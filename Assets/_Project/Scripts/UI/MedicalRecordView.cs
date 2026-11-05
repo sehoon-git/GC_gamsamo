@@ -34,6 +34,8 @@ namespace Gamsamo.UI
         private Button summaryTab, transcriptTab, resultTab, previousPage, nextPage;
         private Button previousRecord, nextRecord;
         private TMP_Text pageLabel, recordLabel;
+        private static readonly Color32 Ink = new Color32(62, 48, 40, 255);
+        private static readonly Color32 FadedInk = new Color32(137, 123, 110, 255);
         private int recordIndex, recordCount;
         private readonly Dictionary<string, string> structuredFields = new Dictionary<string, string>(StringComparer.Ordinal);
         private string settlementText = "";
@@ -160,47 +162,102 @@ namespace Gamsamo.UI
         {
             if (detailControls != null || consultationNotes == null || consultationNotes.font == null) return;
             detailControls = Rect("ConsultationRecordControls", transform, 0, 0, 1024, 1536);
-            summaryTab = Button("SummaryTab", "상담 메모", 296, 884, 190, 40, () => SelectSection(RecordSection.Summary));
-            transcriptTab = Button("TranscriptTab", "대화 원문", 496, 884, 190, 40, () => SelectSection(RecordSection.Transcript));
-            resultTab = Button("ResultTab", "상담 결과", 696, 884, 190, 40, () => SelectSection(RecordSection.Result));
-            Place(consultationNotes.rectTransform, 296, 936, 592, 222);
+            // The printed notes value cell is x278..906, y874..1220 on every 1024x1536 sheet.
+            // Soften just its ruling underneath the text; preserve the form borders and left label.
+            var writingArea = Rect("WritingArea", transform, 280, 876, 624, 342);
+            writingArea.SetAsFirstSibling();
+            var paper = writingArea.gameObject.AddComponent<Image>();
+            paper.color = new Color32(250, 243, 237, 206);
+            paper.raycastTarget = false;
+            var rule = Rect("IndexRule", detailControls, 280, 934, 624, 2).gameObject.AddComponent<Image>();
+            rule.color = new Color32(151, 136, 119, 255);
+            rule.raycastTarget = false;
+            summaryTab = IndexTab("SummaryTab", "상담 메모", 296, RecordSection.Summary);
+            transcriptTab = IndexTab("TranscriptTab", "대화 원문", 496, RecordSection.Transcript);
+            resultTab = IndexTab("ResultTab", "상담 결과", 696, RecordSection.Result);
+            Place(consultationNotes.rectTransform, 296, 946, 592, 216);
             consultationNotes.alignment = TextAlignmentOptions.TopLeft;
             consultationNotes.enableAutoSizing = false;
-            consultationNotes.fontSize = 22;
-            previousPage = Button("PreviousDetailPage", "이전 쪽", 296, 1172, 160, 36, () => ChangePage(-1));
-            pageLabel = Text("DetailPage", "", 466, 1172, 252, 36);
-            nextPage = Button("NextDetailPage", "다음 쪽", 728, 1172, 160, 36, () => ChangePage(1));
-            previousRecord = Button("PreviousPatientRecord", "이전 서류", 296, 1416, 180, 42, () => RecordNavigationRequested?.Invoke(-1));
-            recordLabel = Text("RecordIndex", "", 486, 1416, 212, 42);
-            nextRecord = Button("NextPatientRecord", "다음 서류", 708, 1416, 180, 42, () => RecordNavigationRequested?.Invoke(1));
+            consultationNotes.fontSize = 25;
+            consultationNotes.color = Ink;
+            previousPage = InkButton("PreviousDetailPage", "‹ 이전 쪽", 296, 1166, 146, 44, () => ChangePage(-1));
+            pageLabel = Text("DetailPage", "", 450, 1166, 284, 44);
+            nextPage = InkButton("NextDetailPage", "다음 쪽 ›", 742, 1166, 146, 44, () => ChangePage(1));
+            // Bind document navigation to the title band. Its footer has only 46px of paper.
+            recordLabel = Text("RecordIndex", "", 114, 248, 230, 48);
+            recordLabel.alignment = TextAlignmentOptions.MidlineLeft;
+            previousRecord = InkButton("PreviousPatientRecord", "‹ 이전 서류", 650, 248, 124, 48,
+                () => RecordNavigationRequested?.Invoke(-1));
+            nextRecord = InkButton("NextPatientRecord", "다음 서류 ›", 782, 248, 124, 48,
+                () => RecordNavigationRequested?.Invoke(1));
             RefreshControls();
         }
 
         private void RefreshControls()
         {
             if (detailControls == null) return;
-            summaryTab.interactable = Section != RecordSection.Summary;
-            transcriptTab.interactable = Section != RecordSection.Transcript;
-            resultTab.interactable = Section != RecordSection.Result;
+            SetTab(summaryTab, Section == RecordSection.Summary);
+            SetTab(transcriptTab, Section == RecordSection.Transcript);
+            SetTab(resultTab, Section == RecordSection.Result);
+            bool paginated = DetailPageCount > 1;
             previousPage.interactable = DetailPage > 1;
             nextPage.interactable = DetailPage < DetailPageCount;
+            previousPage.gameObject.SetActive(paginated);
+            nextPage.gameObject.SetActive(paginated);
+            pageLabel.gameObject.SetActive(paginated);
             pageLabel.text = DetailPage + " / " + DetailPageCount;
             previousRecord.interactable = recordIndex > 0;
             nextRecord.interactable = recordIndex + 1 < recordCount;
+            previousRecord.gameObject.SetActive(recordCount > 1);
+            nextRecord.gameObject.SetActive(recordCount > 1);
             recordLabel.text = recordCount > 0 ? "서류 " + (recordIndex + 1) + " / " + recordCount : "";
         }
 
-        private Button Button(string name, string caption, float x, float y, float width, float height, UnityEngine.Events.UnityAction clicked)
+        private Button IndexTab(string name, string caption, float x, RecordSection section)
         {
-            RectTransform rect = Rect(name, detailControls, x, y, width, height);
-            var background = rect.gameObject.AddComponent<Image>();
-            background.color = new Color32(229, 208, 178, 255);
+            const float width = 192, height = 48;
+            RectTransform rect = Rect(name, detailControls, x, 888, width, height);
+            var tab = rect.gameObject.AddComponent<RecordIndexTabGraphic>();
             var button = rect.gameObject.AddComponent<Button>();
-            button.targetGraphic = background;
+            button.targetGraphic = tab;
             button.navigation = new Navigation { mode = Navigation.Mode.None };
-            button.onClick.AddListener(clicked);
+            var colors = button.colors;
+            colors.disabledColor = Color.white; // The active paper tab supplies its own colour.
+            colors.pressedColor = new Color32(224, 208, 186, 255);
+            colors.fadeDuration = 0f;
+            button.colors = colors;
+            button.onClick.AddListener(() => SelectSection(section));
+            var label = Text(name + "Label", caption, 0, 2, width, height - 2, rect);
+            label.fontSize = 24;
+            return button;
+        }
+
+        private static void SetTab(Button button, bool selected)
+        {
+            button.interactable = !selected;
+            ((RecordIndexTabGraphic)button.targetGraphic).SetSelected(selected);
+            button.GetComponentInChildren<TMP_Text>(true).fontStyle = selected ? FontStyles.Bold : FontStyles.Normal;
+        }
+
+        private Button InkButton(string name, string caption, float x, float y, float width, float height,
+            UnityEngine.Events.UnityAction clicked)
+        {
+            var rect = Rect(name, detailControls, x, y, width, height);
+            var hitArea = rect.gameObject.AddComponent<Image>();
+            hitArea.color = Color.clear;
             var label = Text(name + "Label", caption, 0, 0, width, height, rect);
-            label.raycastTarget = false;
+            label.color = Color.white;
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = label;
+            button.navigation = new Navigation { mode = Navigation.Mode.None };
+            var colors = button.colors;
+            colors.normalColor = Ink;
+            colors.highlightedColor = colors.selectedColor = new Color32(123, 71, 39, 255);
+            colors.pressedColor = new Color32(84, 44, 23, 255);
+            colors.disabledColor = FadedInk;
+            colors.fadeDuration = 0f;
+            button.colors = colors;
+            button.onClick.AddListener(clicked);
             return button;
         }
 
@@ -209,7 +266,8 @@ namespace Gamsamo.UI
             var text = Rect(name, parent != null ? parent : detailControls, x, y, width, height).gameObject.AddComponent<TextMeshProUGUI>();
             text.font = consultationNotes.font;
             text.fontSize = 22;
-            text.color = new Color32(69, 47, 38, 255);
+            text.color = Ink;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
             text.alignment = TextAlignmentOptions.Center;
             text.richText = false;
             text.raycastTarget = false;

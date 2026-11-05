@@ -50,7 +50,7 @@ D는 늦게 연결되거나 다시 열 때 `runtime.PendingResult`를 읽는다.
 1. `PatientAiAdapter`/`AiSaveStore`: 진행 ID 또는 저장 경로를 주입하는 세션 열기 API. 입력 progressId/patientId/caseId/roundId, 출력 기존 AiSession 또는 실패. 현재 B는 기존 단일 환자 저장 포인터를 공개 Save API로 선택하고, B에 저장한 A 스냅샷을 복원한다. 이전 immutable snapshots는 삭제하지 않는다. 동시 여러 게임 실행은 금지하고 충돌은 revision으로 거부한다.
 2. `PatientAiAdapter`: B 승인 없이 공개 Revisit/NewExperiment를 호출하지 않도록 연결. 현재 UI는 이 API들을 직접 노출하지 않으며 B가 다음 문 입장에서 Revisit를 호출한다. 향후 버튼 연결 시 우회하지 말 것.
 3. `AiSaveStore`: 확정된 과거 사례/회차 목록을 읽는 read-only API. 현재 B 진행에 연결된 모든 진행/환자/회차는 입장 없이 복원하지만, B 도입 이전 snapshot 폴더의 모든 파일이 실제 commit됐는지는 포인터만으로 증명할 수 없다. 기존 원문은 보존하고 이를 임의로 확정 이력으로 가져오지 않는다.
-4. `PatientAiAdapter`: 초안 flush 성공/실패를 반환하는 API. 현재 ReturnToStartMenu는 busy/retry 상태를 차단하지만 초안 최종 flush는 A.OnDisable에 의존한다. 완전한 안전 복귀 보장을 위해 해당 결과가 필요하다.
+4. `PatientAiAdapter`: 초안 flush 성공/실패를 반환하는 API가 있으면 즉시 복귀 UX 개선 가능. 현재 ReturnToStartMenu는 busy/retry 상태를 차단하고, ai.Draft가 실제 저장 snapshot의 draft와 같을 때만 B 저장 후 이동한다. 아직 저장되지 않은 초안은 기존 0.75초 debounce를 기다린 뒤 재시도한다.
 5. 민석 정식 데이터/평가 기준 및 UsesPatient 지원. 현재 roster의 여섯 번째 종류 중 minseok은 미지원이므로 입장을 차단한다.
 
 보상 공식/가격은 C, 사연/평가 기준은 A, 사진·엔딩 자산은 D가 제공한다. B가 승인으로 간주하거나 만들어 넣지 않는다.

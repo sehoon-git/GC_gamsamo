@@ -38,7 +38,19 @@ namespace Gamsamo.Dialogue
         public Action ExternalNextRequested;
 
         public VisitState State { get; private set; } = VisitState.Waiting;
-        public int CompletedCount { get; private set; }
+        public int CompletedCount => GetClearedCount != null ? GetClearedCount() : 0;
+        public int DepartureCount { get; private set; }
+        public bool ProgressReady { get; set; }
+        public Func<string, bool> BeforeAdmission;
+        public Func<bool> BeforeDeparture;
+        public Func<int> GetProgressIndex;
+        public Func<int> GetClearedCount;
+
+        private void Start()
+        {
+            if (GetComponent<Gamsamo.Progression.GameProgressRuntime>() == null)
+                gameObject.AddComponent<Gamsamo.Progression.GameProgressRuntime>();
+        }
         public int AdmittedCount => nextPatientIndex;
         public string CurrentSessionId { get; private set; } = string.Empty;
         public PatientVisitDefinition CurrentPatient { get; private set; }
@@ -128,8 +140,9 @@ namespace Gamsamo.Dialogue
 
         public bool TryAdmitNextPatient()
         {
-            if (!isActiveAndEnabled || !validConfiguration || RoomBlocked || State != VisitState.Waiting)
+            if (!ProgressReady || !isActiveAndEnabled || !validConfiguration || RoomBlocked || State != VisitState.Waiting)
                 return false;
+            nextPatientIndex = GetProgressIndex != null ? GetProgressIndex() : nextPatientIndex;
             if (nextPatientIndex >= patients.Length)
             {
                 SetState(VisitState.Finished);
@@ -137,7 +150,8 @@ namespace Gamsamo.Dialogue
             }
 
             // Reserve the slot and lock the door synchronously, before any animation yields.
-            CurrentPatient = patients[nextPatientIndex++];
+            if (BeforeAdmission == null || !BeforeAdmission(patients[nextPatientIndex].patientId)) return false;
+            CurrentPatient = patients[nextPatientIndex];
             CurrentSessionId = Guid.NewGuid().ToString("N");
             IsAwaitingDeparture = false;
             demoLineIndex = 0;
@@ -286,6 +300,7 @@ namespace Gamsamo.Dialogue
         {
             if (!isActiveAndEnabled || RoomBlocked || State != VisitState.Consulting || !IsAwaitingDeparture
                 || string.IsNullOrEmpty(sessionId) || sessionId != CurrentSessionId) return false;
+            if (BeforeDeparture == null || !BeforeDeparture()) return false;
             // Invalidate pending external replies as soon as leaving begins.
             CurrentSessionId = string.Empty;
             IsAwaitingDeparture = false;
@@ -316,7 +331,8 @@ namespace Gamsamo.Dialogue
             portraitRoot.anchoredPosition = seatedPosition;
             portraitImage.sprite = null;
             CurrentPatient = null;
-            CompletedCount++;
+            DepartureCount++;
+            nextPatientIndex = GetProgressIndex != null ? GetProgressIndex() : nextPatientIndex;
             transition = null;
             SetState(nextPatientIndex >= patients.Length ? VisitState.Finished : VisitState.Waiting);
         }
@@ -365,7 +381,7 @@ namespace Gamsamo.Dialogue
         private void RefreshInput()
         {
             bool blocked = RoomBlocked;
-            if (doorButton != null) doorButton.interactable = isActiveAndEnabled && validConfiguration && !blocked && State == VisitState.Waiting;
+            if (doorButton != null) doorButton.interactable = ProgressReady && isActiveAndEnabled && validConfiguration && !blocked && State == VisitState.Waiting;
             if (dialogue != null) dialogue.SetSuspended(!isActiveAndEnabled || blocked);
         }
 
@@ -394,7 +410,7 @@ namespace Gamsamo.Dialogue
             CurrentSessionId = string.Empty;
             IsAwaitingDeparture = false;
             CurrentPatient = null;
-            CompletedCount = nextPatientIndex = demoLineIndex = 0;
+            DepartureCount = nextPatientIndex = demoLineIndex = 0;
             if (dialogue != null) dialogue.Hide();
             if (portraitRoot != null) portraitRoot.anchoredPosition = seatedPosition;
             if (portraitImage != null) portraitImage.sprite = null;

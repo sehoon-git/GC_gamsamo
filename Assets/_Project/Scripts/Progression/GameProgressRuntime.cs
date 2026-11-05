@@ -59,9 +59,11 @@ namespace Gamsamo.Progression
         public string LastError { get; private set; }
         private PatientVisitController visits;
         private PatientAiAdapter ai;
-        private bool handling, revisitPending;
-        private readonly HashSet<string> prepared = new HashSet<string>();
-        private IDisposable presentationLock;
+        private bool handling;
+        public Gamsamo.Economy.EconomyWallet Wallet { get; private set; }
+        public GamePresentationIntegration Presentation { get; private set; }
+        private readonly Dictionary<string, string> settlementDescriptions = new Dictionary<string, string>();
+        private string notifiedResult;
         private void Start()
         {
             visits = GetComponent<PatientVisitController>(); ai = GetComponent<PatientAiAdapter>();
@@ -77,11 +79,23 @@ namespace Gamsamo.Progression
                     string file = Path.Combine(Application.streamingAssetsPath, "GameData", "Patients", patientId + ".json");
                     if (File.Exists(file)) AiProtocol.RegisterPatient(AiProtocol.Parse(File.ReadAllText(file)));
                 }
+                var economy = new EconomyIntegration(Progress);
+                Rewards = economy;
+                var pc = visits.room?.pcDesktopView;
+                if (pc?.shopView?.catalog != null)
+                {
+                    Wallet = new Gamsamo.Economy.EconomyWallet(Progress.State.ProgressId, economy, pc.shopView.catalog);
+                    Wallet.Reload(); pc.BindEconomy(Wallet);
+                }
+                Presentation = GetComponent<GamePresentationIntegration>();
+                if (Presentation != null) Presentation.Bind(this, visits, ai);
                 visits.useDemoDialogue = false;
                 visits.BeforeAdmission = BeforeAdmission;
                 visits.BeforeDeparture = BeforeDeparture;
                 visits.GetProgressIndex = () => Progress.State.CurrentIndex;
                 visits.GetClearedCount = () => Progress.State.ClearedCount;
+                if (visits.room != null) visits.room.CommittedSettlementForRecord = data =>
+                    settlementDescriptions.TryGetValue(data.gameProgressId + "/" + data.registrationNumber + "/" + data.caseId + "/" + data.sessionId, out var description) ? description : "";
                 if (ai != null) ai.StateChanged += OnAiChanged;
                 RestoreRecords();
                 visits.ProgressReady = true;
@@ -98,32 +112,15 @@ namespace Gamsamo.Progression
                 if (Progress.State.Current?.PatientId != patientId) return false;
                 if (visits.UsesExternalDialogue == null || !visits.UsesExternalDialogue(patientId))
                     throw new InvalidOperationException("이 환자의 정식 AI 연결이 아직 없습니다. A의 콘텐츠 연결이 필요합니다.");
+                Progress.PrepareAiOperation();
                 var patient = Progress.State.Current;
-                if (prepared.Add(patientId))
-                {
-                    try
-                    {
-                        AiProtocol.RegisterPatient(AiProtocol.Parse(File.ReadAllText(Path.Combine(Application.streamingAssetsPath, "GameData", "Patients", patientId + ".json"))));
-                        var store = new AiSaveStore(PatientAiAdapter.SaveDirectoryFor(patientId));
-                        var active = store.Load();
-                        var saved = string.IsNullOrEmpty(patient.AiSnapshot) ? null : AiProtocol.Parse(patient.AiSnapshot);
-                        // Recover the window where A saved but B had not captured its notification yet.
-                        if (saved != null && active != null && (string)active["state"]?["case_id"] == patient.CaseId
-                            && (int)active["local_revision"] >= (int)saved["local_revision"]) saved = active;
-                        var desired = saved ?? AiSaveStore.NewSnapshot(patientId);
-                        if (!JToken.DeepEquals(active, desired))
-                        {
-                            int revision = active == null ? -1 : (int)active["local_revision"];
-                            desired["local_revision"] = revision + 1; store.Save(desired, revision);
-                        }
-                        var state = AiProtocol.Object(desired, "state");
-                        // Bind before any network request so a restart never adopts a different case.
-                        Progress.CaptureAi(patientId, AiProtocol.Id(state, "case_id"), AiProtocol.Id(AiProtocol.Current(state), "id"),
-                            AiProtocol.Encode(desired), AiProtocol.Phase(state));
-                    }
-                    catch { prepared.Remove(patientId); throw; }
-                }
-                revisitPending = patient.NeedsRevisit && Progress.State.Phase != ProgressPhase.AwaitingDeparture;
+                var key = new AiConversationKey(Progress.State.ProgressId, patientId, patient.CaseId, patient.RoundId);
+                bool accepted;
+                if (patient.PendingAiOperation == "start") accepted = ai.StartNewCase(key);
+                else if (patient.PendingAiOperation == "revisit")
+                    accepted = ai.StartRevisit(key.WithSession(patient.PreviousRoundId), patient.RoundId);
+                else accepted = ai.ResumeSession(key);
+                if (!accepted) throw new InvalidOperationException(ai.LastError);
                 if (Progress.State.Phase == ProgressPhase.Waiting) Progress.BeginVisit();
                 LastError = ""; return true;
             }
@@ -135,46 +132,43 @@ namespace Gamsamo.Progression
             handling = true;
             try
             {
-                if (revisitPending)
-                {
-                    if (ai.CurrentPhase == "evaluated") { ai.Revisit(); return; }
-                    if (ai.SessionId == Progress.State.Current.RoundId) return;
-                    revisitPending = false;
-                }
-                var snapshot = new AiSaveStore(PatientAiAdapter.SaveDirectoryFor(ai.PatientId)).Load();
+                var key = ai.ConversationKey;
+                if (key == null || key.GameProgressId != Progress.State.ProgressId) return;
+                // During a pending revisit, A's committed state still belongs to the previous round.
+                if (key.SessionId != Progress.State.Current?.RoundId) return;
+                var snapshot = PatientAiAdapter.CreateCaseRepository().Store(key).Load();
                 if (snapshot == null) return;
                 var state = AiProtocol.Object(snapshot, "state");
-                Progress.CaptureAi(ai.PatientId, AiProtocol.Id(state, "case_id"), AiProtocol.Id(AiProtocol.Current(state), "id"),
-                    AiProtocol.Encode(snapshot), AiProtocol.Phase(state));
+                Progress.CaptureAi(ai.PatientId, key.CaseId, key.SessionId, AiProtocol.Encode(snapshot), AiProtocol.Phase(state));
+                Progress.CompleteAiOperation(key.SessionId);
                 RestoreRecords();
-                if (ai.CurrentPhase != "evaluated" || ai.IsBusy || !string.IsNullOrEmpty(ai.LastError)) return;
-                var evaluation = AiProtocol.Object(AiProtocol.Current(state), "evaluation");
-                if (ai.IsMock || AiProtocol.Text(evaluation, "model_revision").StartsWith("mock", StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidOperationException("모의 AI 평가는 정식 진행에 정산할 수 없습니다.");
-                int patientScore = AiProtocol.Number(evaluation, "patient_score"), counselorScore = AiProtocol.Number(evaluation, "counselor_score");
-                string photoId = PhotoForPatient?.Invoke(ai.PatientId);
-                if (patientScore >= 70 && counselorScore >= 70 && string.IsNullOrWhiteSpace(photoId))
-                    throw new InvalidOperationException("환자별 정식 사진 ID 연결 대기: D의 사진 목록이 필요합니다.");
+                if (!ai.TryGetSavedEvaluation(out var evaluation)) return;
+                Presentation?.BeginResultSave();
                 var receipt = Progress.Settle(new SavedEvaluation {
-                    Identity = new RoundIdentity { ProgressId = Progress.State.ProgressId, PatientId = ai.PatientId, CaseId = ai.CaseId, RoundId = ai.SessionId },
-                    AiSaveCompleted = true, Phase = "evaluated", PatientScore = patientScore,
-                    CounselorScore = counselorScore }, Rewards, photoId);
+                    Identity = new RoundIdentity { ProgressId = evaluation.Key.GameProgressId, PatientId = evaluation.Key.PatientId,
+                        CaseId = evaluation.Key.CaseId, RoundId = evaluation.Key.SessionId },
+                    AiSaveCompleted = true, Phase = "evaluated", PatientScore = evaluation.PatientScore,
+                    CounselorScore = evaluation.CounselorScore }, Rewards, PhotoForPatient?.Invoke(ai.PatientId));
+                Wallet?.Reload();
+                RestoreRecords();
+                Presentation?.CompleteResultSave();
                 LastError = "";
-                if (Progress.State.Phase == ProgressPhase.Presenting && presentationLock == null)
+                if (Progress.State.Phase == ProgressPhase.Presenting && notifiedResult != receipt.Identity.Key)
                 {
-                    presentationLock = visits.room?.AcquireInputBlock();
+                    notifiedResult = receipt.Identity.Key;
+                    // D acquires the presentation lease; persisted phase also gates departure.
                     ResultCommitted?.Invoke(receipt);
                     // With no D presenter the durable result remains pending; never fake a completed animation.
                 }
             }
-            catch (Exception e) { Fail(e); }
+            catch (Exception e) { Fail(e); Presentation?.FailResultSave(LastError); }
             finally { handling = false; }
         }
         public void RetryProgress() => OnAiChanged();
         public ConfirmedResult PendingResult => Progress?.State.PendingPresentation;
         public bool CompletePresentation(string key)
         {
-            try { Progress.CompletePresentation(key); presentationLock?.Dispose(); presentationLock = null; LastError = ""; return true; }
+            try { Progress.CompletePresentation(key); LastError = ""; return true; }
             catch (Exception e) { Fail(e); return false; }
         }
         private bool BeforeDeparture()
@@ -186,20 +180,30 @@ namespace Gamsamo.Progression
         {
             if (visits.room == null) return;
             visits.room.ClearArchivedRecords();
+            settlementDescriptions.Clear();
+            var runs = GameProgressSession.SavedRuns();
+            foreach (var run in runs)
+            foreach (var receipt in run.Economy.Ledger?.settlements ?? new List<Gamsamo.Economy.SessionSettlement>())
+                settlementDescriptions[run.ProgressId + "/" + receipt.patientId + "/" + receipt.caseId + "/" + receipt.sessionId] =
+                    "기본 보상 " + receipt.baseCoins + " C · 첫 클리어 보너스 " + receipt.bonusCoins + " C\n이번 지급 " + (receipt.baseCoins + receipt.bonusCoins) + " C\n" + (receipt.cleared ? "클리어 완료" : "재상담이 필요합니다");
             // Previous runs are read-only; browsing never changes the active progress or A's active case.
-            foreach (var run in GameProgressSession.SavedRuns())
+            foreach (var run in runs)
             foreach (var patient in run.Patients)
             {
                 if (string.IsNullOrEmpty(patient.AiSnapshot)) continue;
                 var state = AiProtocol.Object(AiProtocol.Parse(patient.AiSnapshot), "state");
-                var definition = visits.patients.First(p => p.patientId == patient.PatientId);
+                var definition = visits.patients.FirstOrDefault(p => p.patientId == patient.PatientId);
+                if (definition == null) continue;
+                var labels = AiProtocol.Array(AiProtocol.Patient(patient.PatientId), "rubric").OfType<JObject>()
+                    .ToDictionary(item => AiProtocol.Text(item, "id"), item => AiProtocol.Text(item, "label"));
                 foreach (JObject session in AiProtocol.Array(state, "sessions"))
                 {
                     var single = AiProtocol.Copy(state); single["sessions"] = new JArray(session.DeepClone());
                     visits.room.SetArchivedRecord(run.ProgressId + "/" + patient.PatientId + "/" + (string)session["id"], new MedicalRecordData {
+                        gameProgressId = run.ProgressId, caseId = patient.CaseId, sessionId = (string)session["id"],
                         registrationNumber = patient.PatientId, patientName = definition.displayName,
-                        recordedDate = (string)session["started_at"], consultationNotes = "저장된 상담 회차: " + (string)session["id"],
-                        consultationTranscript = AiRecordFormatter.Transcript(single), consultationResult = AiRecordFormatter.Results(single, null) });
+                        recordedDate = PatientAiAdapter.RecordedLocalDate((string)session["started_at"]), consultationNotes = "저장된 상담 회차: " + (string)session["id"],
+                        consultationTranscript = AiRecordFormatter.Transcript(single), consultationResult = AiRecordFormatter.Results(single, labels) });
                 }
             }
         }
@@ -213,7 +217,7 @@ namespace Gamsamo.Progression
             {
                 if (ai != null && ai.IsAiVisit)
                 {
-                    var snapshot = new AiSaveStore(PatientAiAdapter.SaveDirectoryFor(ai.PatientId)).Load();
+                    var snapshot = PatientAiAdapter.CreateCaseRepository().Store(ai.ConversationKey).Load();
                     if (snapshot == null || AiProtocol.Text(snapshot, "draft") != ai.Draft)
                         throw new InvalidOperationException("초안 자동 저장을 기다린 뒤 다시 눌러 주세요.");
                     var state = AiProtocol.Object(snapshot, "state");
@@ -241,6 +245,6 @@ namespace Gamsamo.Progression
             if (GUILayout.Button("시작 화면으로")) ReturnToStartMenu();
             GUILayout.EndArea();
         }
-        private void OnDestroy() { if (ai != null) ai.StateChanged -= OnAiChanged; presentationLock?.Dispose(); }
+        private void OnDestroy() { visits?.room?.pcDesktopView?.BindEconomy(null); if (visits?.room != null) visits.room.CommittedSettlementForRecord = null; if (ai != null) ai.StateChanged -= OnAiChanged; }
     }
 }

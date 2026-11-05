@@ -58,6 +58,7 @@ namespace Gamsamo.UI.Presentation
         internal static void Set(TMP_Text label, string value)
         {
             if (label == null) return;
+            label.textWrappingMode = TextWrappingModes.Normal;
             label.richText = false; label.text = value ?? "";
         }
     }

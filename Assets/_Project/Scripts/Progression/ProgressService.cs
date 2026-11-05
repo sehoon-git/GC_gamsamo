@@ -28,6 +28,43 @@ namespace Gamsamo.Progression
             if (state.Phase != ProgressPhase.Waiting || state.Current == null) throw new InvalidOperationException("방문 대기 상태가 아닙니다.");
             var next = State; next.Phase = ProgressPhase.Consulting; Commit(next);
         }
+        public void PrepareAiOperation()
+        {
+            var next = State;
+            var patient = next.Current;
+            if (patient == null || !string.IsNullOrEmpty(patient.PendingAiOperation)) return;
+            if (string.IsNullOrEmpty(patient.CaseId))
+            {
+                patient.CaseId = Guid.NewGuid().ToString("N"); patient.RoundId = Guid.NewGuid().ToString("N");
+                patient.PendingAiOperation = "start";
+            }
+            else if (patient.NeedsRevisit && next.Phase == ProgressPhase.Waiting)
+            {
+                patient.PreviousRoundId = patient.RoundId; patient.RoundId = Guid.NewGuid().ToString("N");
+                patient.PendingAiOperation = "revisit";
+            }
+            else return;
+            Commit(next);
+        }
+        public void CompleteAiOperation(string roundId)
+        {
+            if (state.Current?.RoundId != roundId || string.IsNullOrEmpty(state.Current.PendingAiOperation)) return;
+            var next = State; next.Current.PendingAiOperation = null; next.Current.PreviousRoundId = null;
+            next.Current.NeedsRevisit = false; Commit(next);
+        }
+        public void SavePresentationStage(string key, string stage)
+        {
+            if (state.PendingPresentation?.Identity.Key != key || state.Phase != ProgressPhase.Presenting)
+                throw new InvalidOperationException("표시 중인 회차가 다릅니다.");
+            if (stage != "ending" && stage != "completed" && stage != "skipped") throw new InvalidOperationException("잘못된 재생 상태입니다.");
+            var next = State; next.PresentationStage = stage;
+            if (stage == "completed" || stage == "skipped")
+            {
+                next.Phase = ProgressPhase.AwaitingDeparture;
+                if (!next.PlayedEndings.Contains(next.Current.PatientId)) next.PlayedEndings.Add(next.Current.PatientId);
+            }
+            Commit(next);
+        }
         // Snapshot is A's existing serialized AiSaveStore format, never an independently invented AI DTO.
         public void CaptureAi(string patientId, string caseId, string roundId, string snapshot, string phase)
         {
@@ -73,8 +110,9 @@ namespace Gamsamo.Progression
             next.Current.Cleared = cleared; next.Current.NeedsRevisit = !cleared;
             next.Settlements.Add(id.Key, receipt);
             if (cleared && !string.IsNullOrEmpty(photoId) && !next.Photos.Contains(photoId)) next.Photos.Add(photoId);
-            next.FinalEndingUnlocked = next.ClearedCount == 6;
+            next.FinalEndingUnlocked = next.ClearedCount == next.Patients.Count;
             next.PendingPresentation = receipt;
+            next.PresentationStage = "clear";
             next.Phase = cleared ? ProgressPhase.Presenting : ProgressPhase.AwaitingDeparture;
             Commit(next); return GameProgress.Copy(receipt);
         }
@@ -96,7 +134,7 @@ namespace Gamsamo.Progression
         }
         public void CommitEconomy(EconomyState economy, int expectedRevision)
         {
-            if (expectedRevision != state.Revision || (state.Phase != ProgressPhase.Waiting && state.Phase != ProgressPhase.Consulting))
+            if (expectedRevision != state.Revision)
                 throw new InvalidOperationException("경제 상태를 다시 읽은 뒤 시도하세요.");
             var next = State; next.Economy = GameProgress.Copy(economy); Commit(next);
         }

@@ -160,7 +160,7 @@ namespace Gamsamo.UI.Presentation
             GuidebookView.Set(bodyText, clear ? "함께 나눈 이야기와 상세 결과는 책상 위 서류에 보관되어 있습니다."
                 : final ? FinalCreditsText() : entry != null ? entry.description : "후일담 콘텐츠가 아직 준비되지 않았습니다. 계속하기로 돌아갈 수 있어요.");
             GuidebookView.Set(rewardText, clear ? "이번 획득 " + awardedCoins + " C" : "");
-            GuidebookView.Set(photoNotice, clear && photoUnlocked ? "PC 사진첩에 사진이 추가되었습니다." : "");
+            GuidebookView.Set(photoNotice, clear ? (photoUnlocked ? "PC 사진첩에 사진이 추가되었습니다." : "웃는 사진과 후일담은 준비 중입니다. 클리어 기록은 저장되었습니다.") : "");
             if (photo != null) { photo.sprite = !clear && !final && photoUnlocked && entry != null ? entry.photo : null; photo.enabled = photo.sprite != null; photo.preserveAspect = true; }
             if (bodyText != null)
             {

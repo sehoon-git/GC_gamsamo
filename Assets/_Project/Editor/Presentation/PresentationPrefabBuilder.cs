@@ -175,6 +175,7 @@ namespace Gamsamo.Editor.Presentation
             label.font = Font; label.fontSize = size; label.color = Ink; label.richText = false;
             label.text = value; label.raycastTarget = false; label.alignment = alignment;
             label.overflowMode = TextOverflowModes.Page;
+            label.textWrappingMode = TextWrappingModes.Normal;
             return label;
         }
         public static Button Button(string name, Transform parent, string caption, float x, float y, float w, float h)

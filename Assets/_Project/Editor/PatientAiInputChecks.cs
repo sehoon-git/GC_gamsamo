@@ -180,6 +180,8 @@ namespace Gamsamo.Editor
                 Call(adapter, "Update");
                 Check(visits.State == PatientVisitController.VisitState.Consulting && !completedSession.VisitCompleted
                     && departureButton.interactable, "Restoring an evaluated save waits for an explicit departure click");
+                // This isolated A/UI fixture has no B runtime. Supply its committed-departure contract.
+                visits.BeforeDeparture = () => true;
                 departureButton.onClick.Invoke();
                 Check(visits.State == PatientVisitController.VisitState.Leaving && string.IsNullOrEmpty(visits.CurrentSessionId),
                     "The departure button invokes the adapter and invalidates the local visit once");

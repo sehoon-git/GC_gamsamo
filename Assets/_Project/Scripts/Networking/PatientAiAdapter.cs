@@ -373,9 +373,12 @@ namespace Gamsamo.Networking
                 {
                     var health = AiProtocol.Parse(request.downloadHandler.text);
                     inferenceMode = AiProtocol.ValidateHealth(health, activePatientId);
-                    if (AiProtocol.ProgressId(session.State) != "legacy")
-                        AiProtocol.Require(health["capabilities"] is JArray capabilities && capabilities.Any(v => (string)v == "game_progress_scope"),
-                            "게임 진행별 저장을 지원하는 서버가 필요합니다.");
+                    if (AiProtocol.ProgressId(session.State) != "legacy" &&
+                        !(health["capabilities"] is JArray capabilities && capabilities.Any(v => (string)v == "game_progress_scope")))
+                    {
+                        Fail("AI 서버 업데이트가 필요합니다. 서버에 최신 A 변경을 배포한 뒤 재시도해 주세요. 기존 상담 기록은 보존됩니다.");
+                        yield break;
+                    }
                     healthReady = true;
                 }
                 catch (Exception) { Fail("서버의 준비 상태·데이터 버전이 일치하지 않습니다. 서버 설정을 확인해 주세요."); }
@@ -481,6 +484,7 @@ namespace Gamsamo.Networking
             if (visits.room == null) return;
             visits.room.SetRecord(new MedicalRecordData
             {
+                gameProgressId = ConversationKey?.GameProgressId, caseId = ConversationKey?.CaseId, sessionId = ConversationKey?.SessionId,
                 registrationNumber = activePatientId, patientName = this.patientName,
                 recordedDate = RecordedLocalDate(AiProtocol.Text(AiProtocol.Current(committedState), "started_at")),
                 visitReason = "상담에서 확인한 내용",
@@ -493,7 +497,7 @@ namespace Gamsamo.Networking
                 counselor = visits.room.record == null ? "" : visits.room.record.counselor
             });
         }
-        private static string RecordedLocalDate(string startedAt)
+        public static string RecordedLocalDate(string startedAt)
         {
             if (DateTimeOffset.TryParse(startedAt, CultureInfo.InvariantCulture, DateTimeStyles.None, out var timestamp))
                 return timestamp.ToLocalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);

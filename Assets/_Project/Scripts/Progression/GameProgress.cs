@@ -24,6 +24,7 @@ namespace Gamsamo.Progression
     [Serializable] public sealed class EconomyState
     {
         public long Balance;
+        public Gamsamo.Economy.EconomyState Ledger;
         public Dictionary<string, long> HighestRewards = new Dictionary<string, long>();
         public List<string> FirstClearBonuses = new List<string>();
         public List<string> OwnedItems = new List<string>();
@@ -49,6 +50,7 @@ namespace Gamsamo.Progression
     [Serializable] public sealed class PatientProgress
     {
         public string PatientId, CaseId, RoundId, AiSnapshot;
+        public string PendingAiOperation, PreviousRoundId;
         public bool Cleared, NeedsRevisit;
     }
     [Serializable] public sealed class GameProgress
@@ -64,20 +66,22 @@ namespace Gamsamo.Progression
         public List<string> PlayedEndings = new List<string>();
         public bool FinalEndingUnlocked, FinalEndingPlayed;
         public ConfirmedResult PendingPresentation;
+        public string PresentationStage = "clear", FinalPresentationStage = "credits";
         [JsonIgnore] public int ClearedCount => Patients.Where(p => p.Cleared).Select(p => p.PatientId).Distinct().Count();
         [JsonIgnore] public PatientProgress Current => CurrentIndex < Patients.Count ? Patients[CurrentIndex] : null;
         public static T Copy<T>(T value) => JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(value));
         public void Validate()
         {
-            if (Version != 1 || string.IsNullOrWhiteSpace(ProgressId) || Revision < 0 || Patients == null || Patients.Count != 6
+            if (Version != 1 || string.IsNullOrWhiteSpace(ProgressId) || Revision < 0 || Patients == null || Patients.Count != 5
                 || Patients.Any(p => p == null || string.IsNullOrWhiteSpace(p.PatientId))
-                || Patients.Select(p => p.PatientId).Distinct().Count() != 6 || CurrentIndex < 0 || CurrentIndex > 6
+                || Patients.Select(p => p.PatientId).Distinct().Count() != 5 || CurrentIndex < 0 || CurrentIndex > Patients.Count
                 || Economy == null || Economy.Balance < 0 || Settlements == null || Photos == null || PlayedEndings == null
                 || Economy.HighestRewards == null || Economy.FirstClearBonuses == null || Economy.OwnedItems == null || Economy.EquippedItems == null
+                || (Economy.Ledger != null && (!Economy.Ledger.IsValid() || Economy.Ledger.runId != ProgressId || Economy.Ledger.balance != Economy.Balance))
                 || Economy.HighestRewards.Values.Any(value => value < 0)
                 || !Enum.IsDefined(typeof(ProgressPhase), Phase)
-                || FinalEndingUnlocked != (ClearedCount == 6) || (FinalEndingPlayed && !FinalEndingUnlocked)
-                || (Phase == ProgressPhase.Finished && CurrentIndex != 6)
+                || FinalEndingUnlocked != (ClearedCount == Patients.Count) || (FinalEndingPlayed && !FinalEndingUnlocked)
+                || (Phase == ProgressPhase.Finished && CurrentIndex != Patients.Count)
                 || Patients.Take(CurrentIndex).Any(p => !p.Cleared)
                 || (Phase == ProgressPhase.Presenting && PendingPresentation == null))
                 throw new InvalidOperationException("진행 저장의 형식·상태가 손상되었습니다. 원본과 백업을 보존하고 복구해 주세요.");

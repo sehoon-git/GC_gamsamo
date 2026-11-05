@@ -1,0 +1,72 @@
+{
+  "sfx_page_turn": {
+    "prompt": "A single gentle page turn on a wooden desk, fine dry paper friction and a soft settling edge; no tearing, exaggerated whoosh, speech, music or room noise.",
+    "duration": 0.53,
+    "peak_db": -13,
+    "event": "Guide page changed",
+    "slot": "pageSound"
+  },
+  "sfx_clear": {
+    "prompt": "Two or three softly ascending warm felt-mallet notes, a modest confirmation of progress; no fanfare, coins, applause, sharp bell, voice or dramatic impact.",
+    "duration": 1.62,
+    "peak_db": -15,
+    "event": "First-clear notice after persistent commit",
+    "slot": "clearSound"
+  },
+  "sfx_ui_confirm": {
+    "prompt": "One rounded, quiet tactile wooden UI click with a short dry decay; no ring, metallic edge, music or speech.",
+    "duration": 0.127,
+    "peak_db": -17,
+    "event": "Accepted UI action",
+    "slot": null
+  },
+  "sfx_ui_back": {
+    "prompt": "One low wooden tap for closing a calm interface panel, short decay, soft attack, no sharp transient or voice.",
+    "duration": 0.169,
+    "peak_db": -18,
+    "event": "Panel dismissed",
+    "slot": null
+  },
+  "sfx_purchase_success": {
+    "prompt": "Two soft mellow mallet notes acknowledging a saved cosmetic purchase, no cash register, coins, or casino timbre.",
+    "duration": 0.635,
+    "peak_db": -16,
+    "event": "Purchase committed",
+    "slot": null
+  },
+  "sfx_action_unavailable": {
+    "prompt": "Very soft neutral double tap, low wood, no buzzer or alarm, no voice.",
+    "duration": 0.247,
+    "peak_db": -19,
+    "event": "Unavailable action or insufficient funds",
+    "slot": null
+  },
+  "sfx_door_open": {
+    "prompt": "Quiet interior wooden door handle turning and the door opening gently, soft latch; no slam, footsteps, voices or horror creak.",
+    "duration": 0.953,
+    "peak_db": -13,
+    "event": "Door begins opening",
+    "slot": null
+  },
+  "sfx_door_close": {
+    "prompt": "An interior wooden door settling into its frame followed by a small soft latch, no slam or voices.",
+    "duration": 0.705,
+    "peak_db": -14,
+    "event": "Door closes",
+    "slot": null
+  },
+  "sfx_record_open": {
+    "prompt": "Thin paper folder lifted and opened, soft paper movement and a faint cardboard touch on a wood desk, no writing, voices or music.",
+    "duration": 0.46,
+    "peak_db": -15,
+    "event": "Medical-record folder opened",
+    "slot": null
+  },
+  "sfx_photo_open": {
+    "prompt": "A small photographic print gently lifted from an album, delicate short dry rustle, no shutter, sparkle or music.",
+    "duration": 0.321,
+    "peak_db": -17,
+    "event": "A photo is opened",
+    "slot": null
+  }
+}

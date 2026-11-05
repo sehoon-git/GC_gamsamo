@@ -438,7 +438,7 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 | --- | --- |
 | `Assets/_Project/Art/UI/CounselingPack/room/` | 1920×1080 좌표의 기본 방·문·창문 3종·PC·서류철, 빈 사진 칸 기록부. 순서대로 합성해 기존 블러에 전달 |
 | `Assets/_Project/Art/UI/PcDesktop/` | 1520×657 좌표. 배경화면 → 새 투명 테두리 → 아이콘 순서로 조립 |
-| `Assets/_Project/Art/UI/CosmeticShop/` | 1112×534 레이아웃의 8개 카드 영역 사용. `tabs/`의 완성 카드 PNG 5개·`layout.json`은 제공본으로 갱신하며 실제 화면은 `templates/`의 빈 탭 PNG 5개 위에 동적 카드 구성 |
+| `Assets/_Project/Art/UI/CosmeticShop/` | 원본 1112×534 레이아웃의 8개 카드 좌표 유지. `templates/`의 빈 탭 PNG 5개를 9-slice로 표시해 하단만 40px 늘린 1112×574 창에 동적 카드 구성. `tabs/`의 완성 카드 PNG와 `layout.json`은 원본 기준 자료 |
 | `Assets/_Project/Art/UI/CounselingPack/profile/`, `photos/`, `settings/` | 실제 내부 창 이미지와 배치 JSON, 설정 슬라이더 fill/thumb |
 | `Assets/_Project/Art/UI/CounselingPack/cosmetics/` | 40종 원본 카탈로그·썸네일·실제 외형·서류철 확대·창문 날씨/블라인드 이미지. PNG 202개·JSON 2개·TXT 안내 2개로 총 206개 원본 파일 |
 | `Assets/_Project/Settings/CosmeticCatalog.asset` | 임포터가 원본 ID·분류·테마·Sprite 참조를 검증해 생성하는 런타임 카탈로그. 가격 수치·소유 상태를 만들지 않음 |
@@ -446,6 +446,8 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 이전 내부 창 적용에서는 신규 PNG 15개와 기존 동일 이미지 12개를 사용했다. 이번 치장 적용은 원본 PNG 202개와 빈 상점 템플릿 5개, **신규 PNG 총 207개**를 추가한다. 원본 안내 TXT 2개는 참고자료이며 사용자 요청·게임 규칙보다 우선하지 않는다. 상점 레이아웃의 카탈로그 상대 경로만 프로젝트 폴더 배치에 맞춰 `../CounselingPack/cosmetics/catalog.json`으로 보정한다. 원본 상품 ID·순서·가격 미정 값은 유지한다.
 
 `overview`·`preview`·`pc-open`·날씨별 완성 배경은 참고용이며 런타임 에셋으로 중복 추가하지 않는다. 입력 좌표는 JSON의 좌상단 px를 Unity 앵커로 변환한다. 방은 1920×1080, 기록부는 1024×1536, PC는 1520×657 좌표계를 사용한다. 모니터 윤곽만 PC 클릭 대상이며 키보드·마우스는 제외한다. 기록부 클릭에서 펜은 제외한다.
+
+상점 표시 영역은 PC 좌표의 `(253, 61, 1112, 574)`이다. 템플릿의 Sprite border는 **왼쪽·아래·오른쪽·위 `(8, 12, 8, 500)`**으로 설정해 상단 500px의 탭·카드 위치와 하단 테두리를 보존하고 하단 종이 영역만 확장한다. 원본 PNG·카드 배치 JSON과 PC의 1520×657 기준·너비 82% 제한은 유지한다.
 
 날씨는 맑음·흐림·비의 정적 창 그림이며 기본값은 맑음이다. `SetWeather`로 교체할 수 있지만 환자 감정·회차와의 자동 연결이나 비 애니메이션은 없다. 새 창문 치장은 `SetWindowVariant`에 블라인드 3단계×날씨 3종의 완성 이미지 9개를 전달해 `단계 × 3 + 날씨`로 선택한다. 별도 블라인드 오버레이도 원본으로 보존하지만 완성 이미지 위에 다시 합성하지 않는다. 일반 전체 레이어 교체인 `SetCosmetic(Window, texture)`도 유지하며 이 경로는 날씨 변형 대신 단일 그림을 사용한다. 창문 분류 복원은 현재 날씨의 기본 창으로 돌아가고, `CosmeticAppearanceController.RestoreAll()`도 현재 날씨를 보존한다. 대화 안전 영역은 배치 자료만 제공되었고 대화 UI는 이번 범위에 없다.
 
@@ -811,7 +813,9 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 | `CosmeticAppearanceController.RestoreCategory(target)` / `RestoreAll()` | 해당 분류 또는 5분류를 기본 외형으로 복원하며 현재 날씨 보존. `SelectedId(target)`·`Changed`로 선택 조회·UI 갱신 |
 | `CosmeticAppearanceController.SetBlindState(int)` | 선택한 창문의 0 올림·1 절반·2 내림 변경. `CanControlBlinds`가 false인 기본 창문에서는 조절하지 않음 |
 | `CosmeticShopView.ShowCategory(int)` / `PreviewSlot(int)` | 분류의 카드 8개를 표시하고 선택을 Appearance로 전달. `ItemIdAt`·`ActiveTarget`으로 현재 카드 데이터 조회. 선택 배지·기본 복원·블라인드 활성 상태는 `Changed`로 갱신 |
-| `CosmeticShopBuilder.Build(desktop, catalog, appearance, font)` | 빈 템플릿 5개를 `shopSprites`에 연결하고 `DynamicCosmeticShop`의 카드·하단 컨트롤만 생성·갱신. 기존 탭·닫기·다른 내부 창 유지, 재실행 시 중복 생성하지 않음 |
+| `CosmeticShopBuilder.Build(desktop, catalog, appearance, font)` | 빈 템플릿 5개를 `shopSprites`에 연결하고 상점 하단을 확장. `DynamicCosmeticShop`의 카드·상품명 바탕 `NamePaper`·하단 컨트롤을 생성·갱신. 기존 탭·닫기·다른 내부 창 유지, 재실행 시 중복 생성하지 않음 |
+| `CosmeticShopBuilder.PrepareTemplate(path)` | `Build`가 호출하는 내부 함수. 원본 PNG를 바꾸지 않고 Sprite border를 `(8, 12, 8, 500)`으로 맞추며 설정이 달라진 경우에만 재임포트 |
+| `CosmeticShopBuilder.TextButton(...)` / `DisableStraightBorder(parent)` | `Build` 내부에서 기본 `UI/Skin/UISprite.psd`로 갈색 테두리·크림색 면·상단 밝은 선을 구성. 기존 직선 테두리 자식은 삭제하지 않고 비활성화해 직렬화된 ID 보존 |
 | `ProfileView.SetProfile(name, affiliation, intro, avatar)` | 미설정 문자열은 —, Female/Male 그림 변경. 환자 성별과 무관하며 저장하지 않음 |
 | `PhotoGalleryView.SetPhotos(IReadOnlyList<PhotoGalleryEntry>)` | 지급된 썸네일·제목을 최대 6개 표시. null은 초기화, 제목 rich text 비활성 |
 | `PcSettingsView.BeginEdit()` / `CancelEdit()` / `ApplySettings()` | 확정값 복사·초안 폐기·설정 저장 및 런타임 적용 |
@@ -835,8 +839,10 @@ room.SetRecord(null);
 ### 유지해야 할 규칙과 설정
 
 - `PcDesktopView`는 내부 상점·앱 창 밖의 PC 루트에 둔다. 상점과 앱 창은 아이콘 전용 `shortcuts` CanvasGroup의 자식으로 두지 않는다. PC 닫기 버튼은 내부 창보다 앞에 표시한다.
-- PC 에셋의 버튼 좌표는 1520×657, 상점 내부는 1112×534 기준이다. 스케일은 공통 상위 오브젝트에 적용해 표시와 클릭 영역을 함께 움직인다. 원본 합성 화면의 아이콘·상품 카드를 중복 배치하지 않는다.
-- 상점 `shopSprites`에는 `templates/`의 빈 배경을 연결한다. `tabs/`의 완성 카드 이미지와 동적 카드 8개를 함께 사용하지 않는다. 카드 좌표는 `CosmeticShop/layout.json`, 하단 안내·복원·블라인드 영역은 y=500~529를 사용한다.
+- PC 에셋의 버튼 좌표는 1520×657, 상점 원본은 1112×534 기준이다. 상점 표시 크기만 Builder에서 1112×574로 확장하며 PC 기준 크기·82% 제한과 원본 카드 좌표는 유지한다. 스케일은 공통 상위 오브젝트에 적용해 표시와 클릭 영역을 함께 움직인다. 원본 합성 화면의 아이콘·상품 카드를 중복 배치하지 않는다.
+- 상점 `shopSprites`에는 `templates/`의 빈 배경을 연결한다. `tabs/`의 완성 카드 이미지와 동적 카드 8개를 함께 사용하지 않는다. 카드 좌표는 `CosmeticShop/layout.json`을 유지하고, 하단 안내·복원·블라인드 영역은 y=514~548, 구분선은 y=505·506에 둔다. 템플릿 border `(8, 12, 8, 500)`과 `Image.Type.Sliced`를 함께 유지해야 카드·하단 테두리가 늘어나지 않는다.
+- 카드의 `NamePaper`는 카드 좌표 `(12, 125, 148, 31)`의 불투명 종이색 `#FFF9EA`이며 원본 PNG에 박힌 상품명 자리의 가로선을 가린다. 첫 번째 자식으로 두어 상품명 텍스트 뒤에 표시하고 `raycastTarget=false`를 유지한다. 원본 PNG를 지우거나 반투명으로 바꾸지 않는다.
+- 하단 버튼은 기본 sliced Sprite의 갈색 테두리·크림색 면을 사용하며 비활성 색도 불투명하게 유지한다. 블라인드 선택은 녹색 외곽선으로 구분한다. 기존 직선 테두리 노드는 삭제하지 않고 비활성화해 씬·프리팹의 기존 ID를 보존한다.
 - 원본 카탈로그·블라인드 manifest·PNG는 치장 정의의 기준이다. 상점 레이아웃의 카탈로그 상대 경로는 프로젝트 배치에 맞춰 보정하되 원본 ID·순서·40개 null 가격을 바꾸지 않는다. 원본 통화 KRW를 C로 환산하거나 7.5절의 이전 가격을 새 상품에 임의 적용하지 않는다.
 - `CosmeticAppearanceController`는 PC 내부 창이 아닌 상담실 루트에 둔다. 선택은 Play 실행 중에만 유지하고 종료 후 저장하지 않는다. 카드 클릭·기본 복원은 소유권·지갑·게임 저장에 접근하지 않는다. 구매와 영구 장착은 별도 확정·저장 서비스가 구현된 뒤 연결한다.
 - 창문 9개 완성 이미지는 올림(맑음·흐림·비) → 절반(같은 순서) → 내림(같은 순서)이다. 별도 오버레이를 중복 합성하지 않는다. `RestoreAll()`은 날씨를 보존하지만 저수준 `ConsultationRoomAppearance.RestoreDefaults()`는 맑음으로 초기화하므로 용도를 구분한다.
@@ -859,7 +865,8 @@ room.SetRecord(null);
 ### 검증 결과와 제한
 
 - **이전 내부 창·기본 레이어 에셋 적용 검사: PC 125개 + 상담실 외형 49개 + 기록부 52개 = 226개 통과, 실패 0개.** Unity 6000.3.28f1의 실제 Play 모드에서 수행했다. 프로필 텍스트 3개가 처음에 넘친 문제와 슬라이더 손잡이 높이를 수정한 뒤 재검증했다. 이 숫자는 이번 40종 동적 상점·블라인드 구현의 최종 검사 결과가 아니다.
-- **이번 40종 치장 통합 검사: 치장 575개 + PC 125개 + 상담실 외형 49개 + 기록부 52개 = 801개 통과, 실패 0개.** Unity 6000.3.28f1 Play 모드에서 수행했다. 치장 검사는 5분류×8카드의 Raycaster·이벤트·선택, 8테마×3블라인드×3날씨의 실제 GPU 픽셀, 기본 복원·재열기·서류철 확대 동시 변경·블러·글리프·텍스트 넘침·데이터 불변과 검사 후 참조 복원을 확인한다. 보고서는 `artifacts/ui/cosmetic-checks.txt`, 캡처는 `cosmetics-shop-*.png`, `cosmetics-blinds-*.png`, `cosmetics-room-sage.png`, `cosmetics-record-sage.png`다.
+- **이전 40종 치장 통합 검사: 치장 575개 + PC 125개 + 상담실 외형 49개 + 기록부 52개 = 801개 통과, 실패 0개.** Unity 6000.3.28f1 Play 모드에서 수행했다. 치장 검사는 5분류×8카드의 Raycaster·이벤트·선택, 8테마×3블라인드×3날씨의 실제 GPU 픽셀, 기본 복원·재열기·서류철 확대 동시 변경·블러·글리프·텍스트 넘침·데이터 불변과 검사 후 참조 복원을 확인한다. 보고서는 `artifacts/ui/cosmetic-checks.txt`, 캡처는 `cosmetics-shop-*.png`, `cosmetics-blinds-*.png`, `cosmetics-room-sage.png`, `cosmetics-record-sage.png`다.
+- **최신 상점 UI 수정 검사: 치장 647개 + PC 125개 = 772개 통과, 실패 0개.** 하단 배치 검사 72개를 추가해 초기 비활성 상태와 5개 분류의 선택 상태에서 카드·테두리 여백, 컨트롤 간 겹침, PC 내부 수용, 버튼 글리프·텍스트 넘침을 확인했다. 상품명 가로선 수정 후 5개 분류 캡처도 확인했다. `cosmetics-footer-disabled.png`는 비활성 상태이며 나머지 보고서·캡처 경로는 위와 같다. 이 수정에서는 외형 49개·기록부 52개를 다시 실행하지 않았다.
 - 상담실 외형 검사는 날씨별 실제 GPU 픽셀 해시 차이, 열린 PC·기록부에서의 블러 유지, 5개 치장 대상 적용·해제와 원래 데이터 복원을 확인한다. 보고서 `artifacts/ui/room-appearance-checks.txt`, 캡처 `room-clear.png`, `room-cloudy.png`, `room-rain.png`, `room-pc-weather-blur.png`, `room-record-weather-blur.png`.
 - 설정 검사는 편집 중 확정값·음량·저장 불변, 취소·재진입, 드롭다운 우선 닫기, 적용 후 PlayerPrefs·AudioListener 반영을 확인한다. 검사 전 설정·프로필·사진과 저장 키의 원문/존재 여부를 복원한다. 실제 게임 저장을 만들지 않는다.
 - 이전 내부 창 적용에서는 원본 신규 PNG 15개의 바이트 일치와 신규 `.meta`를 확인했다. 당시 씬·프리팹은 기존 객체 ID 소실, 중복 ID, 미해결 내부 참조가 모두 0개였고 설치 메뉴 재실행 후에도 프로필·사진·설정 창이 하나씩 유지됐다. 이번에는 원본 cosmetics 206개·templates 5개·갱신 tabs 5개의 바이트 일치와 신규 메타 280개를 확인했다. 씬 기존 객체 551개와 프리팹 기존 객체 539개가 모두 보존되며 내부 참조 13,807개·외부 참조 1,164개의 미해결 항목과 중복 ID는 0개다. 적용 메뉴를 두 번 실행해도 동적 상점은 한 벌이며 객체 수가 같다.
@@ -882,7 +889,7 @@ room.SetRecord(null);
 
 ### 구현 우선순위
 
-PC 내부 네 화면, 기본 방 레이어·날씨, 원본 40종의 동적 카드·실행 중 미리보기·창문 블라인드 연결을 구현했다. 이번 치장 통합·회귀 검사는 총 801개 통과했다. 사용자 설정 저장과 게임 진행 자동 저장은 별개이며 미리보기는 진행 저장을 만들지 않는다. 다음 연결은 실제 프로필·사진 콘텐츠, 음원, 새 40종의 확정 가격·소유·구매 데이터다. 화면 단위는 C이지만 원본 카탈로그 KRW·null 가격은 보존하며 환산 규칙은 없다.
+PC 내부 네 화면, 기본 방 레이어·날씨, 원본 40종의 동적 카드·실행 중 미리보기·창문 블라인드 연결을 구현했다. 이전 치장 통합·회귀 검사는 총 801개, 최신 상점 하단·버튼·상품명 수정 검사는 치장·PC 772개를 통과했다. 사용자 설정 저장과 게임 진행 자동 저장은 별개이며 미리보기는 진행 저장을 만들지 않는다. 다음 연결은 실제 프로필·사진 콘텐츠, 음원, 새 40종의 확정 가격·소유·구매 데이터다. 화면 단위는 C이지만 원본 카탈로그 KRW·null 가격은 보존하며 환산 규칙은 없다.
 
 1. **실제 환자 데이터 연결:** 환자 JSON·공개 상태를 `MedicalRecordData`로 변환해 `SetRecord()`에 전달한다. 현재 null·빈 문자열은 `—`로 표시하므로 기획의 미설정·미확인·해당 없음 구분을 추가해야 한다. 샘플 환자를 서윤 확정 설정으로 오인하지 않는다.
 2. **대화·진행 연결:** 서버 요청·응답 규격을 확정하고 입력창·응답 대기·오류 재시도·질문 사용량 바를 연결한다. 총 질문 5개 → 마지막 답변·마무리 → 원문 저장 → 두 축 평가 → 보상 정산 → 자동 저장 순서를 적용한다. 책 안내서 열람 중에는 확정 응답을 보존하고 화면 전환은 닫은 뒤 이어간다.
@@ -1147,3 +1154,19 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 제한: 좌표 입력 도구가 `noWindowsAvailable`을 반환해 물리적 마우스 검증은 미완료다. Raycaster·이벤트 검사와 구분한다. Windows/macOS 실행 빌드·다른 화면 비율·실제 화면 설정 적용·청감 검증은 미수행이다. 가격·보유·구매·영구 장착 저장, 실제 프로필·사진·음원·자동 날씨는 후속 범위다. Unity는 검증 후 Edit 모드로 복귀했다.
 - 다음 추천 작업: (1) 사용자 마우스와 16:9·16:10 및 실행 빌드 확인, (2) 새 40종 가격·소유·구매·장착 저장 규칙 확정, (3) 지갑 승인→소유 확정→장착→자동 저장과 실패 복원 연결, (4) 실제 프로필·사진·음원·날씨 결정 연결. 환자·대화·총 질문 5개·책·엔딩의 기존 우선순위는 15절을 따른다.
 - 제출 범위: 이번 에셋·런타임·에디터 도구·씬·프리팹·README·plan01만 같은 브랜치에서 커밋·게시·PR로 묶는다. 작업 중 발견한 별도 로컬 `ConsultationRoomUI 2.prefab`과 메타는 보존하며 제출하지 않는다. `Library/Temp/Logs/UserSettings/artifacts`와 개인 설정은 제외한다. main 직접 푸시·PR 병합·자동 병합은 수행하지 않는다.
+
+
+### 17.17 상점 하단 겹침·버튼 스타일·상품명 가로선 수정
+
+- 구현·검증·문서 정리 완료 시각: **2026-11-05 22:20:51 KST (UTC+09:00)**. 커밋·작업 브랜치 게시·PR의 실제 결과는 Git 이력과 최종 보고에서 확인한다.
+- 요청: 상점 하단 버튼이 창 테두리에 걸리는 문제를 고치고 다른 UI의 디자인에 맞춰 버튼을 다듬는다. 작업 중 추가 요청한 상품명 뒤의 가로선도 함께 수정한다. 현재 추적 브랜치를 `pull --ff-only`로 확인한 뒤 PR #14가 병합된 최신 `origin/main`의 `99a8d95`에서 `codex/shop-footer-layout`을 만들고 main을 다시 fast-forward 확인했다. 기존 별도 복사 프리팹과 메타는 보존했다.
+- 원인·수정: 원본 상점의 짧은 하단 여백에 y=500~529 컨트롤이 걸쳐 있었다. `CosmeticShopBuilder.Build`가 표시 창만 `(253,61,1112,574)`로 바꾸고 `PrepareTemplate`이 5개 템플릿의 Sprite border를 `(8,12,8,500)`으로 설정한다. 카드·탭·하단 테두리는 유지하고 빈 종이 부분만 늘려 컨트롤을 y=514~548에 배치했다. PC 기준 크기와 상담실 너비 82% 제한은 그대로다.
+- 버튼: `TextButton`은 Unity 기본 sliced Sprite로 갈색 테두리·크림색 면·얕은 밝은 선·굵은 글자를 구성한다. 호버·누름·비활성 색과 블라인드 선택 녹색 외곽선을 구분한다. `DisableStraightBorder`는 기존 직선 테두리 자식을 비활성화해 ID를 보존하며 `Face`·`TopLight`는 동명 객체를 재사용한다.
+- 상품명: 선은 TMP 취소선이 아니라 5개 원본 템플릿의 이름 자리 표시선이었다. 카드마다 `NamePaper`를 `(12,125,148,31)`, 원본 바탕색 `#FFF9EA`, 불투명·raycast 비활성·첫 자식으로 배치해 선을 가리고 기존 이름을 그 위에 표시한다. 가격 태그·썸네일·클릭 영역은 유지한다. PNG 바이트는 수정하지 않는다.
+- 주요 파일·실행: `Assets/_Project/Editor/CosmeticShopBuilder.cs`, `CosmeticSmokeChecks.cs`, 템플릿 `.meta` 5개, `ConsultationRoom.unity`, `ConsultationRoomUI.prefab`, 동적 한글 폰트, README·이 문서. 저장된 씬에서 Play → 모니터 → 상점으로 확인한다. 재적용은 Edit 모드의 `Gamsamo > Apply Counseling Asset Pack`; `CheckFooterLayout`은 Play 모드 `Gamsamo > Run Cosmetic Checks`에 연결되어 실제 Canvas 모서리·간격·텍스트를 검사한다.
+- 데이터·주의점: 9-slice border와 `Image.Type.Sliced`를 함께 유지한다. 원본 카드 좌표를 축소하거나 PNG를 편집하지 않는다. NamePaper의 불투명 색·형제 순서·입력 비활성을 유지한다. 기존 40종 가격 미정·실행 중 미리보기·복원 계약과 씬/프리팹 양쪽 갱신 규칙은 바뀌지 않는다. 구매·저장·LLM 변경은 없다.
+- 검증: 상품명 수정 후 **치장 647 + PC 125 = 772개 통과, 실패 0개**. 기존 치장 575개에 초기 비활성·5분류 선택 상태의 하단 배치 검사 72개를 추가했다. 상품명 선 제거와 버튼·하단 여백은 실제 Game View 캡처로 확인했다. 보고서는 `artifacts/ui/cosmetic-checks.txt`·`pc-smoke-checks.txt`, 캡처는 `cosmetics-shop-*.png`·`cosmetics-footer-disabled.png`이며 Git에서 제외한다. Unity Editor 컴파일과 적용·검사 후 로그에 새 예외·컴파일 오류가 없다.
+- 정적 검증: 씬 객체 1,063→1,141, 프리팹 1,051→1,129로 기존 ID 소실·중복·미해결 내부 참조 0개이며 `NamePaper`는 각각 8개다. PNG 변경 0개; 템플릿 메타는 border만 바뀌었다. 폰트는 기존 192개 글리프를 보존하고 상품명 등의 55개 글리프를 추가했으며 설정·머티리얼은 유지했다. C#·Markdown 공백 검사 통과, Unity YAML의 기본 빈 값 뒤 공백은 직렬화 형식을 유지했다.
+- 제한: 이번 검증은 Unity 6000.3.28f1 Editor의 실제 Raycaster·이벤트·GPU·Canvas 검사다. 물리적 마우스, 목표별 16:9·16:10 화면 비율, Windows/macOS 실행 빌드는 미검증이다. 외형 49개·기록부 52개 검사는 이번에 반복하지 않았으며 이전 통과 이력은 17.16절에 남긴다. 검증 후 Unity는 Edit 모드로 복귀했다.
+- 다음 추천 작업: (1) 사용자 환경에서 마우스로 상품·블라인드·복원·닫기를 확인하고 목표 해상도의 실행 빌드 검증, (2) 이후 UI 변경 전에 씬/프리팹 연결 정리, (3) 40종 가격·소유·구매·영구 장착 규칙 확정 후 지갑 승인·자동 저장 연결. 환자·대화 기능의 전체 구현 순서는 15절을 따른다.
+- 제출: `codex/shop-footer-layout`에 구현·에셋 메타·씬·프리팹·폰트·문서를 함께 커밋하고 main 대상 PR 하나로 게시한다. 별도 로컬 `ConsultationRoomUI 2.prefab`·메타와 `Library/Temp/Logs/UserSettings/artifacts`는 제외한다. main 직접 푸시·PR 병합·자동 병합은 수행하지 않는다.

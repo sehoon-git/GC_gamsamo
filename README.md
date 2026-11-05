@@ -35,6 +35,8 @@ python tools/run_experiment.py
 
 PC 창은 실제 상담실 배경 너비의 82% 안에서 비율을 유지합니다. 넓은 게임 뷰에 여백이 생겨도 PC와 상점이 상담실 화면 밖으로 커지지 않습니다.
 
+상점은 상품 카드 크기를 유지하면서 하단 종이 여백을 늘려 안내·블라인드·기본 복원 버튼을 테두리 안에 배치합니다. 하단 버튼은 크림색 바탕·갈색 테두리와 초록색 선택 표시를 사용합니다. 빈 카드 이미지의 이름 자리 표시선은 같은 종이색 UI로 가려 상품명과 겹치지 않게 했습니다. 원본 PNG는 변경하지 않습니다.
+
 UI 프리팹은 `Assets/_Project/Prefabs/ConsultationRoomUI.prefab`입니다. 씬의 `ConsultationRoomUI`에 있는 `ConsultationRoomController`의 `record` 필드에서 예시 내용을 수정할 수 있습니다. 런타임에는 `SetRecord(MedicalRecordData)`로 내용을 교체합니다. 기록부 사진 칸은 항상 공백입니다. 배경과 팝업은 화면 비율을 유지하며, 화면 비율이 다르면 상담실 좌우 또는 상하에 여백이 생깁니다.
 
 Play 모드에서 `Gamsamo > Run UI Smoke Checks`로 클릭 영역, 모달 차단, 블러, 한글 표시, 텍스트 넘침, 닫기와 재열기를 검사합니다. 결과와 화면 캡처는 Git에서 제외된 `artifacts/ui/`에 저장됩니다. 씬을 처음 생성하는 도구는 `Gamsamo > Create Consultation Room Scene`이며, 기존 씬이 있으면 덮어쓰지 않습니다.

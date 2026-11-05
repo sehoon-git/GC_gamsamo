@@ -109,6 +109,9 @@ namespace Gamsamo.Editor
             desktop.OpenShop();
             yield return 0.2f;
             r.Check(shop.itemButtons.Length == 8 && shop.blindButtons.Length == 3, "Eight cards and three blind controls are installed");
+            CheckFooterLayout(r, desktop, shop, "initial disabled controls");
+            r.Capture("cosmetics-footer-disabled.png");
+            yield return 0.15f;
 
             for (int category = 0; category < Targets.Length; category++)
             {
@@ -146,6 +149,7 @@ namespace Gamsamo.Editor
                     yield return 0.02f;
                 }
                 CheckText(r, shop.statusText, "shop status " + category);
+                CheckFooterLayout(r, desktop, shop, Targets[category] + " selected controls");
                 r.Capture("cosmetics-shop-" + Targets[category] + ".png");
                 yield return 0.15f;
                 r.Check(Hit(shop.restoreCategoryButton) == shop.restoreCategoryButton, "Restore control receives input: " + category);
@@ -237,6 +241,87 @@ namespace Gamsamo.Editor
             text.ForceMeshUpdate(true);
             r.Check(!text.isTextOverflowing && text.text.All(c => char.IsWhiteSpace(c) || text.font.HasCharacter(c, true, false)),
                 "Readable Korean text: " + context);
+        }
+
+        private static void CheckFooterLayout(RunState r, PcDesktopView desktop,
+            CosmeticShopView shop, string context)
+        {
+            Canvas.ForceUpdateCanvases();
+            var window = desktop.shopWindow.transform as RectTransform;
+            var pc = desktop.transform as RectTransform;
+            var status = shop.statusText != null ? shop.statusText.rectTransform : null;
+            var restore = shop.restoreCategoryButton != null ? shop.restoreCategoryButton.transform as RectTransform : null;
+            var blinds = shop.blindControls != null ? shop.blindControls.transform as RectTransform : null;
+            var blindLabel = blinds != null ? blinds.Find("Label")?.GetComponent<TMP_Text>() : null;
+            bool ready = window != null && pc != null && status != null && restore != null && blinds != null
+                && blindLabel != null && desktop.wallpaper != null
+                && shop.blindButtons != null && shop.blindButtons.Length == 3
+                && shop.blindButtons.All(button => button != null)
+                && shop.itemButtons != null && shop.itemButtons.Length == 8
+                && shop.itemButtons.All(button => button != null);
+            r.Check(ready, "Footer geometry references are complete: " + context);
+            if (!ready) return;
+
+            // Read real world corners back into the shop's coordinate system. This includes
+            // inactive tab controls and non-interactable buttons, without altering their state.
+            var topLevel = new[] { status, blinds, restore };
+            var blindParts = new[] { blindLabel.rectTransform }
+                .Concat(shop.blindButtons.Select(button => (RectTransform)button.transform)).ToArray();
+            Rect[] footerBounds = topLevel.Concat(blindParts).Select(rect => BoundsIn(rect, window)).ToArray();
+            const float margin = 8f;
+            // The source artwork has a 12px bottom frame. Controls need another 8px of paper
+            // below them, so containment in the outer window rectangle alone is insufficient.
+            Rect paper = Rect.MinMaxRect(window.rect.xMin + 8f + margin, window.rect.yMin + 12f + margin,
+                window.rect.xMax - 8f - margin, window.rect.yMax - margin);
+            r.Check(footerBounds.All(bounds => Contains(paper, bounds)),
+                "Footer stays inside the paper with frame clearance: " + context);
+            float lowestCardEdge = shop.itemButtons.Min(button => BoundsIn((RectTransform)button.transform, window).yMin);
+            r.Check(footerBounds.All(bounds => bounds.yMax <= lowestCardEdge - margin + 0.1f),
+                "Footer has at least eight pixels below product cards: " + context);
+            r.Check(DoNotOverlap(topLevel.Select(rect => BoundsIn(rect, window)).ToArray()),
+                "Status, blind controls and restore button do not overlap: " + context);
+            Rect[] blindBounds = blindParts.Select(rect => BoundsIn(rect, window)).ToArray();
+            r.Check(DoNotOverlap(blindBounds), "Blind label and three buttons do not overlap: " + context);
+            Rect blindGroup = BoundsIn(blinds, window);
+            r.Check(blindBounds.All(bounds => Contains(blindGroup, bounds)),
+                "Blind controls remain within their group: " + context);
+            r.Check(Contains(BoundsIn(desktop.wallpaper.rectTransform, pc), BoundsIn(window, pc)),
+                "Shop window fits inside the PC desktop content: " + context);
+
+            CheckText(r, blindLabel, "blind group label " + context);
+            foreach (Button button in shop.blindButtons.Concat(new[] { shop.restoreCategoryButton }))
+                CheckText(r, button.GetComponentInChildren<TMP_Text>(true), button.name + " label " + context);
+        }
+
+        private static Rect BoundsIn(RectTransform rect, RectTransform relativeTo)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+            Vector2 max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+            foreach (Vector3 corner in corners)
+            {
+                Vector2 local = relativeTo.InverseTransformPoint(corner);
+                min = Vector2.Min(min, local);
+                max = Vector2.Max(max, local);
+            }
+            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+        }
+
+        private static bool Contains(Rect outer, Rect inner)
+        {
+            const float tolerance = 0.1f;
+            return inner.width > 0 && inner.height > 0
+                && inner.xMin >= outer.xMin - tolerance && inner.xMax <= outer.xMax + tolerance
+                && inner.yMin >= outer.yMin - tolerance && inner.yMax <= outer.yMax + tolerance;
+        }
+
+        private static bool DoNotOverlap(Rect[] bounds)
+        {
+            for (int first = 0; first < bounds.Length; first++)
+                for (int second = first + 1; second < bounds.Length; second++)
+                    if (bounds[first].Overlaps(bounds[second])) return false;
+            return true;
         }
 
         private static string PixelHash(RenderTexture source)

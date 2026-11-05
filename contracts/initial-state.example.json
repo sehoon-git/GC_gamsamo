@@ -1,6 +1,6 @@
 {
-  "format_version": 3,
-  "content_version": "seoyun-3.0",
+  "format_version": 4,
+  "content_version": "seoyun-4.0",
   "case_id": "case_example",
   "patient_id": "seoyun",
   "revision": 0,
@@ -15,7 +15,7 @@
       "id": "session_example",
       "started_at": "2026-11-06T00:00:00+00:00",
       "closed_at": null,
-      "questions_used": 0,
+      "opening": null,
       "phase": "active",
       "closing_request_id": null,
       "closing_text": "",

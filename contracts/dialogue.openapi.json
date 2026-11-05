@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "서윤 상담 실험",
-    "version": "0.3.0"
+    "version": "0.4.0"
   },
   "paths": {
     "/health": {
@@ -15,6 +15,156 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/dialogue/start": {
+      "post": {
+        "summary": "Start",
+        "operationId": "start_v1_dialogue_start_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/dialogue/open": {
+      "post": {
+        "summary": "Open Session",
+        "operationId": "open_session_v1_dialogue_open_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/dialogue/revisit": {
+      "post": {
+        "summary": "Revisit",
+        "operationId": "revisit_v1_dialogue_revisit_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -178,15 +328,15 @@
         "properties": {
           "format_version": {
             "type": "integer",
-            "const": 3,
+            "const": 4,
             "title": "Format Version",
-            "default": 3
+            "default": 4
           },
           "content_version": {
             "type": "string",
-            "const": "seoyun-3.0",
+            "const": "seoyun-4.0",
             "title": "Content Version",
-            "default": "seoyun-3.0"
+            "default": "seoyun-4.0"
           },
           "case_id": {
             "type": "string",
@@ -518,6 +668,91 @@
         "type": "object",
         "title": "Metrics"
       },
+      "OpenRequest": {
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/CaseState"
+          },
+          "session_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Session Id"
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Request Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "state",
+          "session_id",
+          "request_id"
+        ],
+        "title": "OpenRequest"
+      },
+      "Opening": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Id"
+          },
+          "patient_text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Patient Text"
+          },
+          "candidate_fact_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Candidate Fact Ids"
+          },
+          "created_at": "2026-11-06T00:00:00+00:00",
+          "metrics": {
+            "$ref": "#/components/schemas/Metrics"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "patient_text"
+        ],
+        "title": "Opening",
+        "description": "A patient's first utterance, with no invented counselor message."
+      },
+      "RevisitRequest": {
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/CaseState"
+          },
+          "session_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Session Id"
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Request Id"
+          },
+          "created_at": "2026-11-06T00:00:00+00:00"
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "state",
+          "session_id",
+          "request_id"
+        ],
+        "title": "RevisitRequest"
+      },
       "Session": {
         "properties": {
           "id": {
@@ -527,11 +762,15 @@
           },
           "started_at": "2026-11-06T00:00:00+00:00",
           "closed_at": "2026-11-06T00:00:00+00:00",
-          "questions_used": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Questions Used",
-            "default": 0
+          "opening": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Opening"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "phase": {
             "type": "string",
@@ -591,6 +830,40 @@
         "additionalProperties": false,
         "type": "object",
         "title": "Session"
+      },
+      "StartRequest": {
+        "properties": {
+          "patient_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Patient Id"
+          },
+          "case_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Case Id"
+          },
+          "session_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Session Id"
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Request Id"
+          },
+          "created_at": "2026-11-06T00:00:00+00:00"
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "patient_id",
+          "case_id",
+          "session_id",
+          "request_id"
+        ],
+        "title": "StartRequest"
       },
       "StateResponse": {
         "properties": {
@@ -658,14 +931,6 @@
             "minLength": 1,
             "title": "Patient Text"
           },
-          "question_delta": {
-            "type": "integer",
-            "enum": [
-              0,
-              1
-            ],
-            "title": "Question Delta"
-          },
           "topic_label": {
             "type": "string",
             "maxLength": 200,
@@ -690,8 +955,7 @@
         "required": [
           "id",
           "user_text",
-          "patient_text",
-          "question_delta"
+          "patient_text"
         ],
         "title": "Turn"
       },

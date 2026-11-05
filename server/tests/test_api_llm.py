@@ -5,22 +5,22 @@ from app.core.config import Settings, ExperimentError
 from app.llm.client import VllmClient
 from app.main import create_app
 from app.schemas.models import CaseState, Metrics, PatientReply, TurnRequest
-from conftest import FakeLLM, classification, reply
+from conftest import FakeLLM, classification, reply, opened_case
 
 
 @pytest.mark.asyncio
 async def test_api_auth_and_response_contract():
     settings = Settings(api_key="test-key")
-    llm = FakeLLM([("Classification", classification("none")), ("PatientReply", reply())])
+    llm = FakeLLM([("Classification", classification()), ("PatientReply", reply())])
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(settings, llm)), base_url="http://test") as client:
         assert (await client.get("/health")).status_code == 200
-        state = CaseState()
+        state = opened_case()
         body = TurnRequest(state=state, session_id=state.current.id, turn_id="hello", text="안녕하세요").model_dump()
         assert (await client.post("/v1/dialogue/turn", json=body)).status_code == 401
         response = await client.post("/v1/dialogue/turn", json=body, headers={"Authorization": "Bearer test-key"})
         assert response.status_code == 200, response.text
         assert response.json()["request_id"] == "hello"
-        assert response.json()["state"]["sessions"][0]["questions_used"] == 0
+        assert len(response.json()["state"]["sessions"][0]["turns"]) == 1
 
 
 class TinyTokenizer:
@@ -76,15 +76,15 @@ async def test_two_invalid_outputs_fail_without_silent_fallback(settings):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("legacy_version", [1, 2])
-async def test_legacy_version_and_compound_have_stable_error_envelopes(legacy_version):
+@pytest.mark.parametrize("legacy_version", [1, 2, 3])
+async def test_legacy_version_errors_and_compound_success(legacy_version):
     settings = Settings(mock=True, api_key="test-key")
     async with httpx.AsyncClient(base_url="http://test", transport=httpx.ASGITransport(app=create_app(settings)), headers={"Authorization": "Bearer test-key"}) as client:
         assert (await client.get("/health")).json()["mode"] == "mock"
-        state = CaseState()
+        state = opened_case()
         request = TurnRequest(state=state, session_id=state.current.id, turn_id="multi", text="면접은요? 친구는요?").model_dump()
         result = await client.post("/v1/dialogue/turn", json=request)
-        assert result.status_code == 422 and result.json()["detail"]["code"] == "needs_split"
+        assert result.status_code == 200 and len(result.json()["state"]["sessions"][0]["turns"]) == 1
         request["state"]["format_version"] = legacy_version
         result = await client.post("/v1/dialogue/turn", json=request)
         assert result.status_code == 422 and result.json()["detail"]["code"] == "unsupported_save_version"

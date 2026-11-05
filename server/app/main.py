@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import ExperimentError, Settings
 from app.llm.client import VllmClient
 from app.llm.mock import MockLLM
-from app.schemas.models import CONTENT_VERSION, FORMAT_VERSION, CloseRequest, EvaluateRequest, StateResponse, TurnRequest
+from app.schemas.models import CONTENT_VERSION, FORMAT_VERSION, CloseRequest, EvaluateRequest, OpenRequest, RevisitRequest, StartRequest, StateResponse, TurnRequest
 from app.services.catalog import Catalog
 from app.services.dialogue import DialogueService
 from app.services.evaluation import EvaluationService
@@ -33,7 +33,7 @@ def create_app(settings: Settings | None = None, llm=None):
         yield
         await engine.close()
 
-    app = FastAPI(title="서윤 상담 실험", version="0.3.0", lifespan=lifespan)
+    app = FastAPI(title="서윤 상담 실험", version="0.4.0", lifespan=lifespan)
 
     @app.exception_handler(ExperimentError)
     async def experiment_error(request, exc):
@@ -45,7 +45,7 @@ def create_app(settings: Settings | None = None, llm=None):
         legacy = isinstance(state, dict) and (state.get("format_version", FORMAT_VERSION) != FORMAT_VERSION or state.get("content_version", CONTENT_VERSION) != CONTENT_VERSION)
         return JSONResponse(status_code=422, content={"detail": {
             "code": "unsupported_save_version" if legacy else "invalid_request",
-            "message": "이전 기록은 보존하고 형식 3의 새 실험을 시작하세요." if legacy else "요청 형식·질문 사용량·상담 단계의 일관성을 확인하세요.",
+            "message": "이전 기록은 보존하고 형식 4의 새 실험을 시작하세요." if legacy else "요청 형식·대화 원문·상담 단계의 일관성을 확인하세요.",
         }})
 
     async def authorize(authorization: str = Header(default="")):
@@ -59,7 +59,24 @@ def create_app(settings: Settings | None = None, llm=None):
             "api": "ok", "inference": status, "content_version": catalog.patient["content_version"],
             "model_revision": engine.config["revision"], "prompt_version": catalog.prompt_version, "busy": gate.locked(),
             "format_version": FORMAT_VERSION, "mode": "mock" if settings.mock else "model",
+            "supported_patient_ids": [catalog.patient["id"]],
+            "supported_patients": [{"id": catalog.patient["id"], "display_name": catalog.patient["name"]}],
         })
+
+    @app.post("/v1/dialogue/start", response_model=StateResponse, dependencies=[Depends(authorize)])
+    async def start(request: StartRequest):
+        async with gate:
+            return await dialogue.start(request)
+
+    @app.post("/v1/dialogue/open", response_model=StateResponse, dependencies=[Depends(authorize)])
+    async def open_session(request: OpenRequest):
+        async with gate:
+            return await dialogue.open_session(request)
+
+    @app.post("/v1/dialogue/revisit", response_model=StateResponse, dependencies=[Depends(authorize)])
+    async def revisit(request: RevisitRequest):
+        async with gate:
+            return await dialogue.revisit(request)
 
     @app.post("/v1/dialogue/turn", response_model=StateResponse, dependencies=[Depends(authorize)])
     async def turn(request: TurnRequest):

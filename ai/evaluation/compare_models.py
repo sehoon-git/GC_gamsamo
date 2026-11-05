@@ -37,13 +37,11 @@ async def main():
         for repeat in range(2):
             for scenario in scenarios:
                 state = CaseState()
-                for i, (question, answer) in enumerate(scenario["context"]):
-                    state.current.turns.append(Turn(id=f"context_{i}", user_text=question, patient_text=answer, question_delta=1))
-                    state.current.questions_used += 1
                 state.revision = len(state.current.turns)
                 store.save(state)
                 client = SessionClient(settings, store, state)
                 sample = {"scenario": scenario["id"], "repeat": repeat, "input": scenario["text"], "context": scenario["context"], "focus": scenario["focus"]}
+                start = perf_counter()
                 try:
                     health = await client.http.get("/health")
                     health.raise_for_status()
@@ -53,19 +51,30 @@ async def main():
                     if not report["samples"]:
                         start = perf_counter()
                         warm = CaseState()
-                        body = {"state": warm.model_dump(), "session_id": warm.current.id, "turn_id": "warmup", "text": "안녕하세요."}
-                        response = await client.http.post("/v1/dialogue/turn", json=body)
+                        body = {"state": warm.model_dump(), "session_id": warm.current.id, "request_id": "warmup"}
+                        response = await client.http.post("/v1/dialogue/open", json=body)
                         response.raise_for_status()
                         report["warmup_seconds"] = perf_counter() - start
+                    opening_started = perf_counter()
+                    opening = await client.open()
+                    sample.update(opening=opening.patient_text, opening_seconds=perf_counter()-opening_started)
+                    # Authored scenario history is explicit synthetic context, not model evidence.
+                    contextual = client.state.model_copy(deep=True)
+                    for i, (question, answer) in enumerate(scenario["context"]):
+                        contextual.current.turns.append(Turn(id=f"context_{i}", user_text=question, patient_text=answer))
+                    if scenario["context"]:
+                        contextual.revision += 1
+                        client.replace(contextual)
+                    state = client.state.model_copy(deep=True)
                     start = perf_counter()
                     turn = await client.turn(scenario["text"])
-                    sample.update(seconds=perf_counter()-start, reply=turn.patient_text, question_delta=turn.question_delta,
+                    sample.update(seconds=perf_counter()-start, reply=turn.patient_text,
                                   metrics=turn.metrics.model_dump(), candidates=turn.candidate_fact_ids,
-                                  rule_pass=turn.question_delta == scenario["expected_delta"])
+                                  rule_pass=client.state.current.phase == "active")
                     assert store.load() == client.state
                 except ExperimentError as error:
                     sample.update(seconds=perf_counter()-start, error=error.code, message=str(error),
-                                  rule_pass=error.code == "needs_split" and scenario["expected_delta"] is None)
+                                  rule_pass=False)
                     assert client.state == state and store.load(state.case_id) == state
                 finally:
                     await client.close()

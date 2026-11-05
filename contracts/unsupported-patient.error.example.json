@@ -1,0 +1,6 @@
+{
+  "detail": {
+    "code": "unsupported_patient",
+    "message": "이 환자의 AI 상담 콘텐츠는 아직 준비되지 않았습니다."
+  }
+}

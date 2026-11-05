@@ -60,7 +60,7 @@ async def test_closing_notice_cannot_be_scored_or_remembered(catalog):
     case = closed_case(1)
     llm = FakeLLM([("JudgmentProposal", judgment(catalog, case))])
     response = await EvaluationService(llm, catalog).evaluate(EvaluateRequest(state=case, session_id=case.current.id, request_id="grade_notice"))
-    assert response.state.current.evaluation.source_messages == 2
+    assert response.state.current.evaluation.source_messages == 3
     assert CLOSING_TEXT not in str(llm.calls)
     score = next(s for s in response.state.current.evaluation.scores if s.criterion_id == "empathy")
     score.evidence = [Evidence(message_id="closing:closing", quote=CLOSING_TEXT)]
@@ -119,7 +119,7 @@ async def test_long_evaluation_visits_all_records(catalog):
 
 
 @pytest.mark.asyncio
-async def test_retry_consultation_carries_memory_but_resets_question_count(catalog):
+async def test_reconsultation_carries_memory_and_starts_without_turns(catalog):
     from app.schemas.models import Memory, MemoryItem, next_session
     case = closed_case()
     case.current.turns[0].candidate_fact_ids = ["cafe_strength"]
@@ -130,7 +130,7 @@ async def test_retry_consultation_carries_memory_but_resets_question_count(catal
     response = await EvaluationService(llm, catalog).evaluate(EvaluateRequest(state=case, session_id=case.current.id, request_id="grade"))
     continued = next_session(response.state)
     assert len(continued.sessions) == 2
-    assert continued.current.questions_used == 0 and not continued.current.turns
+    assert continued.current.opening is None and not continued.current.turns
     assert continued.memory == case.memory
     assert continued.revealed_fact_ids == ["cafe_strength"]
     catalog.validate_state(continued)
@@ -150,7 +150,7 @@ async def test_cleared_case_cannot_start_another_consultation(catalog):
 async def test_positive_scores_keep_support_and_counter_evidence(catalog):
     case = closed_case()
     proposal = judgment(catalog, case, 70, 70)
-    proposal['self_worth']['counter_evidence'] = [{'message_id': 'M0004', 'counter': True}]
+    proposal['self_worth']['counter_evidence'] = [{'message_id': 'M0005', 'counter': True}]
     result = await EvaluationService(FakeLLM([('JudgmentProposal', proposal)]), catalog).evaluate(
         EvaluateRequest(state=case, session_id=case.current.id, request_id='both-sides'))
     evidence = next(s for s in result.state.current.evaluation.scores if s.criterion_id == 'self_worth').evidence
@@ -183,6 +183,6 @@ async def test_empty_reconsultation_keeps_patient_history_but_has_no_counselor_e
     result = await evaluator.evaluate(EvaluateRequest(state=closed.state, session_id=second.current.id, request_id="second_grade"))
     value = result.state.current.evaluation
     assert (value.patient_score, value.counselor_score) == (70, 0)
-    assert value.source_messages == 2 and not value.cleared
+    assert value.source_messages == 3 and not value.cleared
     assert all(not score.evidence for score in value.scores if catalog.rubric[score.criterion_id]["axis"] == "counselor")
     catalog.validate_state(result.state)

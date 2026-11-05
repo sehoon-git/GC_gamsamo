@@ -9,7 +9,7 @@ from app.schemas.models import CaseState, next_session
 
 HELP = """명령:
   /help              도움말
-  /status            실험·상담·질문 사용량·상담 단계
+  /status            실험·상담·대화·처리 단계
   /retry             저장 또는 요청을 같은 ID로 재시도
   /finish            지금 상담 종료: 고정 안내 저장 후 평가
   /evaluate          마무리 저장 후 평가만 재시도
@@ -23,7 +23,7 @@ HELP = """명령:
 
 def status(client):
     state, session = client.state, client.state.current
-    print(f"[질문 {session.questions_used}개 · {session.phase} · 상담 {len(state.sessions)}회차]")
+    print(f"[{session.phase} · 상담 {len(state.sessions)}회차]")
 
 
 def show_evaluation(value, catalog):
@@ -50,8 +50,8 @@ async def main():
     print(f"실험: {state.case_id}\n저장 위치: {store.directory}\n/help로 명령을 볼 수 있습니다. x를 입력하고 Enter를 누르면 종료합니다.")
     if state.current.turns:
         print(f"\n마지막 서윤 발언: {state.current.turns[-1].complete_reply}")
-    else:
-        print("플레이어가 먼저 인사하세요.")
+    elif state.current.opening:
+        print(f"\n서윤 > {state.current.opening.patient_text}")
     if state.current.evaluation:
         show_evaluation(state.current.evaluation, client.catalog)
     status(client)
@@ -62,6 +62,9 @@ async def main():
         show_evaluation(value, client.catalog)
 
     async def advance():
+        if client.state.current.phase == "active" and client.state.current.opening is None:
+            opening = await client.open()
+            print("\n서윤 >", opening.patient_text)
         if client.state.current.phase == "closing":
             await client.finish()
         if client.state.current.phase == "pending_evaluation":
@@ -90,14 +93,17 @@ async def main():
                     print("\n".join(store.cases()))
                 elif text.startswith("/open "):
                     client.replace(store.load(case_id=text.split(maxsplit=1)[1]))
+                    await advance()
                     status(client)
                 elif text == "/new":
                     client.replace(CaseState())
                     print("이전 실험 기록을 보존했습니다. 새 실험:", client.state.case_id)
+                    await advance()
                     status(client)
                 elif text == "/next":
                     client.replace(next_session(client.state))
                     print("이전 기억을 이어 새 상담을 시작합니다.")
+                    await advance()
                     status(client)
                 elif text == "/finish":
                     await client.finish()
@@ -110,6 +116,8 @@ async def main():
                     await client.retry()
                     if client.state.current.turns:
                         print("\n서윤 >", client.state.current.turns[-1].complete_reply)
+                    elif client.state.current.opening:
+                        print("\n서윤 >", client.state.current.opening.patient_text)
                     await advance()
                     status(client)
                 elif text.startswith("/"):

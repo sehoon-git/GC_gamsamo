@@ -5,7 +5,7 @@ import re
 
 class MockLLM:
     def __init__(self, settings):
-        self.config = {**settings.model, "revision": "mock-fixture-v3"}
+        self.config = {**settings.model, "revision": "mock-fixture-v4"}
 
     def count(self, messages, role):
         return sum(len(m["content"]) for m in messages) // 2
@@ -14,7 +14,7 @@ class MockLLM:
         return self.count(messages, role) + self.config["roles"][role]["max_tokens"] + 128 < self.config["max_model_len"]
 
     async def health(self):
-        return {"ready": True, "model": "mock-fixture-v3"}
+        return {"ready": True, "model": "mock-fixture-v4"}
 
     async def close(self):
         pass
@@ -24,10 +24,7 @@ class MockLLM:
         text = messages[-1]["content"]
         if role == "controller":
             text = text.split("분류할 현재 상담자 발언:\n", 1)[-1]
-            multiple = text.count("?") + text.count("？") > 1 or "그리고 또" in text
-            asks = bool(re.search(r"[?？]|말씀해|알려|궁금|어떤|어떻|왜|인가요|나요", text))
-            value = {"reason": "연결 검증용 고정 분류", "topic_label": "현재 마음",
-                     "question_count": "multiple" if multiple else "one" if asks else "none", "disclose_fact_ids": []}
+            value = {"reason": "연결 검증용 맥락", "topic_label": "현재 마음", "disclose_fact_ids": []}
         elif role == "patient":
             value = {"text": "면접 생각을 하면 아직 긴장돼요. 지금은 제 마음을 천천히 이야기하고 싶어요.", "disclosed_fact_ids": []}
         elif role == "evaluation":

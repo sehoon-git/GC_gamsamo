@@ -21,7 +21,9 @@ class Catalog:
         CaseState.model_validate(state.model_dump())
         if not set(state.revealed_fact_ids) <= self.facts.keys():
             raise ExperimentError("알 수 없는 공개 정보 ID가 있습니다.")
-        candidates = {f for session in state.sessions for turn in session.turns for f in turn.candidate_fact_ids}
+        candidates = {f for session in state.sessions
+                      for turn in ([session.opening] if session.opening else []) + session.turns
+                      for f in turn.candidate_fact_ids}
         if not candidates <= self.facts.keys() or not set(state.revealed_fact_ids) <= candidates:
             raise ExperimentError("공개 확정 정보는 대화에 기록된 후보에서 선택해야 합니다.")
         record_map = {r.id: r for r in records(state) if r.kind == "dialogue"}

@@ -1,0 +1,22 @@
+{
+  "api": "ok",
+  "inference": {
+    "ready": true,
+    "model": "mock-fixture-v4"
+  },
+  "content_version": "seoyun-4.0",
+  "model_revision": "mock-fixture-v4",
+  "prompt_version": "21cfbe9c92d94400",
+  "busy": false,
+  "format_version": 4,
+  "mode": "mock",
+  "supported_patient_ids": [
+    "seoyun"
+  ],
+  "supported_patients": [
+    {
+      "id": "seoyun",
+      "display_name": "서윤"
+    }
+  ]
+}

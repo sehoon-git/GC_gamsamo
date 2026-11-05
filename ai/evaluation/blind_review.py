@@ -35,7 +35,6 @@ def main():
     samples,mapping=[],{}
     for key,left in indexes[0].items():
         right=indexes[1][key]
-        if left.get('error')==right.get('error')=='needs_split':continue
         order=[0,1];generator.shuffle(order)
         sample_id=f"Q{len(samples)+1:02d}"
         pair=[indexes[i][key] for i in order]

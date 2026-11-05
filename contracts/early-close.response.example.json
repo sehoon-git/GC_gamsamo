@@ -2,13 +2,13 @@
   "case_id": "case_example",
   "session_id": "session_example",
   "request_id": "early_close_example",
-  "base_revision": 1,
+  "base_revision": 2,
   "state": {
-    "format_version": 3,
-    "content_version": "seoyun-3.0",
+    "format_version": 4,
+    "content_version": "seoyun-4.0",
     "case_id": "case_example",
     "patient_id": "seoyun",
-    "revision": 2,
+    "revision": 3,
     "created_at": "2026-11-06T00:00:00+00:00",
     "revealed_fact_ids": [],
     "memory": {
@@ -20,7 +20,19 @@
         "id": "session_example",
         "started_at": "2026-11-06T00:00:00+00:00",
         "closed_at": "2026-11-06T00:00:00+00:00",
-        "questions_used": 0,
+        "opening": {
+          "id": "opening_example",
+          "patient_text": "면접 생각을 하면 아직 긴장돼요. 지금은 제 마음을 천천히 이야기하고 싶어요.",
+          "candidate_fact_ids": [],
+          "created_at": "2026-11-06T00:00:00+00:00",
+          "metrics": {
+            "seconds": 0.0,
+            "calls": 1,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "role_seconds": {}
+          }
+        },
         "phase": "pending_evaluation",
         "closing_request_id": "early_close_example",
         "closing_text": "상담은 여기까지 하겠습니다. 오늘 수고하셨습니다!",
@@ -37,7 +49,6 @@
             "id": "hello_example",
             "user_text": "안녕하세요. 와주셔서 감사합니다.",
             "patient_text": "면접 생각을 하면 아직 긴장돼요. 지금은 제 마음을 천천히 이야기하고 싶어요.",
-            "question_delta": 0,
             "topic_label": "현재 마음",
             "candidate_fact_ids": [],
             "created_at": "2026-11-06T00:00:00+00:00",

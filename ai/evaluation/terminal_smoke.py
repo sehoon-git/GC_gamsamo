@@ -1,4 +1,4 @@
-"""Real API: unlimited questions, user closing, automatic save, evaluation and resume.
+"""Real API: patient opening, freeform dialogue, user closing, automatic save, evaluation and resume.
 
 Uses a disposable save directory. Output stays in ignored ai/outputs.
 """
@@ -16,14 +16,14 @@ from app.core.config import ExperimentError, Settings
 from app.schemas.models import CLOSING_TEXT, CaseState, now, records, request_closing
 
 INPUTS = [
-    ("안녕하세요. 오늘 와주셔서 감사합니다.", 0),
-    ("면접을 앞두고 잠을 못 주무셨다고 들었어요. 그때 가장 부담됐던 건 어떤 점이었나요?", 1),
-    ("부담이 많이 컸겠어요.", 0),
-    ("면접에 가지 않은 날에는 어떤 마음이 들었나요?", 1),
-    ("그때 느낀 마음을 지금은 어떻게 바라보고 계세요?", 1),
-    ("카페에서 스스로 잘 해냈다고 느낀 경험이 궁금해요.", 1),
-    ("생활비 부담도 고려할 때 지금 감당할 수 있는 작은 계획은 무엇일까요?", 1),
-    ("그 계획에서 가장 먼저 해보고 싶은 일은 무엇인가요?", 1),
+    "안녕하세요. 오늘 와주셔서 감사합니다.",
+    "면접을 앞두고 잠을 못 주무셨다고 들었어요. 그때 가장 부담됐던 건 어떤 점이었나요?",
+    "부담이 많이 컸겠어요.",
+    "면접에 가지 않은 날에는 어떤 마음이 들었나요?",
+    "그때 느낀 마음을 지금은 어떻게 바라보고 계세요?",
+    "카페에서 스스로 잘 해냈다고 느낀 경험이 궁금해요.",
+    "생활비 부담도 고려할 때 지금 감당할 수 있는 작은 계획은 무엇일까요?",
+    "그 계획에서 먼저 해보고 싶은 일은 무엇인가요? 어려움이 생기면 어떤 도움이 필요할까요?",
 ]
 
 
@@ -45,20 +45,23 @@ async def main():
             response = await client.http.get("/health")
             response.raise_for_status()
             report["server"] = response.json()
-            for text, delta in INPUTS:
+            opening = await client.open()
+            report["opening"] = opening.model_dump()
+            assert store.load() == client.state
+            assert records(client.state)[0].speaker == "patient"
+            for index, text in enumerate(INPUTS, 1):
                 start = perf_counter()
                 turn = await client.turn(text)
-                entry = {"input": text, "reply": turn.patient_text, "delta": turn.question_delta,
+                entry = {"input": text, "reply": turn.patient_text,
                          "seconds": perf_counter() - start, "metrics": turn.metrics.model_dump()}
                 report["turns"].append(entry)
-                assert turn.question_delta == delta, f"Unexpected question count: {text}"
                 assert store.load() == client.state
                 assert client.state.current.phase == "active"
-                print(f"Questions {client.state.current.questions_used} saved; active", flush=True)
-                if client.state.current.questions_used == 4:
+                print(f"Dialogue {len(client.state.current.turns)} saved; active", flush=True)
+                if index == 4:
                     await client.close()
                     client = SessionClient(settings, store, store.load())
-            assert client.state.current.questions_used == 6
+            assert len(client.state.current.turns) == len(INPUTS)
             client.replace(request_closing(client.state))
             await client.close()
             client = SessionClient(settings, store, store.load())

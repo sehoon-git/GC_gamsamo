@@ -8,6 +8,7 @@
   "base": "room-base.png",
   "draw_order": [
     "base",
+    "room-wallpaper",
     "door",
     "window",
     "pc",
@@ -57,6 +58,14 @@
       "y": 771,
       "width": 407,
       "height": 258
+    },
+    "room-wallpaper": {
+      "file": "wallpaper-none.png",
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 1080,
+      "optional": true
     }
   },
   "dialogue_area": {

@@ -15,7 +15,7 @@ namespace Gamsamo.Editor
         public const string CatalogPath = "Assets/_Project/Settings/CosmeticCatalog.asset";
         const string ArtRoot = "Assets/_Project/Art/UI/CounselingPack/cosmetics/";
         const string ShopRoot = "Assets/_Project/Art/UI/CosmeticShop/";
-        static readonly string[] Targets = { "window", "door", "clipboard", "pc", "wallpaper" };
+        static readonly string[] Targets = { "window", "door", "clipboard", "pc", "wallpaper", "room-wallpaper" };
         static readonly string[] Themes = { "oak", "walnut", "sage", "lavender", "terracotta", "midnight", "brass", "white" };
 
         public static CosmeticCatalog Build()
@@ -56,10 +56,10 @@ namespace Gamsamo.Editor
 
         static void ValidateCatalog(CatalogData data, string json)
         {
-            Require(data != null && data.items != null && data.items.Length == 40, "Catalog must contain exactly 40 items.");
+            Require(data != null && data.items != null && data.items.Length == Targets.Length * Themes.Length, "Catalog must contain exactly 48 items.");
             Require(data.currency == "KRW", "Keep the supplied KRW currency; no conversion is defined.");
             Require(data.categories != null && data.categories.Select(entry => entry.id).OrderBy(id => id)
-                .SequenceEqual(Targets.OrderBy(id => id)), "Catalog categories must match the five supported targets.");
+                .SequenceEqual(Targets.OrderBy(id => id)), "Catalog categories must match the six supported targets.");
             Require(data.themes != null && data.themes.Select(entry => entry.id).OrderBy(id => id)
                 .SequenceEqual(Themes.OrderBy(id => id)), "Catalog must contain the eight supplied themes.");
             ValidateExplicitNullPrices(json);
@@ -129,7 +129,8 @@ namespace Gamsamo.Editor
         static void ValidateShopLayout(CatalogData catalog)
         {
             var shop = JsonUtility.FromJson<ShopLayout>(File.ReadAllText(ShopRoot + "layout.json"));
-            Require(shop?.tabs?.Length == 5, "Shop layout must contain five tabs.");
+            Require(shop?.tabs?.Length == Targets.Length, "Shop layout must contain six tabs.");
+            Require(shop.tabs.Select(tab => tab?.id).SequenceEqual(Targets), "Shop tabs must follow the runtime category order.");
             Require(Path.GetFullPath(Path.Combine(ShopRoot, shop.catalog ?? ""))
                 == Path.GetFullPath(ArtRoot + "catalog.json"), "Shop catalog reference does not point to the imported catalog.");
             var seen = new HashSet<string>();
@@ -187,7 +188,7 @@ namespace Gamsamo.Editor
                     prices++;
                 }
             }
-            Require(items == 40, "Exactly 40 explicit null prices are required.");
+            Require(items == Targets.Length * Themes.Length, "Exactly 48 explicit null prices are required.");
         }
 
         static CosmeticItem CreateItem(ItemData source)

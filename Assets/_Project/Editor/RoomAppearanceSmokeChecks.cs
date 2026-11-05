@@ -321,9 +321,10 @@ namespace Gamsamo.Editor
             private static readonly ConsultationRoomAppearance.CosmeticLayer[] Layers =
             {
                 ConsultationRoomAppearance.CosmeticLayer.Window, ConsultationRoomAppearance.CosmeticLayer.Door,
-                ConsultationRoomAppearance.CosmeticLayer.Clipboard, ConsultationRoomAppearance.CosmeticLayer.Pc
+                ConsultationRoomAppearance.CosmeticLayer.Clipboard, ConsultationRoomAppearance.CosmeticLayer.Pc,
+                ConsultationRoomAppearance.CosmeticLayer.RoomWallpaper
             };
-            private static readonly string[] Properties = { "windowCosmetic", "doorCosmetic", "clipboardCosmetic", "pcCosmetic" };
+            private static readonly string[] Properties = { "windowCosmetic", "doorCosmetic", "clipboardCosmetic", "pcCosmetic", "roomWallpaperCosmetic" };
 
             public CheckRun(ConsultationRoomAppearance appearance)
             {

@@ -39,11 +39,15 @@ namespace Gamsamo.UI
             cancelQuitButton.onClick.AddListener(CloseModal);
             confirmQuitButton.onClick.AddListener(ConfirmQuit);
             GameSettings.Applied += OnSettingsApplied;
-            // Room entry preserves per-patient AI autosaves. Full game-progress loading is not implemented.
-            loadButton.interactable = false;
+            loadButton.onClick.AddListener(ContinueGame);
             TMP_Text entryLabel = newGameButton.GetComponentInChildren<TMP_Text>(true);
-            if (entryLabel != null) entryLabel.text = "상담실 입장";
-            saveStatus.text = "기존 상담 기록은 상담실에서 자동 복원됩니다";
+            if (entryLabel != null) entryLabel.text = "새 게임";
+            try
+            {
+                loadButton.interactable = Gamsamo.Progression.GameProgressSession.Open() != null;
+                saveStatus.text = loadButton.interactable ? "저장된 진행을 이어갈 수 있습니다 · 새 게임도 이전 기록을 보존합니다" : "저장된 진행이 없습니다";
+            }
+            catch (Exception e) { loadButton.interactable = false; newGameButton.interactable = false; saveStatus.text = e.Message; }
             settingsModal.SetActive(false);
             quitModal.SetActive(false);
             transitionStatus.text = "";
@@ -132,7 +136,9 @@ namespace Gamsamo.UI
 #endif
         }
 
-        public void StartNewGame()
+        public void StartNewGame() => EnterGame(true);
+        public void ContinueGame() => EnterGame(false);
+        private void EnterGame(bool newGame)
         {
             if (IsBusy || IsSettingsOpen || IsQuitOpen) return;
             if (!Application.CanStreamedLevelBeLoaded(consultationSceneName))
@@ -141,6 +147,12 @@ namespace Gamsamo.UI
                 Debug.LogError("Start menu destination is absent from enabled build scenes: " + consultationSceneName, this);
                 return;
             }
+            try
+            {
+                if (!newGame && Gamsamo.Progression.GameProgressSession.Open() == null) return;
+                Gamsamo.Progression.GameProgressSession.NewGameRequested = newGame;
+            }
+            catch (Exception e) { transitionStatus.text = e.Message; return; }
             IsBusy = true; // Lock synchronously before starting the fade or an async load.
             SetMenuInput(false);
             StartCoroutine(LoadConsultationRoom());
@@ -195,6 +207,7 @@ namespace Gamsamo.UI
         private void OnDestroy()
         {
             if (newGameButton != null) newGameButton.onClick.RemoveListener(StartNewGame);
+            if (loadButton != null) loadButton.onClick.RemoveListener(ContinueGame);
             if (settingsButton != null) settingsButton.onClick.RemoveListener(OpenSettings);
             if (quitButton != null) quitButton.onClick.RemoveListener(OpenQuit);
             if (settingsBackdrop != null) settingsBackdrop.onClick.RemoveListener(CloseModal);

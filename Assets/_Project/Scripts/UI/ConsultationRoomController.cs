@@ -37,9 +37,18 @@ namespace Gamsamo.UI
         public bool IsRecordOpen { get; private set; }
         public bool IsPcOpen { get; private set; }
         // The patient input remains blocked until the room overlay has finished fading out.
-        public bool IsOverlayBlocking => activeModal != ModalKind.None;
+        public bool IsOverlayBlocking => activeModal != ModalKind.None || inputBlocks > 0;
+        private int inputBlocks;
+        public System.IDisposable AcquireInputBlock()
+        { inputBlocks++; return new InputLease(this); }
+        private sealed class InputLease : System.IDisposable
+        {
+            private ConsultationRoomController owner;
+            public InputLease(ConsultationRoomController owner) { this.owner = owner; }
+            public void Dispose() { if (owner == null) return; owner.inputBlocks--; owner = null; }
+        }
         public bool CanInteractWithRoom => initialized && isActiveAndEnabled
-            && activeModal == ModalKind.None && transition == null;
+            && !IsOverlayBlocking && transition == null;
 
         private enum ModalKind { None, Record, Pc }
 
@@ -52,6 +61,20 @@ namespace Gamsamo.UI
         private CosmeticAppearanceController subscribedAppearance;
         private readonly List<MedicalRecordData> patientRecords = new List<MedicalRecordData>();
         private int selectedRecord;
+        private readonly Dictionary<string, MedicalRecordData> archivedRecords = new Dictionary<string, MedicalRecordData>();
+        public void ClearArchivedRecords()
+        {
+            foreach (var archived in archivedRecords.Values) patientRecords.Remove(archived);
+            archivedRecords.Clear();
+        }
+        public void SetArchivedRecord(string key, MedicalRecordData data)
+        {
+            if (archivedRecords.TryGetValue(key, out var old)) patientRecords.Remove(old);
+            archivedRecords[key] = data;
+            patientRecords.RemoveAll(item => item.registrationNumber == "SAMPLE-001");
+            patientRecords.Add(data);
+            RefreshSelectedRecord();
+        }
 
         private CanvasGroup ActiveGroup => activeModal == ModalKind.Record ? modal
             : activeModal == ModalKind.Pc ? pcModal : null;
@@ -128,7 +151,7 @@ namespace Gamsamo.UI
         {
             record = data;
             if (data == null) return;
-            int index = patientRecords.FindIndex(item => item.registrationNumber == data.registrationNumber);
+            int index = patientRecords.FindIndex(item => item.registrationNumber == data.registrationNumber && !archivedRecords.ContainsValue(item));
             if (index < 0)
             {
                 // The design preview is not a real patient's consultation archive.
@@ -167,7 +190,7 @@ namespace Gamsamo.UI
 
         public void OpenRecord()
         {
-            if (!isActiveAndEnabled || modal == null || IsRecordOpen)
+            if (inputBlocks > 0 || !isActiveAndEnabled || modal == null || IsRecordOpen)
                 return;
             RefreshSelectedRecord();
             if (recordDrag != null)
@@ -192,7 +215,7 @@ namespace Gamsamo.UI
 
         public void OpenPc()
         {
-            if (!isActiveAndEnabled || pcModal == null || IsPcOpen)
+            if (inputBlocks > 0 || !isActiveAndEnabled || pcModal == null || IsPcOpen)
                 return;
             if (pcDesktopView != null)
                 pcDesktopView.ResetDesktop();

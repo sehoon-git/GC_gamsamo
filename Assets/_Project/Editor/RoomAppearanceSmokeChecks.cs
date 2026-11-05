@@ -300,6 +300,8 @@ namespace Gamsamo.Editor
             public readonly bool OriginalRunInBackground;
             private readonly ConsultationRoomAppearance.Weather originalWeather;
             private readonly Texture2D[] originalCosmetics;
+            private readonly Texture2D[] originalWindowVariants;
+            private readonly int originalBlindState;
             private readonly Sprite originalWallpaper;
             private readonly bool originalPcOpen;
             private readonly bool originalRecordOpen;
@@ -330,6 +332,8 @@ namespace Gamsamo.Editor
                 Desktop = Room.pcDesktopView;
                 OriginalRunInBackground = Application.runInBackground;
                 originalWeather = appearance.CurrentWeather;
+                originalWindowVariants = appearance.WindowVariantTextures;
+                originalBlindState = appearance.WindowBlindState;
                 var serialized = new SerializedObject(appearance);
                 originalCosmetics = Properties.Select(name => serialized.FindProperty(name).objectReferenceValue as Texture2D).ToArray();
                 originalWallpaper = Desktop.wallpaper != null ? Desktop.wallpaper.sprite : null;
@@ -385,6 +389,8 @@ namespace Gamsamo.Editor
                         Appearance.SetWeather(originalWeather);
                         for (int index = 0; index < Layers.Length; index++)
                             Appearance.SetCosmetic(Layers[index], originalCosmetics[index]);
+                        if (originalWindowVariants.Length > 0)
+                            Appearance.SetWindowVariant(originalWindowVariants, originalBlindState);
                     }
                     if (Desktop != null && Desktop.wallpaper != null)
                         Desktop.wallpaper.sprite = originalWallpaper;
@@ -410,8 +416,10 @@ namespace Gamsamo.Editor
                 var serialized = new SerializedObject(Appearance);
                 bool cosmeticsRestored = Enumerable.Range(0, Layers.Length).All(index =>
                     serialized.FindProperty(Properties[index]).objectReferenceValue == originalCosmetics[index]);
-                Check(Appearance.CurrentWeather == originalWeather && cosmeticsRestored,
-                    "Cleanup restores original weather and exact cosmetic overrides");
+                Check(Appearance.CurrentWeather == originalWeather && cosmeticsRestored
+                    && Appearance.WindowVariantTextures.SequenceEqual(originalWindowVariants)
+                    && Appearance.WindowBlindState == originalBlindState,
+                    "Cleanup restores original weather, exact cosmetic overrides, window variants, and blind state");
                 Check(Desktop.wallpaper != null && Desktop.wallpaper.sprite == originalWallpaper,
                     "Cleanup restores the original wallpaper Sprite");
                 Check(Room.IsPcOpen == originalPcOpen && Room.IsRecordOpen == originalRecordOpen

@@ -28,6 +28,7 @@ namespace Gamsamo.UI
         public ProfileView profileView;
         public PhotoGalleryView photoView;
         public PcSettingsView settingsView;
+        public CosmeticShopView shopView;
         public Image wallpaper;
         public Sprite defaultWallpaper;
         public ConsultationRoomAppearance roomAppearance;
@@ -103,6 +104,8 @@ namespace Gamsamo.UI
             ActiveTabIndex = index;
             if (shopImage != null)
                 shopImage.sprite = shopSprites[index];
+            if (shopView != null)
+                shopView.ShowCategory(index);
         }
 
         /// <summary>Returns to the desktop without taking focus away from the room controller.</summary>

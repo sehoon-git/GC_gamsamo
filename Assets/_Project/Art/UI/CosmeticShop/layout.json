@@ -33,7 +33,17 @@
         "height": 48
       },
       "scene_asset_key": "window",
-      "products": []
+      "products": [
+        "window.oak",
+        "window.walnut",
+        "window.sage",
+        "window.lavender",
+        "window.terracotta",
+        "window.midnight",
+        "window.brass",
+        "window.white"
+      ],
+      "empty_window_png": "templates/window.png"
     },
     {
       "id": "door",
@@ -46,7 +56,17 @@
         "height": 48
       },
       "scene_asset_key": "door",
-      "products": []
+      "products": [
+        "door.oak",
+        "door.walnut",
+        "door.sage",
+        "door.lavender",
+        "door.terracotta",
+        "door.midnight",
+        "door.brass",
+        "door.white"
+      ],
+      "empty_window_png": "templates/door.png"
     },
     {
       "id": "clipboard",
@@ -59,7 +79,17 @@
         "height": 48
       },
       "scene_asset_key": "clipboard",
-      "products": []
+      "products": [
+        "clipboard.oak",
+        "clipboard.walnut",
+        "clipboard.sage",
+        "clipboard.lavender",
+        "clipboard.terracotta",
+        "clipboard.midnight",
+        "clipboard.brass",
+        "clipboard.white"
+      ],
+      "empty_window_png": "templates/clipboard.png"
     },
     {
       "id": "pc",
@@ -72,7 +102,17 @@
         "height": 48
       },
       "scene_asset_key": "pc",
-      "products": []
+      "products": [
+        "pc.oak",
+        "pc.walnut",
+        "pc.sage",
+        "pc.lavender",
+        "pc.terracotta",
+        "pc.midnight",
+        "pc.brass",
+        "pc.white"
+      ],
+      "empty_window_png": "templates/pc.png"
     },
     {
       "id": "wallpaper",
@@ -85,7 +125,17 @@
         "height": 48
       },
       "pc_desktop_image_key": "wallpaper",
-      "products": []
+      "products": [
+        "wallpaper.oak",
+        "wallpaper.walnut",
+        "wallpaper.sage",
+        "wallpaper.lavender",
+        "wallpaper.terracotta",
+        "wallpaper.midnight",
+        "wallpaper.brass",
+        "wallpaper.white"
+      ],
+      "empty_window_png": "templates/wallpaper.png"
     }
   ],
   "balance": {
@@ -167,5 +217,24 @@
     "y": 5,
     "width": 41,
     "height": 34
+  },
+  "catalog": "../CounselingPack/cosmetics/catalog.json",
+  "slot_binding": {
+    "order": "tabs[].products in row-major order",
+    "price_source": "catalog item price_krw",
+    "null_price": "unset; render no price",
+    "thumbnail_and_name": "baked in active_window_png; use empty_window_png for fully dynamic composition",
+    "price_area_in_slot": {
+      "x": 177,
+      "y": 128,
+      "width": 47,
+      "height": 19
+    },
+    "thumbnail_area_in_slot": {
+      "x": 14,
+      "y": 15,
+      "width": 218,
+      "height": 96
+    }
   }
 }

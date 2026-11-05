@@ -704,7 +704,33 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 ## 15. 현재 구현과 연결 지점
 
-이 절은 Unity 상담실·기록부·PC·상점·프로필·사진·환경설정 UI, 40종 치장과 블라인드의 실행 중 미리보기, 사용자 설정 저장, 시작 화면 브라우저 시안, 독립 실행하는 서윤 AI 실험의 구현 상태를 기록한다. **Unity UI와 AI는 아직 연결되지 않았다.** AI의 대화·기억·평가·클라이언트 저장은 구현되어 있으나, 최신 총 질문 5개·공감 별도·자동 저장 전용 규칙과 차이가 있다. Unity의 질문 사용량·평가·보상·실제 상품 구매·게임 진행 자동 저장·책·엔딩 연결은 남아 있다. 각 작업의 검증 환경·시점은 별도로 기록한다.
+이 절은 Unity 상담실·환자 6명 입장과 임시 대화·기록부·PC·상점·프로필·사진·환경설정 UI, 40종 치장과 블라인드의 실행 중 미리보기, 사용자 설정 저장, 시작 화면 브라우저 시안, 독립 실행하는 서윤 AI 실험의 구현 상태를 기록한다. **Unity UI와 AI는 아직 연결되지 않았다.** 문 클릭 입장과 이름·임시 대사 표시는 로컬 UI 시연이며 정식 해금·임상 설정·상담 완료 판정을 구현한 것이 아니다. AI의 대화·기억·평가·클라이언트 저장은 구현되어 있으나, 최신 총 질문 5개·공감 별도·자동 저장 전용 규칙과 차이가 있다. Unity의 질문 사용량·평가·보상·실제 상품 구매·게임 진행 자동 저장·책·엔딩 연결은 남아 있다. 각 작업의 검증 환경·시점은 별도로 기록한다.
+
+### 문 클릭 환자 입장과 임시 대화 — feature/records
+
+- 사용자 지정 작업 브랜치는 `feature/records`다. 최신 main의 기존 치장·PC·AI 계획을 유지하며 현재 상담실 씬과 독립 프리팹 양쪽에 환자 UI를 추가한다.
+- 로컬 시연 순서는 **서윤(`seoyun`) → 도현(`dohyeon`) → 민석(`minseok`) → 태준(`taejun`) → 지은(`jieun`) → 하린(`harin`)**이다. 원본은 `Assets/_Project/Settings/PatientVisits.json`이며 ID·이름·초상화 경로·임시 대사를 담는다. 기존 `Assets/StreamingAssets/GameData/Patients/seoyun.json`의 상담 설정과 분리하고 기존 콘텐츠 버전·평가 항목은 변경하지 않는다.
+- 문을 누르면 `Waiting → Entering → Consulting → Leaving → Waiting/Finished`로 진행한다. 입장 요청 직후 상태를 먼저 잠그므로 빠른 연속 클릭도 다음 환자를 예약하지 않는다. 입장·상담·퇴장 중에는 새 입장을 거부한다. 6명 이후에는 `Finished`로 남고 처음으로 돌아가지 않는다.
+- 초상화는 문 방향에서 중앙 자리로 이동·나타나며, 책상 윗면 경계의 마스크로 하체를 가린다. 원본 이미지의 어두운 바탕은 `PatientPortrait.shader`와 전용 머티리얼로 표시에서 제거한다. 기록부·PC 클릭 영역과 기존 치장 합성은 유지한다.
+- 도착하면 이름과 첫 임시 대사를 자동 표시한다. `계속 듣기`는 타이핑 완료 또는 다음 임시 문장을 표시하며 마지막 문장만으로 상담이 끝나지 않는다. `상담 마치기`로 확인창을 열고 다시 확인해야 퇴장한다. 확인창의 `계속 상담하기` 또는 `Esc`는 종료를 취소한다.
+- PC·기록부가 열리거나 닫히는 동안에는 `ConsultationRoomController.IsOverlayBlocking`으로 문·대화 입력을 막는다. 대화창은 숨기고 타이핑과 입퇴장 연출을 일시 정지하며, 창을 닫으면 같은 환자·세션을 이어간다. 상담 상태가 유지된 채 컴포넌트가 비활성화된 경우에도 다시 활성화할 때 같은 환자의 입퇴장을 재개한다.
+- 입장할 때 기록부에는 현재 환자 ID·이름·날짜와 미확인 항목을 넣는다. 병력·복약·상담 원문·공개 정보는 임의로 생성하지 않으며 사진 칸도 비운다. 입장 전의 예시 기록과 현재 이름 표시를 실제 환자 설정 연동 완료로 해석하지 않는다.
+- `useDemoDialogue=true`가 현재 기본값이다. 후속 LLM 어댑터는 이를 끄고 `PatientArrived(sessionId, patientId)`를 받아 `PresentPatientLine(sessionId, text)`에 결과를 전달한다. 활성 세션과 다른 ID, 종료·퇴장한 세션, 빈 대사는 거부한다. `CompleteConsultation(sessionId)`는 활성 상담을 퇴장 상태로 바꾸는 연결 함수이며 팝업 차단 중에는 거부하므로 닫힌 후 호출한다. 이 함수는 환자 클리어·보상·자동 저장을 의미하지 않는다.
+- 이번에는 네트워크 호출, 질문 입력·총 5회 계산, AI 평가, 저장, 승급·엔딩을 추가하지 않는다. 고정 순서는 시연용이며 기존 단계별 해금 기획을 대체하지 않는다. 대화창은 짧은 임시 대사에 맞춘 것으로 긴 LLM 응답의 페이지 나누기·스크롤과 원문 보존은 후속 연결 전에 구현한다.
+- 설치는 Edit 모드의 `Gamsamo > Install Patient Visits`, 검사는 새 Play 실행의 빈 상담실에서 `Gamsamo > Run Patient Visit Checks`다. 검사는 실제 UI Raycaster·버튼 이벤트와 상태 전이를 확인하도록 구성하고 `artifacts/ui/patient-visit-checks.txt`에 기록한다. 검사 뒤 Editor 전용 `ResetPreview()`가 입장 수·세션·표시를 초기 상태로 돌린다. 실제 이번 실행 결과와 완료 시각은 17.18절에 확정한다.
+
+<a id="patient-dialogue-art"></a>
+
+#### 환자 대화창 이미지 생성 기록
+
+- 도구: 기본 제공 `image_gen` 이미지 생성. 별도 API·CLI는 사용하지 않는다.
+- 산출물: `Assets/_Project/Art/UI/Dialogue/DialoguePanel.png`, 2172×724, 외곽 투명 배경. 기존 상담실의 따뜻한 종이·나무 색감에 맞춘 빈 대화 패널이며 이름·문장은 TMP로 덧붙인다.
+- 보존 규칙: 패널 안에 고정 인물 이름이나 `???`를 넣지 않는다. 게임에서 출력한 이름과 대사는 리치 텍스트로 해석하지 않는다. 원본 초상화의 신원·복장·포즈를 변경하지 않으며 생성 패널을 프로젝트 안에 보관한다.
+- 최종 생성 프롬프트 원문(요청 비율과 실제 출력 크기는 다르며 실제 2172×724 출력의 알파를 유지했다):
+
+```text
+Create a production 2D game UI asset: a single wide horizontal dialogue speech panel for a cozy Korean counseling-room visual novel. Warm peach and cream paper, subtle handmade paper fibers, thin muted walnut-brown ink border, softly rounded corners, a small dusty terracotta paper name-tab overlapping the upper-left edge. The name-tab is completely blank. Large cream main body is completely blank for dynamic Korean dialogue rendered by Unity. A very small upward-pointing speech tail centered on top hints at the seated speaker. Quiet hand-painted illustration compatible with warm wooden desk and softly painted beige room; restrained detailing only around edges. Flat straight-on UI, no perspective. Intended asset ratio 4:1, approximately 1536x384, panel occupies almost entire wide canvas with only 12px transparent margin. True transparent exterior, opaque light cream panel interior. No scene, no people, no text, no letters, no symbols, no buttons, no baked-in interface labels, no watermark. Use attached counseling-room screenshot only as color/style reference, and attached dialogue example only as compositional reference; create original art without copying its text or decorative binder rings.
+```
 
 ### 시작 화면 로컬 시안 — Unity 외부 레이아웃 검토
 
@@ -733,7 +759,7 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 사용자가 제공한 상담실 이미지와 단독 기록부 이미지를 사용했다. 합성 참고 화면은 에셋으로 추가하지 않았다. 기록부는 외곽과 클립 구멍을 투명하게 처리하고 사진 칸의 인물을 제거했다. 사진 칸은 현재 공백이며 환자 초상화 연결 기능은 없다. 이미지 편집 도구·프롬프트는 [에셋 편집 기록](#asset-edit)에 보관했다.
 
-표 위에 12개 TextMeshPro 필드를 배치했다. 현재 내용은 `MedicalRecordData.CreateSample()`의 가상 환자 예시다. LLM 서버, 환자 원본 데이터, 진행도, 저장과는 아직 연결하지 않았다.
+표 위에 12개 TextMeshPro 필드를 배치했다. 첫 환자 입장 전에는 `MedicalRecordData.CreateSample()`의 가상 예시를 표시한다. 문 클릭으로 환자가 입장하면 현재 ID·이름·날짜와 미확인 항목으로 교체한다. LLM 서버, 환자 원본의 공개 정보·임상 설정, 진행도, 저장과는 아직 연결하지 않았다.
 
 모니터의 PC·상점 UI와 프로필·사진·설정 창을 추가했다. 상점은 원본 카탈로그 40종의 카드와 미리보기·분류별 기본 복원·창문 블라인드 조절을 제공한다. 프로필·사진은 실제 콘텐츠가 없으면 빈 상태를 표시한다. 열기·닫기·탭 동작과 제공 에셋 범위는 8.5절을 따른다. 배경 블러는 하나의 `ConsultationRoomController`가 관리하므로 상점만 닫거나 외형을 바꿀 때도 유지된다.
 
@@ -741,9 +767,10 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 1. Unity `6000.3.28f1`로 저장소 루트 프로젝트를 연다.
 2. `Assets/_Project/Scenes/ConsultationRoom.unity`를 열고 Play를 누른다.
-3. 왼쪽 아래 기록부를 열어 내용·블러를 확인하고 닫기 버튼, 배경 클릭, `Esc`를 확인한다.
-4. 오른쪽 모니터 → 상점 → 탭 5개와 각 카드 8개를 확인한다. 카드 선택·분류별 기본 복원·창문 블라인드 3단계를 조작한다. 내부 X·`Esc`는 바탕화면으로 돌아오고 PC X는 상담실로 돌아온다. PC를 닫고 기록부를 열면 선택한 서류철 확대 외형을 확인할 수 있다.
-5. Play 모드의 `Gamsamo > Run Cosmetic Checks`로 치장 40종·창문 72조합을 검사하고 `Gamsamo > Run PC UI Smoke Checks`로 PC 검사를 실행한다. 기존 기록부는 `Gamsamo > Run UI Smoke Checks`로 검사한다.
+3. 왼쪽 문을 눌러 환자 입장·이름·임시 대사를 확인한다. `계속 듣기`, `상담 마치기`의 취소·확인을 조작하고 퇴장 후 문으로 다음 환자를 받는다. 6명 이후에는 입장이 끝난다.
+4. 왼쪽 아래 기록부를 열어 현재 환자 이름·블러를 확인하고 닫기 버튼, 배경 클릭, `Esc`를 확인한다. PC·기록부 열람 중 대화는 보존된다.
+5. 오른쪽 모니터 → 상점 → 탭 5개와 각 카드 8개를 확인한다. 카드 선택·분류별 기본 복원·창문 블라인드 3단계를 조작한다. 내부 X·`Esc`는 바탕화면으로 돌아오고 PC X는 상담실로 돌아온다. PC를 닫고 기록부를 열면 선택한 서류철 확대 외형을 확인할 수 있다.
+6. 새 Play 실행의 빈 상담실에서 `Gamsamo > Run Patient Visit Checks`를 실행한다. 기존 검사는 `Gamsamo > Run Cosmetic Checks`, `Gamsamo > Run PC UI Smoke Checks`, `Gamsamo > Run UI Smoke Checks`로 각각 실행한다. 서로 다른 검사 메뉴는 동시에 실행하지 않는다.
 
 | 위치 | 용도 |
 | --- | --- |
@@ -752,6 +779,12 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 | `Assets/_Project/Art/UI/CounselingPack/room/` | 새 상담실 레이어·3종 날씨·기록부 (이전 배경은 초기 생성·시안용 보존) |
 | `Assets/_Project/Art/UI/CounselingPack/room/medical-record-front.png` | 현재 기록부 이미지, 빈 사진 칸 |
 | `Assets/_Project/Scripts/Patients/MedicalRecordData.cs` | 화면 표시용 기록 데이터 |
+| `Assets/_Project/Settings/PatientVisits.json` | 6명 이름·고정 시연 순서·초상화 경로·임시 대사 |
+| `Assets/_Project/Art/Characters/Patients/`, `Art/UI/Dialogue/DialoguePanel.png` | 환자 원본 초상화 6개와 생성 대화창 이미지 |
+| `Assets/_Project/Scripts/Patients/PatientVisitDefinition.cs` | 입장 표시 자료형. 정식 환자 설정과 별개 |
+| `Assets/_Project/Scripts/Dialogue/PatientVisitController.cs`, `PatientDialogueView.cs` | 입장 상태·문 잠금·세션 ID·타이핑·종료 확인 |
+| `Assets/_Project/Shaders/PatientPortrait.shader`, `Materials/PatientPortrait.mat` | 초상화의 어두운 바탕 제거와 UI 마스크 지원 |
+| `Assets/_Project/Editor/PatientVisitSceneInstaller.cs`, `PatientVisitSmokeChecks.cs` | 기존 씬·프리팹에 추가 설치, Play 동작 검사 |
 | `Assets/_Project/Scripts/UI/` | 모달·텍스트·블러·클릭 영역·크기 조절 |
 | `Assets/_Project/Shaders/ConsultationBackgroundBlur.shader` | 배경 전용 블러 셰이더 |
 | `Assets/_Project/Editor/ConsultationRoomSceneBuilder.cs` | 씬과 프리팹 초기 생성 도구 |
@@ -775,6 +808,16 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 | 클래스·함수 | 역할과 사용 규칙 |
 | --- | --- |
+| `PatientVisitController.TryAdmitNextPatient()` | 대기 상태와 팝업 차단 여부를 확인한 뒤 한 명을 예약하고 입장. 입장·상담·퇴장·6명 종료 상태에서 거부 |
+| `PatientVisitController.PatientArrived(sessionId, patientId)` | 착석 후 발생하는 LLM 어댑터용 이벤트. 실제 서버 호출은 아직 없음 |
+| `PatientVisitController.PresentPatientLine(sessionId, text)` | 활성 상담의 동일 세션만 받아 이름과 대사를 표시. 종료된 세션·빈 대사는 거부 |
+| `PatientVisitController.NextDemoLine()` | 타이핑 완료 또는 다음 임시 문장 표시. 마지막 문장만으로 종료하지 않음 |
+| `PatientVisitController.RequestEndConsultation/CancelEndConsultation/ConfirmEndConsultation` | 상담 종료 확인창의 열기·취소·확정. 사용자 클릭은 확인 단계를 거침 |
+| `PatientVisitController.CompleteConsultation(sessionId)` | 활성 세션을 무효화하고 퇴장. 팝업 차단 중에는 거부하며 클리어·점수·보상·저장은 처리하지 않음 |
+| `PatientDialogueView.ShowLine/RevealAll/SetSuspended` | 이름·대사·타이핑·전체 표시와 팝업 중 일시 정지. `richText=false` 유지 |
+| `PatientVisitSceneInstaller.Install()` | 저장된 상담실 씬과 독립 프리팹 양쪽에 문·초상화·대화창·확인창을 추가. 기존 기능 계층은 보존 |
+| `PatientVisitSmokeChecks.Run()`, `PatientVisitController.ResetPreview()` | 새 Play의 방문 대기 상태 검사와 Editor 전용 초기 상태 복원. 실행 게임의 저장·진행 초기화 API가 아님 |
+| `ConsultationRoomController.IsOverlayBlocking` | 기록부·PC가 열리거나 닫히는 동안 true. 다른 방 입력은 이 값을 기준으로 차단 |
 | `MedicalRecordData.CreateSample()` | 가상 환자 표시 예시를 반환한다. 실제 환자 로더나 저장소 역할은 하지 않는다. |
 | `ConsultationRoomController.SetRecord(MedicalRecordData)` | 현재 기록 데이터를 바꾸고 즉시 화면에 반영한다. 환자 선택·정보 공개 시스템이 연결할 진입점이다. |
 | `ConsultationRoomController.OpenRecord()` / `CloseRecord()` | 모달 활성화, 입력 차단, 애니메이션, 초점 복원을 관리한다. `IsRecordOpen`으로 논리적 열림 상태를 확인한다. 닫힘 애니메이션 중에는 이 값이 false여도 잠시 입력을 차단한다. |
@@ -834,6 +877,9 @@ room.SetRecord(null);
 
 ### 유지해야 할 규칙과 설정
 
+- 환자 방문 컨트롤러는 항상 활성인 상담실 루트에 두고, 초상화·대화창·종료 확인창의 생명주기를 분리한다. 종료 확인창은 대화창 CanvasGroup 밖에 둬 대화 입력 차단에 함께 비활성화되지 않게 한다.
+- 문과 환자 UI는 기존 `RoomFrame`의 1920×1080 좌표와 비율을 공유한다. 문 클릭은 UI 버튼 상태뿐 아니라 `TryAdmitNextPatient()`의 상태 검사로도 차단한다. 팝업 닫힘 애니메이션 도중에는 `IsRecordOpen/IsPcOpen` 대신 `IsOverlayBlocking`을 사용한다.
+- 방문 세션 ID는 입장마다 새로 생성하고 퇴장 시작 즉시 무효화한다. LLM 응답은 반드시 요청 당시 세션 ID와 함께 전달한다. 이전 환자 응답을 현재 이름 아래에 표시하지 않는다. 임시 대사·초상화 목록을 서버 환자 데이터로 사용하지 않는다.
 - `PcDesktopView`는 내부 상점·앱 창 밖의 PC 루트에 둔다. 상점과 앱 창은 아이콘 전용 `shortcuts` CanvasGroup의 자식으로 두지 않는다. PC 닫기 버튼은 내부 창보다 앞에 표시한다.
 - PC 에셋의 버튼 좌표는 1520×657, 상점 내부는 1112×534 기준이다. 스케일은 공통 상위 오브젝트에 적용해 표시와 클릭 영역을 함께 움직인다. 원본 합성 화면의 아이콘·상품 카드를 중복 배치하지 않는다.
 - 상점 `shopSprites`에는 `templates/`의 빈 배경을 연결한다. `tabs/`의 완성 카드 이미지와 동적 카드 8개를 함께 사용하지 않는다. 카드 좌표는 `CosmeticShop/layout.json`, 하단 안내·복원·블라인드 영역은 y=500~529를 사용한다.
@@ -882,9 +928,9 @@ room.SetRecord(null);
 
 ### 구현 우선순위
 
-PC 내부 네 화면, 기본 방 레이어·날씨, 원본 40종의 동적 카드·실행 중 미리보기·창문 블라인드 연결을 구현했다. 이번 치장 통합·회귀 검사는 총 801개 통과했다. 사용자 설정 저장과 게임 진행 자동 저장은 별개이며 미리보기는 진행 저장을 만들지 않는다. 다음 연결은 실제 프로필·사진 콘텐츠, 음원, 새 40종의 확정 가격·소유·구매 데이터다. 화면 단위는 C이지만 원본 카탈로그 KRW·null 가격은 보존하며 환산 규칙은 없다.
+PC 내부 네 화면, 기본 방 레이어·날씨, 원본 40종의 동적 카드·실행 중 미리보기·창문 블라인드 연결을 구현했다. 치장 통합·회귀 검사 801개 통과는 17.16절 당시 결과다. 문 클릭으로 6명을 차례로 맞이하고 이름·임시 대사를 표시하는 로컬 방문 기능도 추가했으며, 이번 검증 결과는 17.18절에 기록한다. 사용자 설정 저장과 게임 진행 자동 저장은 별개이며 치장 미리보기·임시 방문은 진행 저장을 만들지 않는다. 다음 연결은 실제 환자·대화 API, 프로필·사진 콘텐츠, 음원, 새 40종의 확정 가격·소유·구매 데이터다. 화면 단위는 C이지만 원본 카탈로그 KRW·null 가격은 보존하며 환산 규칙은 없다.
 
-1. **실제 환자 데이터 연결:** 환자 JSON·공개 상태를 `MedicalRecordData`로 변환해 `SetRecord()`에 전달한다. 현재 null·빈 문자열은 `—`로 표시하므로 기획의 미설정·미확인·해당 없음 구분을 추가해야 한다. 샘플 환자를 서윤 확정 설정으로 오인하지 않는다.
+1. **실제 환자 데이터 연결:** 현재 입장 환자의 이름·ID 표시까지 연결했다. 이후 환자 JSON·공개 상태를 `MedicalRecordData`로 변환해 `SetRecord()`에 전달한다. 현재 null·빈 문자열은 `—`로 표시하므로 기획의 미설정·미확인·해당 없음 구분을 추가해야 한다. 방문 시연의 고정 순서·임시 대사를 서윤 확정 설정이나 정식 해금 규칙으로 오인하지 않는다.
 2. **대화·진행 연결:** 서버 요청·응답 규격을 확정하고 입력창·응답 대기·오류 재시도·질문 사용량 바를 연결한다. 총 질문 5개 → 마지막 답변·마무리 → 원문 저장 → 두 축 평가 → 보상 정산 → 자동 저장 순서를 적용한다. 책 안내서 열람 중에는 확정 응답을 보존하고 화면 전환은 닫은 뒤 이어간다.
 3. **UI 확장 전 프리팹 연결:** 현재 씬과 프리팹의 독립 상태를 정리해 치장·대화 UI 변경의 중복 반영을 방지한다.
 4. **구매·소유·장착 저장 연결:** 7.4절 보상 설계와 새 40종의 가격·분류를 먼저 확정한다. 7.5절의 6상품 가격표는 이전 설계안으로 보존하며 새 상품 가격으로 재사용하지 않는다. 현재 미리보기와 분리해 Economy 상태, 잔액 검증·중복 구매 방지·소유권 확정·장착·자동 저장 실패 복원을 구현한다. 기존 클릭 영역·빈 사진 칸·날씨와 블라인드 상태를 유지한다.
@@ -1187,3 +1233,21 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 새 함수는 없다. 다음 단계에서 질문·마무리·평가·저장 API와 클라이언트, 모델 프로필 및 계약 예제를 함께 변경한다. 기획의 데이터 소유권·두 축 평가·원문 보존 규칙을 유지한다.
 - 검증 범위: 문서 diff·공백·로컬 링크·공개 범위 검사. 신규 모델 품질·최신 질문 규칙·외부 PC·Unity 통합 검증은 후속 단계다. 이전 검증 기록은 당시 이력으로 유지한다.
 - Git: 공개 main에서 시작한 `codex/ai-model-plan`로 문서 PR을 제출한다. 개인 환경정보를 포함한 별도 로컬 커밋은 이 게시 이력에 포함하지 않는다. PR 결과는 최종 보고와 Git 이력으로 확인하며 main 직접 푸시·병합은 하지 않는다.
+
+### 17.18 문 클릭 환자 6명 입장과 생성 대화창
+
+- 구현·검증 완료 시각: **2026-11-05 22:56:57 KST (UTC+09:00)**.
+- 요청: 사용자가 앞으로 작업할 `feature/records`에서 문을 누르면 환자가 한 명씩 입장하고, 상담 중 문을 다시 눌러도 다른 환자로 교체되지 않도록 한다. 책상 뒤 중앙에 배치한 뒤 인물 이름과 임시 대사를 자동 표시하며 상담실 분위기에 맞는 말풍선 이미지를 생성한다.
+- 브랜치·기존 변경: 사용자 지정 `feature/records`에서 최신 main `b6e366f`를 fast-forward로 반영했다. 기존 PC·40종 치장과 17.17절의 AI 베타·통합 시연 계획을 보존한다. 사용자가 Unity에서 만든 로컬 `ProjectSettings/ProjectSettings.asset` 변경은 보존하고 이번 제출 대상에서 제외한다.
+- 구현: 서윤·도현·민석·태준·지은·하린 6명을 고정 순서로 입장시킨다. 입장 예약 직후 문을 잠그고 입장·상담·퇴장 중 재입장을 거부한다. 초상화는 책상 뒤 중앙으로 이동·나타나며 테이블 경계에서 마스킹한다. 착석하면 이름과 첫 대사가 자동 표시되고 `계속 듣기`로 임시 문장을 넘긴다. `상담 마치기`의 확인 후 퇴장하며 6명 종료 뒤에는 반복하지 않는다.
+- 화면·보존: PC·기록부를 열면 같은 방문을 유지하면서 대화창을 숨기고 타이핑·입퇴장 연출을 멈춘다. 입장한 환자 이름·ID·날짜만 기록부로 전달하고 임상 정보는 미확인 상태로 둔다. 사진 칸·기존 치장·기록부·PC·설정은 보존한다. 종료 확인창은 대화창과 별도 계층으로 두어 클릭을 막고 취소할 수 있게 한다.
+- 주요 파일: `Scripts/Patients/PatientVisitDefinition.cs`, `Scripts/Dialogue/PatientVisitController.cs`, `PatientDialogueView.cs`, `Editor/PatientVisitSceneInstaller.cs`, `PatientVisitSmokeChecks.cs`, `Settings/PatientVisits.json`, 환자 초상화 6개, `Shaders/PatientPortrait.shader`, `Materials/PatientPortrait.mat`, 생성 대화창 PNG, 상담실 씬·프리팹과 관련 `.meta`. 기존 `ConsultationRoomController`에는 팝업 닫힘 전환까지 포함하는 `IsOverlayBlocking`을 추가한다.
+- 실행: Unity `6000.3.28f1`의 `ConsultationRoom` 씬에서 Play → 왼쪽 문 → 착석·자동 대사 → `계속 듣기` → `상담 마치기` 확인 → 문으로 다음 환자. 재설치는 저장된 Edit 모드의 `Gamsamo > Install Patient Visits`다. 검사는 새 Play 대기 상태에서 `Gamsamo > Run Patient Visit Checks`이며 보고서·화면 캡처는 Git 제외 영역 `artifacts/ui/`에 남긴다.
+- 함수·연결: `TryAdmitNextPatient()`가 방문을 예약하고 `PatientArrived(sessionId, patientId)`가 착석을 알린다. 미래 LLM 연결은 `useDemoDialogue=false`와 `PresentPatientLine(sessionId, text)`를 사용한다. 세션 ID는 퇴장 시작 즉시 무효화하므로 이전 환자의 늦은 응답을 표시하지 않는다. `CompleteConsultation(sessionId)`는 방문 종료만 담당하며 팝업 차단 중에는 호출을 보류한다. `ResetPreview()`는 Editor 검사 전용이다.
+- 데이터 소유권·제한: `PatientVisits.json`은 화면 시연 자료다. 고정 방문 순서와 각 인물의 임시 대사는 정식 환자 해금·임상 설정·상담 완료 판정을 대체하지 않는다. 기존 서버 환자 JSON·API·모델·프롬프트를 변경하지 않고 네트워크·질문 횟수·평가·보상·게임 저장·승급·엔딩도 추가하지 않는다. Play를 다시 시작하면 방문은 초기화된다. 긴 LLM 응답의 페이지 나누기·스크롤·원문 보존은 후속 작업이다.
+- 이미지 생성: 기본 제공 ImageGen으로 따뜻한 종이·나무 색감의 빈 대화 패널을 생성했다. 실제 2172×724 투명 PNG를 `Assets/_Project/Art/UI/Dialogue/DialoguePanel.png`에 보관하며 이름과 대사는 TMP로 표시한다. 최종 프롬프트는 [환자 대화창 이미지 생성 기록](#patient-dialogue-art)에 원문으로 보존한다.
+- 검증 결과: **환자 244 + PC 125 + 방 외형 49 + 기록부 52 = 470개 통과, 실패 0개**. Unity 6000.3.28f1의 16:9 Game View(1207×679)에서 실제 UI Raycaster·버튼 이벤트, 6명 방문·문 연타 차단·종료 확인/취소·늦은 세션 응답 거부·7번째 환자 차단·한글 및 텍스트 넘침을 검사했다. 실제 마우스로 서윤 입장·상담 중 문 연타·종료 취소·종료 확정·도현 입장까지 확인했다. 이름 칸과 종료 설명의 높이를 늘려 잘림을 수정했고 고정 문구에 Truncate를 명시해 신규 대화창의 말줄임표 경고를 제거했다. 마지막 환자 검사 실행 로그에 새 컴파일/실행 오류나 말줄임표 경고가 없었다.
+- 정적 검증: 신규 에셋 파일 15개와 파일 메타 15개·폴더 메타 2개를 포함하며 전체 Assets의 메타 대상 443개에 누락·중복 GUID가 없다. 씬 1,155개·프리팹 1,143개 객체로 각각 92개 추가됐으며 기존 객체 ID는 모두 보존했다. 내부 참조와 Assets·설치 패키지·Unity 기본 에셋 대상 외부 GUID의 미해결 참조는 0개다. 신규 문구의 한글 글리프를 기존 동적 폰트에 준비했다. 재설치 후 객체 수가 같고 중복 방문 UI가 없다. 임시 로컬 검사 연결 도구는 제거하고 게시 대상에서 제외했다.
+- 검증 제한: 다른 화면 비율과 Windows/macOS 실행 빌드는 수행하지 않았다. 40종 치장 전체 575개 검사는 이번에 반복하지 않았으며 17.16절의 이전 결과와 이번 PC·방 외형 회귀 검사를 구분한다. 검증 후 Unity는 Edit 모드로 복귀했다.
+- 다음 작업: (1) 실제 환자 설정·서버 응답 연결과 긴 응답의 페이지 처리, (2) 질문 5회·마무리·원문 저장·평가 흐름 연결, (3) 환자 해금·완료·보상·게임 저장을 임시 방문 순서와 분리해 통합. 기존 AI 베타 계획과 치장 구매·장착 저장 과제는 유지한다.
+- 제출: 구현·에셋·문서를 `feature/records`의 PR 하나로 제출한다. 커밋·브랜치 게시·PR 링크와 실제 결과는 Git 이력·최종 보고에 남기며 main 직접 푸시·PR 병합·자동 병합을 수행하지 않는다.

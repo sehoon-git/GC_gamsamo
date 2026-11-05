@@ -147,22 +147,10 @@ namespace Gamsamo.Editor
                 Debug.Log("DIALOGUE_NAME_CENTER_PASS " + patient.displayName + " offset=" + delta);
             }
             speaker.text = patients[0].displayName;
-            var canvas = view.GetComponentInParent<Canvas>();
             // Remove game behaviours only in this unsaved fixture. Serialized production scene remains unchanged.
             foreach (var behaviour in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<MonoBehaviour>(true)).ToArray())
                 if (behaviour != null && behaviour.GetType().Namespace?.StartsWith("Gamsamo", StringComparison.Ordinal) == true)
                     UnityEngine.Object.DestroyImmediate(behaviour);
-            var setName = (UnityEngine.Events.UnityAction<string>)Delegate.CreateDelegate(typeof(UnityEngine.Events.UnityAction<string>), speaker, typeof(TMP_Text).GetProperty("text").SetMethod);
-            var setPortrait = (UnityEngine.Events.UnityAction<Sprite>)Delegate.CreateDelegate(typeof(UnityEngine.Events.UnityAction<Sprite>), portrait, typeof(Image).GetProperty("sprite").SetMethod);
-            for (int i = 0; i < patients.Length; i++)
-            {
-                var rect = new GameObject("Preview " + patients[i].patientId, typeof(RectTransform), typeof(Image), typeof(Button)).GetComponent<RectTransform>();
-                rect.SetParent(canvas.transform, false); Place(rect, 520 + 165 * i, 30, 150, 50);
-                var label = UnityEngine.Object.Instantiate(speaker, rect); label.text = patients[i].displayName;
-                var button = rect.GetComponent<Button>(); Restyle(button, PaperSprite());
-                UnityEditor.Events.UnityEventTools.AddStringPersistentListener(button.onClick, setName, patients[i].displayName);
-                UnityEditor.Events.UnityEventTools.AddObjectPersistentListener(button.onClick, setPortrait, patients[i].portrait);
-            }
             const string previewPath = "Assets/__DialoguePaperPreview.unity";
             string oldName = PlayerSettings.productName;
             try
@@ -170,7 +158,7 @@ namespace Gamsamo.Editor
                 EditorSceneManager.SaveScene(scene, previewPath);
                 PlayerSettings.productName = "GC_gamsamo_DialogueStyle_Preview";
                 var result = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = new[] { previewPath },
-                    locationPathName = "artifacts/dialogue-style/player/DialogueStyle.exe", target = BuildTarget.StandaloneWindows64,
+                    locationPathName = "artifacts/dialogue-style/clean-player/DialogueStyle.exe", target = BuildTarget.StandaloneWindows64,
                     options = BuildOptions.Development });
                 if (result.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded) throw new Exception("Preview build failed");
                 Debug.Log("DIALOGUE_STYLE_PREVIEW_BUILD_PASS");

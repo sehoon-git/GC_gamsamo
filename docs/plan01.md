@@ -1116,7 +1116,7 @@ PC 내부 네 화면, 기본 방 레이어·날씨, 원본 48종의 동적 카�
 - 전송/이전·다음 쪽/기록/재시도/종료/내보내기/종료 확인 버튼은 기존 이름표와 어울리는 분홍 종이 sprite를 사용한다. 하단 버튼을 종이 안으로 올리고 입력·본문·상태 영역의 간격을 정리했다. 이벤트·상담 상태·통신·보상 정책은 변경하지 않는다.
 - 재적용 메뉴는 Gamsamo > Apply Dialogue Paper Styling. PatientVisitSceneInstaller도 같은 Apply를 호출한다. 전체 방문 설치기는 구 6인 검증을 갖고 있으므로 이번 스타일 수정에 전체 설치기를 실행하지 않았다.
 - 새 PNG는 기본 제공 ImageGen으로 제작했고 원래 대화창 이미지는 보존했다. 경로: Assets/_Project/Art/UI/Dialogue/PinkPaperButton.png. 함께 저장한 .asset은 해당 texture를 참조하는 9-slice sprite다. 생성 지시: 기존 좌상단 이름표를 참고해 단일 가로형 salmon-pink 종이 버튼, 은은한 watercolor 질감·갈색 가장자리·짧은 그림자, 수평 3.3:1, 투명 배경, 글자/아이콘/크림 배경 없음. CLI는 사용하지 않았다.
-- BuildPreview는 실제 상담실 UI를 복제한 임시 씬에서 게임 동작을 제거한 Windows 시각 검증 빌드를 만든다. 상단 5인 선택 버튼은 미리보기 전용이며 실제 게임 씬에 추가하지 않는다. 사용자 저장/서버 상담은 사용하지 않는다.
+- BuildPreview는 실제 상담실 UI를 복제한 임시 씬에서 게임 동작을 제거한 Windows 시각 검증 빌드를 만든다. 사용자 요청으로 상단 5인 선택 버튼은 미리보기에서도 제거했다. 실제 게임 씬에도 해당 버튼은 없다. 사용자 저장/서버 상담은 사용하지 않는다.
 
 ## 16. 진료기록부 에셋 편집 기록
 
@@ -1672,3 +1672,6 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 이름 5종의 실제 TMP mesh bounds 중앙 검증 통과: 가로 편차 0.91px, 세로 1.34~1.61px(1920 기준). Windows 미리보기 빌드 성공. 실제 화면으로 서윤·도현 중앙 정렬과 투명 배경 버튼을 확인했다. 다른 이름도 같은 공용 위치와 자동 mesh 검사를 통과했으나 이번 최종 수동 전환은 2명까지다.
 - artifacts/dialogue-style/final-preview.log에 결과를 기록했다. 새 UI의 실제 서버 대화/평가 검증은 수행하지 않았고, 시각 검증 대사는 합성 문장이다. font/ProjectSettings 자동 변경과 무관한 Unity 직렬화 재정렬을 제외했다.
 - 기존 UI 이벤트/저장/네트워킹은 수정하지 않는다. 이미지 제작 방법·메뉴·공용 연결 지점은 15절에 기록했다. 사용자 현재 Unity 화면은 별도 체크아웃이므로 PR 반영 후 Edit 모드에서 씬을 다시 열어 확인한다. main 직접 push/병합은 수행하지 않는다.
+
+- 2026-11-06 07:19:26 KST (UTC+09:00) 후속: 사용자가 하단 UI를 승인하고 상단 이름 버튼 제거를 요청했다. BuildPreview의 검증용 선택 버튼 생성만 제거했다. 실제 상담실 씬/프리팹/하단 UI는 직전 승인 상태 그대로 유지한다. 갱신 미리보기 경로는 artifacts/dialogue-style/clean-player/DialogueStyle.exe다.
+- 2026-11-06 07:20:07 KST (UTC+09:00) 제출 검증: 상단 이름 버튼 제거 후 Windows 미리보기 재빌드 성공 및 5인 글자 중앙 검사 통과(clean-preview.log). Computer Use는 사용자 Escape로 중단되어 제거 후 실제 화면 확인은 미수행이다. 하단 UI와 출시 씬/프리팹은 변경하지 않았으며 기존 main 대상 PR #43에 후속 커밋으로 반영한다.

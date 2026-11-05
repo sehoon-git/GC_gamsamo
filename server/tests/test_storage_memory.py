@@ -110,7 +110,7 @@ def test_corrupt_or_future_save_is_not_loaded(tmp_path):
     path.write_text(json.dumps(value), encoding="utf-8")
     with pytest.raises(ValueError):
         store.load()
-    assert state.format_version == 2
+    assert state.format_version == 3
 
 
 def test_memory_cannot_cite_unknown_or_unsummarized_records(catalog):
@@ -193,7 +193,7 @@ def test_legacy_save_is_preserved_and_never_reinterpreted(tmp_path):
         store.load()
     store.save(CaseState())
     assert legacy.read_text() == '{"case_id":"old"}'
-    assert store.load().format_version == 2
+    assert store.load().format_version == 3
 
 
 def test_raw_transcript_corruption_is_rejected(tmp_path):
@@ -266,11 +266,11 @@ async def test_network_retry_keeps_identical_request_id_and_body(tmp_path, setti
 
 
 @pytest.mark.asyncio
-async def test_resume_four_five_closing_and_evaluated(tmp_path):
+async def test_resume_above_five_then_explicit_closing_and_evaluated(tmp_path):
     import httpx
     from app.core.config import Settings
     from app.main import create_app
-    from app.schemas.models import next_session
+    from app.schemas.models import CLOSING_TEXT, next_session, request_closing
     from conftest import case_with_questions
     settings = Settings(mock=True)
     state, store = case_with_questions(4), SaveStore(tmp_path)
@@ -282,8 +282,14 @@ async def test_resume_four_five_closing_and_evaluated(tmp_path):
     await client.turn("지금 마음은 어떤가요?")
     await client.close()
     client = make_client()
+    assert client.state.current.phase == "active" and client.state.current.questions_used == 5
+    await client.turn("지금 마음은 어떤가요?")
+    assert client.state.current.phase == "active" and client.state.current.questions_used == 6
+    client.replace(request_closing(client.state))
+    await client.close()
+    client = make_client()
     assert client.state.current.phase == "closing"
-    await client.finish()
+    assert await client.finish() == CLOSING_TEXT
     await client.close()
     client = make_client()
     assert client.state.current.phase == "pending_evaluation"
@@ -315,3 +321,87 @@ async def test_phase_retry_id_survives_process_restart(tmp_path, settings, actio
             await getattr(client,action)()
         await client.close()
     assert requests[0]==requests[1]
+
+
+def test_v2_save_is_preserved_without_automatic_conversion(tmp_path):
+    from app.client import LegacySaveError
+    old = tmp_path / "v2/index.json"
+    old.parent.mkdir()
+    old.write_text('{"format_version":2,"active_case_id":"old","cases":{}}')
+    original = old.read_bytes()
+    store = SaveStore(tmp_path)
+    with pytest.raises(LegacySaveError, match="형식 3"):
+        store.load()
+    store.save(CaseState())
+    assert old.read_bytes() == original and store.load().format_version == 3
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure_phase", ["closing", "pending_evaluation"])
+async def test_close_save_failure_blocks_input_and_retry_keeps_one_notice(tmp_path, settings, monkeypatch, failure_phase):
+    import httpx
+    from app.main import create_app
+    from app.schemas.models import CLOSING_TEXT, records
+    state, store, llm = CaseState(), SaveStore(tmp_path), FakeLLM()
+    store.save(state)
+    calls = []
+    async def track(request):
+        calls.append(request.url.path)
+    http = httpx.AsyncClient(base_url="http://test", transport=httpx.ASGITransport(app=create_app(settings, llm)), event_hooks={"request": [track]})
+    client = SessionClient(settings, store, state, http=http)
+    original = store.save
+    def fail(state, **kwargs):
+        if state.current.phase == failure_phase:
+            raise OSError("disk full")
+        return original(state, **kwargs)
+    monkeypatch.setattr(store, "save", fail)
+    with pytest.raises(OSError):
+        await client.finish()
+    assert store.load().current.phase == ("active" if failure_phase == "closing" else "closing")
+    assert len(calls) == (0 if failure_phase == "closing" else 1)
+    with pytest.raises(ExperimentError):
+        await client.turn("새 질문?")
+    monkeypatch.setattr(store, "save", original)
+    await client.retry()
+    assert store.load() == client.state and client.state.current.phase == "pending_evaluation"
+    assert len(records(client.state)) == 1 and records(client.state)[0].text == CLOSING_TEXT
+    assert len(calls) == 1 and not llm.calls
+    await client.finish()
+    assert len(calls) == 1
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_finish_cannot_drop_a_failed_turn_request(tmp_path, settings):
+    import httpx
+    state, store = CaseState(), SaveStore(tmp_path)
+    store.save(state)
+    def offline(request):
+        raise httpx.ConnectError("offline")
+    client = SessionClient(settings, store, state, http=httpx.AsyncClient(base_url="http://test", transport=httpx.MockTransport(offline)))
+    with pytest.raises(ExperimentError):
+        await client.turn("지금 마음은 어떤가요?")
+    pending = client.pending_request
+    with pytest.raises(ExperimentError, match="먼저"):
+        await client.finish()
+    with pytest.raises(ExperimentError, match="먼저"):
+        await client.evaluate()
+    assert client.pending_request == pending and store.load() == state
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_evaluation_cannot_replace_pending_close_request(tmp_path, settings):
+    import httpx
+    state, store = CaseState(), SaveStore(tmp_path)
+    store.save(state)
+    def offline(request):
+        raise httpx.ConnectError("offline")
+    client = SessionClient(settings, store, state, http=httpx.AsyncClient(base_url="http://test", transport=httpx.MockTransport(offline)))
+    with pytest.raises(ExperimentError):
+        await client.finish()
+    pending = client.pending_request
+    with pytest.raises(ExperimentError, match="먼저"):
+        await client.evaluate()
+    assert client.pending_request == pending and store.load().current.phase == "closing"
+    await client.close()

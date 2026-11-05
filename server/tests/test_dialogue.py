@@ -1,7 +1,7 @@
 import pytest
 
 from app.core.config import ExperimentError
-from app.schemas.models import CaseState, CloseRequest, TurnRequest
+from app.schemas.models import CLOSING_TEXT, CaseState, CloseRequest, TurnRequest, records, request_closing
 from app.services.dialogue import DialogueService
 from conftest import FakeLLM, case_with_questions, classification, reply
 
@@ -19,25 +19,42 @@ async def test_question_delta_for_neutral_followup_repeated_and_indirect(catalog
 
 
 @pytest.mark.asyncio
-async def test_fifth_answer_then_separate_closing_and_no_sixth_turn(catalog):
+async def test_fifth_and_sixth_answer_remain_active(catalog):
     state = case_with_questions(4)
-    llm = FakeLLM([("Classification", classification()), ("PatientReply", reply()), ("PatientReply", reply("오늘 한 말을 생각해 볼게요."))])
+    llm = FakeLLM([("Classification", classification()), ("PatientReply", reply())] * 2)
     service = DialogueService(llm, catalog)
-    result = await service.turn(TurnRequest(state=state, session_id=state.current.id, turn_id="fifth", text="언제 쉬고 싶으세요?"))
-    assert result.state.current.phase == "closing"
-    assert result.state.current.questions_used == 5
-    assert not result.state.current.closed_at
-    assert len(llm.calls) == 2
-    with pytest.raises(ExperimentError) as error:
-        await service.turn(TurnRequest(state=result.state, session_id=state.current.id, turn_id="sixth", text="고마워요"))
-    assert error.value.code == "session_closed"
-    closed = await service.close_session(CloseRequest(state=result.state, session_id=state.current.id, request_id="closing"))
+    for i in (5, 6):
+        result = await service.turn(TurnRequest(state=state, session_id=state.current.id, turn_id=f"question_{i}", text="언제 쉬고 싶으세요?"))
+        state = result.state
+        assert state.current.phase == "active"
+        assert state.current.questions_used == i and not state.current.closed_at
+    assert len(llm.calls) == 4
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("count", [0, 1, 4, 5, 6, 12])
+@pytest.mark.parametrize("persist_intent", [False, True])
+async def test_manual_close_at_any_count_is_fixed_and_idempotent_without_inference(catalog, count, persist_intent):
+    state, llm = case_with_questions(count), FakeLLM()
+    if persist_intent:
+        state = request_closing(state)
+    original = state.model_dump_json()
+    service = DialogueService(llm, catalog)
+    closed = await service.close_session(CloseRequest(state=state, session_id=state.current.id, request_id="closing"))
     assert closed.state.current.phase == "pending_evaluation"
-    assert closed.state.current.turns[-1].closing_text
-    assert closed.state.revision == result.state.revision + 1
-    assert not result.state.current.closed_at
+    assert closed.state.current.closing_text == CLOSING_TEXT == "상담은 여기까지 하겠습니다. 오늘 수고하셨습니다!"
+    assert closed.state.current.closing_speaker == "counselor"
+    assert closed.state.current.questions_used == count
+    assert closed.state.current.turns == state.current.turns
+    assert closed.state.revision == state.revision + 1
+    assert state.model_dump_json() == original
+    notice = records(closed.state)[-1]
+    assert notice.kind == "closing" and notice.speaker == "counselor" and notice.text == CLOSING_TEXT
+    with pytest.raises(ExperimentError) as error:
+        await service.turn(TurnRequest(state=closed.state, session_id=state.current.id, turn_id="after_end", text="고마워요"))
+    assert error.value.code == "session_closed"
     replay = await service.close_session(CloseRequest(state=closed.state, session_id=state.current.id, request_id="closing"))
-    assert replay.replayed and replay.state == closed.state and len(llm.calls) == 3
+    assert replay.replayed and replay.state == closed.state and not llm.calls
 
 
 @pytest.mark.asyncio
@@ -94,13 +111,14 @@ async def test_patient_prompt_never_receives_unapproved_private_details(catalog)
 
 
 @pytest.mark.asyncio
-async def test_failed_closing_leaves_fifth_answer_recoverable(catalog):
-    state = case_with_questions()
+async def test_saved_end_request_blocks_new_turn_before_close(catalog):
+    state = request_closing(case_with_questions(1))
     before = state.model_dump_json()
-    llm = FakeLLM([("PatientReply", RuntimeError("inference failed"))])
-    with pytest.raises(RuntimeError):
-        await DialogueService(llm, catalog).close_session(CloseRequest(state=state, session_id=state.current.id, request_id="closing"))
+    llm = FakeLLM()
+    with pytest.raises(ExperimentError, match="종료"):
+        await DialogueService(llm, catalog).turn(TurnRequest(state=state, session_id=state.current.id, turn_id="late", text="추가 질문"))
     assert state.model_dump_json() == before and state.current.phase == "closing"
+    assert not llm.calls
 
 
 @pytest.mark.asyncio

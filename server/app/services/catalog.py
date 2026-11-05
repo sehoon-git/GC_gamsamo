@@ -24,7 +24,7 @@ class Catalog:
         candidates = {f for session in state.sessions for turn in session.turns for f in turn.candidate_fact_ids}
         if not candidates <= self.facts.keys() or not set(state.revealed_fact_ids) <= candidates:
             raise ExperimentError("공개 확정 정보는 대화에 기록된 후보에서 선택해야 합니다.")
-        record_map = {r.id: r for r in records(state)}
+        record_map = {r.id: r for r in records(state) if r.kind == "dialogue"}
         covered_ids = set()
         if state.memory.through_turn_id:
             for record in record_map.values():

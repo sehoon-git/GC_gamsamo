@@ -4,7 +4,9 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-CONTENT_VERSION = "seoyun-2.0"
+CONTENT_VERSION = "seoyun-3.0"
+FORMAT_VERSION = 3
+CLOSING_TEXT = "상담은 여기까지 하겠습니다. 오늘 수고하셨습니다!"
 Id = Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")]
 Score = Annotated[int, Field(strict=True, ge=0, le=25)]
 
@@ -118,7 +120,6 @@ class Turn(Model):
     id: Id
     user_text: str = Field(min_length=1)
     patient_text: str = Field(min_length=1)
-    closing_text: str = ""
     question_delta: Literal[0, 1]
     topic_label: str = Field(default="", max_length=200)
     candidate_fact_ids: list[str] = Field(default_factory=list, max_length=3)
@@ -127,24 +128,26 @@ class Turn(Model):
 
     @property
     def complete_reply(self) -> str:
-        return "\n\n".join(t for t in [self.patient_text, self.closing_text] if t)
+        return self.patient_text
 
 
 class Session(Model):
     id: Id = Field(default_factory=lambda: new_id("session"))
     started_at: str = Field(default_factory=now)
     closed_at: str | None = None
-    questions_used: int = Field(default=0, strict=True, ge=0, le=5)
+    questions_used: int = Field(default=0, strict=True, ge=0)
     phase: Literal["active", "closing", "pending_evaluation", "evaluated"] = "active"
     closing_request_id: Id | None = None
+    closing_text: str = ""
+    closing_speaker: Literal["counselor"] = "counselor"
     closing_metrics: Metrics = Field(default_factory=Metrics)
     turns: list[Turn] = Field(default_factory=list)
     evaluation: Evaluation | None = None
 
 
 class CaseState(Model):
-    format_version: Literal[2] = 2
-    content_version: Literal["seoyun-2.0"] = CONTENT_VERSION
+    format_version: Literal[3] = FORMAT_VERSION
+    content_version: Literal["seoyun-3.0"] = CONTENT_VERSION
     case_id: Id = Field(default_factory=lambda: new_id("case"))
     patient_id: Literal["seoyun"] = "seoyun"
     revision: int = Field(default=0, ge=0)
@@ -170,23 +173,16 @@ class CaseState(Model):
         if self.memory.through_turn_id and self.memory.through_turn_id not in turns:
             raise ValueError("기억의 원문 위치가 없습니다.")
         for i, session in enumerate(self.sessions):
-            used = 0
-            for turn in session.turns:
-                if used == 5:
-                    raise ValueError("다섯 번째 질문 이후 대화 턴을 추가할 수 없습니다.")
-                used += turn.question_delta
+            used = sum(turn.question_delta for turn in session.turns)
             if session.questions_used != used:
                 raise ValueError("질문 사용량과 확정 대화 기록이 일치하지 않습니다.")
-            if (session.phase == "active") != (used < 5):
-                raise ValueError("질문 사용량과 상담 단계가 일치하지 않습니다.")
             closed = session.phase in {"pending_evaluation", "evaluated"}
             if bool(session.closed_at) != closed or bool(session.closing_request_id) != closed:
                 raise ValueError("마무리 저장 상태와 상담 단계가 일치하지 않습니다.")
             if bool(session.evaluation) != (session.phase == "evaluated"):
                 raise ValueError("평가 결과와 상담 단계가 일치하지 않습니다.")
-            for j, turn in enumerate(session.turns):
-                if bool(turn.closing_text) != (closed and j == len(session.turns) - 1):
-                    raise ValueError("마지막 질문의 마무리 발화가 상담 단계와 일치하지 않습니다.")
+            if session.closing_text != (CLOSING_TEXT if closed else ""):
+                raise ValueError("고정 종료 안내와 상담 단계가 일치하지 않습니다.")
             if i < len(self.sessions) - 1 and session.phase != "evaluated":
                 raise ValueError("이전 상담의 종료와 평가를 먼저 완료해야 합니다.")
         return self
@@ -224,13 +220,30 @@ class Record(Model):
     session_id: Id
     speaker: Literal["patient", "counselor"]
     text: str
+    kind: Literal["dialogue", "closing"] = "dialogue"
 
 
 def records(state: CaseState) -> list[Record]:
-    return [record for s in state.sessions for t in s.turns for record in (
-        Record(id=t.id + ":user", session_id=s.id, speaker="counselor", text=t.user_text),
-        Record(id=t.id + ":patient", session_id=s.id, speaker="patient", text=t.complete_reply),
-    )]
+    result = []
+    for session in state.sessions:
+        for turn in session.turns:
+            result.extend([
+                Record(id=turn.id + ":user", session_id=session.id, speaker="counselor", text=turn.user_text),
+                Record(id=turn.id + ":patient", session_id=session.id, speaker="patient", text=turn.patient_text),
+            ])
+        if session.closing_text:
+            result.append(Record(id=session.closing_request_id + ":closing", session_id=session.id,
+                                 speaker="counselor", text=session.closing_text, kind="closing"))
+    return result
+
+
+def request_closing(state: CaseState) -> CaseState:
+    """The client persists the user's explicit end request before calling /close."""
+    result = state.model_copy(deep=True)
+    if result.current.phase == "active":
+        result.current.phase = "closing"
+        result.revision += 1
+    return result
 
 
 def next_session(state: CaseState) -> CaseState:

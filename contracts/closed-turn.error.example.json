@@ -1,0 +1,6 @@
+{
+  "detail": {
+    "code": "session_closed",
+    "message": "상담 종료가 요청되었습니다. 종료 안내 저장·평가를 완료하세요."
+  }
+}

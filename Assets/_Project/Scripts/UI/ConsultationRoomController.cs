@@ -20,6 +20,7 @@ namespace Gamsamo.UI
         public Button closeRecordButton;
         public Button backdropButton;
         public MedicalRecordView recordView;
+        public MedicalRecordDragHandler recordDrag;
         public MedicalRecordData record = MedicalRecordData.CreateSample();
 
         public CanvasGroup pcModal;
@@ -28,11 +29,14 @@ namespace Gamsamo.UI
         public Button closePcButton;
         public Button pcBackdropButton;
         public PcDesktopView pcDesktopView;
+        public Button windowBlindButton;
 
         [SerializeField, Min(0f)] private float transitionDuration = 0.2f;
 
         public bool IsRecordOpen { get; private set; }
         public bool IsPcOpen { get; private set; }
+        public bool CanInteractWithRoom => initialized && isActiveAndEnabled
+            && activeModal == ModalKind.None && transition == null;
 
         private enum ModalKind { None, Record, Pc }
 
@@ -42,6 +46,7 @@ namespace Gamsamo.UI
         private GameObject previousSelection;
         private Button returnButton;
         private ModalKind activeModal;
+        private CosmeticAppearanceController subscribedAppearance;
 
         private CanvasGroup ActiveGroup => activeModal == ModalKind.Record ? modal
             : activeModal == ModalKind.Pc ? pcModal : null;
@@ -63,9 +68,13 @@ namespace Gamsamo.UI
                 openRecordButton.onClick.AddListener(OpenRecord);
             }
             if (closeRecordButton != null)
-                closeRecordButton.onClick.AddListener(CloseRecord);
+            {
+                // Preserve installed references while the record is now closed from outside or with Escape.
+                closeRecordButton.interactable = false;
+                closeRecordButton.gameObject.SetActive(false);
+            }
             if (backdropButton != null)
-                backdropButton.onClick.AddListener(CloseRecord);
+                backdropButton.onClick.AddListener(CloseRecordFromBackdrop);
             if (openPcButton != null)
             {
                 if (openPcButton.targetGraphic != null)
@@ -76,6 +85,12 @@ namespace Gamsamo.UI
                 closePcButton.onClick.AddListener(ClosePc);
             if (pcBackdropButton != null)
                 pcBackdropButton.onClick.AddListener(ClosePcTopmost);
+            if (windowBlindButton != null)
+            {
+                if (windowBlindButton.targetGraphic != null)
+                    windowBlindButton.targetGraphic.canvasRenderer.cullTransparentMesh = false;
+                windowBlindButton.onClick.AddListener(CycleWindowBlinds);
+            }
 
             if (recordView != null)
                 recordView.ShowRecord(record);
@@ -86,6 +101,9 @@ namespace Gamsamo.UI
 
         private void OnEnable()
         {
+            subscribedAppearance = GetComponent<CosmeticAppearanceController>();
+            if (subscribedAppearance != null)
+                subscribedAppearance.Changed += RefreshWindowBlindInteraction;
             if (initialized)
                 ResetClosed();
         }
@@ -107,13 +125,24 @@ namespace Gamsamo.UI
                 recordView.ShowRecord(record);
         }
 
+        /// <summary>Cycles the selected room window through half, down, and up while no modal is visible.</summary>
+        public void CycleWindowBlinds()
+        {
+            // activeModal remains set until fade-out ends, even after IsPcOpen/IsRecordOpen become false.
+            if (!CanInteractWithRoom || subscribedAppearance == null || !subscribedAppearance.CanControlBlinds)
+                return;
+            subscribedAppearance.SetBlindState((subscribedAppearance.BlindState + 1) % 3);
+        }
+
         public void OpenRecord()
         {
             if (!isActiveAndEnabled || modal == null || IsRecordOpen)
                 return;
             if (recordView != null)
                 recordView.ShowRecord(record);
-            OpenModal(ModalKind.Record, openRecordButton, closeRecordButton);
+            if (recordDrag != null)
+                recordDrag.ResetPosition();
+            OpenModal(ModalKind.Record, openRecordButton, null);
         }
 
         public void CloseRecord()
@@ -122,6 +151,13 @@ namespace Gamsamo.UI
                 return;
 
             CloseModal();
+        }
+
+        private void CloseRecordFromBackdrop()
+        {
+            if (recordDrag != null && recordDrag.BlocksBackdropClick)
+                return;
+            CloseRecord();
         }
 
         public void OpenPc()
@@ -176,8 +212,8 @@ namespace Gamsamo.UI
             group.interactable = true;
             SetRoomHotspots(false);
             ApplyVisibility(visibleAmount);
-            if (closeButton != null && EventSystem.current != null)
-                EventSystem.current.SetSelectedGameObject(closeButton.gameObject);
+            if (EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(closeButton != null ? closeButton.gameObject : null);
             StartTransition(1f);
         }
 
@@ -185,7 +221,7 @@ namespace Gamsamo.UI
         {
             IsRecordOpen = false;
             IsPcOpen = false;
-            // Both room hotspots stay disabled until the fade-out is completely finished.
+            // Room hotspots stay disabled until the fade-out is completely finished.
             CanvasGroup group = ActiveGroup;
             if (group != null)
             {
@@ -295,6 +331,14 @@ namespace Gamsamo.UI
                 openRecordButton.interactable = interactable;
             if (openPcButton != null)
                 openPcButton.interactable = interactable;
+            RefreshWindowBlindInteraction();
+        }
+
+        private void RefreshWindowBlindInteraction()
+        {
+            if (windowBlindButton != null)
+                windowBlindButton.interactable = CanInteractWithRoom && subscribedAppearance != null
+                    && subscribedAppearance.CanControlBlinds;
         }
 
         private void StopTransition()
@@ -308,6 +352,9 @@ namespace Gamsamo.UI
 
         private void OnDisable()
         {
+            if (subscribedAppearance != null)
+                subscribedAppearance.Changed -= RefreshWindowBlindInteraction;
+            subscribedAppearance = null;
             StopTransition();
             if (initialized)
                 ResetClosed();
@@ -317,16 +364,16 @@ namespace Gamsamo.UI
         {
             if (openRecordButton != null)
                 openRecordButton.onClick.RemoveListener(OpenRecord);
-            if (closeRecordButton != null)
-                closeRecordButton.onClick.RemoveListener(CloseRecord);
             if (backdropButton != null)
-                backdropButton.onClick.RemoveListener(CloseRecord);
+                backdropButton.onClick.RemoveListener(CloseRecordFromBackdrop);
             if (openPcButton != null)
                 openPcButton.onClick.RemoveListener(OpenPc);
             if (closePcButton != null)
                 closePcButton.onClick.RemoveListener(ClosePc);
             if (pcBackdropButton != null)
                 pcBackdropButton.onClick.RemoveListener(ClosePcTopmost);
+            if (windowBlindButton != null)
+                windowBlindButton.onClick.RemoveListener(CycleWindowBlinds);
         }
     }
 }

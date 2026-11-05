@@ -57,6 +57,7 @@ namespace Gamsamo.Editor
             room.background.raycastTarget = false;
             recordImage.sprite = record;
             recordImage.preserveAspect = true;
+            ConfigureRecordInteraction(room);
 
             var appearance = GetOrAdd<ConsultationRoomAppearance>(root);
             appearance.room = room;
@@ -91,6 +92,32 @@ namespace Gamsamo.Editor
                 new Vector2(0, 297), new Vector2(527, 313), new Vector2(527, 5),
                 new Vector2(520, 0), new Vector2(15, 15), new Vector2(0, 20)
             });
+
+            var windowHotspot = ChildRect(roomFrame, "WindowBlindHotspot");
+            var windowGraphic = GetOrAdd<Image>(windowHotspot.gameObject);
+            windowGraphic.color = new Color(1, 1, 1, 0);
+            windowGraphic.raycastTarget = true;
+            var windowButton = GetOrAdd<Button>(windowHotspot.gameObject);
+            windowButton.targetGraphic = windowGraphic;
+            windowButton.transition = Selectable.Transition.None;
+            windowButton.navigation = new Navigation { mode = Navigation.Mode.None };
+            windowButton.interactable = false; // The default window has no blind variants.
+            room.windowBlindButton = windowButton;
+            Rect windowBounds = appearance.windowRect;
+            float monitorLeft = monitorBounds.xMin - windowBounds.xMin;
+            float monitorTop = monitorBounds.yMin - windowBounds.yMin;
+            // Follow the frame, excluding its cast shadow and the monitor's overlapping bottom-right area.
+            UpdateHotspot(windowButton, windowBounds, layout, new[]
+            {
+                new Vector2(29, 4), new Vector2(windowBounds.width - 6, 4),
+                new Vector2(windowBounds.width - 6, monitorTop), new Vector2(monitorLeft, monitorTop),
+                new Vector2(monitorLeft, windowBounds.height - 28), new Vector2(29, windowBounds.height - 28)
+            });
+            // The monitor stays in front even if an existing scene placed the room buttons in a different order.
+            int monitorIndex = room.openPcButton.transform.GetSiblingIndex();
+            if (windowHotspot.GetSiblingIndex() < monitorIndex) monitorIndex--;
+            windowHotspot.SetSiblingIndex(monitorIndex);
+
             // The pen is a separate visible part of the layer and must not open the record.
             Rect clipboardBounds = new Rect(layout.assets.clipboard.x, layout.assets.clipboard.y, 350, 250);
             UpdateHotspot(room.openRecordButton, clipboardBounds, layout, new[]
@@ -103,6 +130,33 @@ namespace Gamsamo.Editor
             EditorUtility.SetDirty(appearance);
             EditorUtility.SetDirty(room);
             EditorUtility.SetDirty(recordImage);
+        }
+
+        internal static void ConfigureRecordInteraction(ConsultationRoomController room)
+        {
+            if (room.recordPanel == null || room.recordView == null || room.modal == null)
+                throw new InvalidOperationException("The existing record panel, artwork and modal are required.");
+            RectTransform panel = room.recordPanel;
+            var parent = panel.parent as RectTransform;
+            if (parent == null)
+                throw new InvalidOperationException("The record panel requires a RectTransform parent.");
+            // Move a separate wrapper so the panel's aspect fitter and transition scale remain independent.
+            RectTransform dragRoot = parent.name == "RecordDragRoot" ? parent : ChildRect(parent, "RecordDragRoot");
+            Stretch(dragRoot);
+            if (panel.parent != dragRoot) panel.SetParent(dragRoot, false);
+            var drag = GetOrAdd<MedicalRecordDragHandler>(room.recordView.gameObject);
+            drag.room = room;
+            drag.dragRoot = dragRoot;
+            drag.artwork = (RectTransform)room.recordView.transform;
+            drag.bounds = (RectTransform)room.modal.transform;
+            drag.ResetPosition();
+            room.recordDrag = drag;
+            if (room.closeRecordButton != null)
+            {
+                room.closeRecordButton.interactable = false;
+                room.closeRecordButton.gameObject.SetActive(false);
+            }
+            EditorUtility.SetDirty(drag);
         }
 
         private static void ValidateLayout(RoomLayout layout)

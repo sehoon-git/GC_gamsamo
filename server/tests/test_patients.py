@@ -1,13 +1,15 @@
 """Cross-patient isolation and authored story timing; fixtures do not grade language quality."""
 
 import httpx
+import json
 import pytest
 
 from app.client import SaveStore, SessionClient
-from app.core.config import ExperimentError, Settings
+from app.core.config import ExperimentError, InvalidModelOutput, Settings
 from app.llm.mock import MockLLM
 from app.main import create_app
 from app.schemas.models import CaseState, Classification, EvaluateRequest, Metrics, OpenRequest, PATIENT_IDS, Session
+from app.schemas.models import TurnRequest, Opening, PatientReply, CloseRequest, next_session
 from app.services.catalog import Catalog
 from app.services.dialogue import DialogueService
 from app.services.evaluation import EvaluationService
@@ -116,6 +118,46 @@ def test_character_specific_rubric_and_authored_choices(patient_id):
     assert {r['axis'] for r in patient['rubric']} == {'patient', 'counselor'}
     assert patient['termination'] == 'user_requested' and patient['clear_threshold'] == 70
     assert patient['boundaries'] and patient['unspecified']
+
+
+@pytest.mark.parametrize('patient_id', PATIENT_IDS)
+def test_reduced_context_preserves_all_authored_facts_conditions_and_rubric_once(patient_id):
+    settings = Settings(mock=True)
+    catalog = Catalog(settings, patient_id)
+    state = CaseState(patient_id=patient_id)
+    dialogue = DialogueService(MockLLM(settings), catalog)
+    work = {'case': state, 'request': TurnRequest(state=state, session_id=state.current.id, turn_id='one', text='어떤 마음인가요?')}
+    control = json.loads(dialogue.management_messages(work)[1]['content'].split('\n', 1)[1])['patient']
+    evaluation = EvaluationService(MockLLM(settings), catalog)
+    payload = json.loads(evaluation.messages({'request': EvaluateRequest(state=state, session_id=state.current.id, request_id='grade')}, 'evaluation', {})[-1]['content'])
+    assert payload['rubric'] == catalog.patient['rubric']
+    assert 'rubric' not in control and 'rubric' not in payload['fixed_story']
+    for key in ('public_facts', 'private_facts', 'direction', 'unspecified', 'possible_change', 'boundaries'):
+        if key in catalog.patient:
+            assert control[key] == payload['fixed_story'][key] == catalog.patient[key]
+    assert control['story_events'] == payload['fixed_story']['story_events'] == catalog.active_story_events(state)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('patient_id', PATIENT_IDS)
+async def test_revisit_prompt_uses_real_prior_dialogue_and_rejects_identical_introduction(patient_id):
+    settings = Settings(mock=True)
+    service = DialogueService(MockLLM(settings), Catalog(settings, patient_id))
+    state = CaseState(patient_id=patient_id)
+    original = '안녕하세요. 오늘은 마음에 남은 고민을 이야기하고 싶어요.'
+    state.current.opening = Opening(id='previous', patient_text=original)
+    closed = await service.close_session(CloseRequest(state=state, session_id=state.current.id, request_id='close'))
+    evaluated = await EvaluationService(service.llm, service.catalog).evaluate(EvaluateRequest(state=closed.state, session_id=state.current.id, request_id='grade'))
+    state = next_session(evaluated.state)
+    state.current.id = 'second'
+    work = dict(case=state, request=OpenRequest(state=state, session_id='second', request_id='new'),
+                allowed=[], classification=Classification(reason='재방문', topic_label='상담 시작', disclose_fact_ids=[]))
+    messages = service.patient_messages(work)
+    assert any(m['role'] == 'assistant' and m['content'] == original for m in messages)
+    assert '자신이 마지막으로 말했던 고민' in messages[0]['content']
+    with pytest.raises(InvalidModelOutput, match='그대로 반복'):
+        service.validate_reply(work, PatientReply(text=original, disclosed_fact_ids=[]))
+    service.validate_reply(work, PatientReply(text='지난번에 말한 고민이 아직 남아 있어서 더 이야기하고 싶어요.', disclosed_fact_ids=[]))
 
 
 @pytest.mark.asyncio

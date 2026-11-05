@@ -41,7 +41,11 @@ class DialogueService:
     def management_messages(self, work):
         case = work["case"]
         payload = {
-            "patient": {**self.catalog.patient, "story_events": self.catalog.active_story_events(case)},
+            # The controller decides disclosure, not scores or clearance. Keep every
+            # authored fact/condition/boundary; do not send an unused grading rubric.
+            "patient": {**{key: value for key, value in self.catalog.patient.items()
+                           if key not in {"rubric", "clear_threshold", "content_version", "termination"}},
+                        "story_events": self.catalog.active_story_events(case)},
             "previously_revealed_fact_ids": case.revealed_fact_ids,
             "memory": case.memory.model_dump(),
             "recent_records": recent_records(case),
@@ -85,9 +89,15 @@ class DialogueService:
                         for r in recent_records(case))
         if isinstance(work["request"], OpenRequest):
             # This is a system-directed opening, never a fabricated counselor record.
-            messages[0]["content"] += ("\n새 상담을 시작했습니다. 상담자의 선행 발언은 없습니다. "
-                f"{self.catalog.patient['name']}이 먼저 인사하고 지금 이야기하고 싶은 마음을 자연스럽게 2~4문장으로 말하세요. "
-                "이전 회차가 있으면 확인된 기억만 이어가고 미공개 정보를 새로 노출하지 마세요.")
+            if len(case.sessions) == 1:
+                messages[0]["content"] += ("\n첫 상담을 시작했습니다. 상담자의 선행 발언은 없습니다. "
+                    f"{self.catalog.patient['name']}이 먼저 인사하고 지금 이야기하고 싶은 마음을 자연스럽게 2~4문장으로 말하세요.")
+            else:
+                messages[0]["content"] += ("\n이전에 상담한 내담자가 새 회차에 다시 방문했습니다. 이번 회차의 상담자 발언은 아직 없습니다. "
+                    "첫 방문의 자기소개·방문 이유를 처음부터 그대로 되풀이하지 마세요. 이전 원문 또는 출처가 있는 기억에서 "
+                    "자신이 마지막으로 말했던 고민·감정·선택 중 하나를 이어서, 오늘 더 이야기하고 싶은 마음을 2~4문장으로 말하세요. "
+                    "미해결된 마음이 그대로 남아 있어도 괜찮습니다. 이전에 말하지 않은 설정을 함께 나눈 기억으로 만들거나, "
+                    "상담 밖의 실천·호전·새 사건을 지어내지 마세요. 미공개 정보는 새로 노출하지 마세요.")
             new_events = [event for event in self.catalog.active_story_events(case)
                           if event["min_session"] == len(case.sessions)]
             if new_events:
@@ -110,6 +120,10 @@ class DialogueService:
         return messages
 
     def validate_reply(self, work, value):
+        if isinstance(work["request"], OpenRequest) and len(work["case"].sessions) > 1:
+            if any(session.opening and re.sub(r"\s+", "", value.text) == re.sub(r"\s+", "", session.opening.patient_text)
+                   for session in work["case"].sessions[:-1]):
+                raise InvalidModelOutput("이전 첫 발화를 그대로 반복했습니다. 이전 상담에서 실제로 말한 고민이나 감정 하나를 이어 이번 방문의 마음을 새 문장으로 말하세요. 새 사건이나 호전을 지어내지는 마세요.")
         if isinstance(work["request"], TurnRequest) and re.sub(r"\s+", "", value.text) == re.sub(r"\s+", "", work["request"].text):
             raise InvalidModelOutput("상담자의 질문을 그대로 반복하지 말고 설정된 내담자의 입장에서 답하세요.")
         if not value.text.strip() or "<think>" in value.text or "</think>" in value.text:

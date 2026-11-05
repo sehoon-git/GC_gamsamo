@@ -5,14 +5,21 @@
     "model": "mock-fixture-v4"
   },
   "content_version": "seoyun-4.0",
+  "api_version": "0.4.3",
+  "code_revision": "unknown",
+  "model_id": "RedHatAI/Qwen3.5-9B-quantized.w4a16",
   "model_revision": "mock-fixture-v4",
-  "prompt_version": "e8445168f1a23c20",
+  "tokenizer_revision": "mock-fixture-v4",
+  "max_model_len": 16384,
+  "prompt_version": "876de93671222a94",
   "busy": false,
   "format_version": 4,
   "mode": "mock",
   "capabilities": [
     "game_progress_scope",
-    "patient_catalog_v1"
+    "patient_catalog_v1",
+    "request_timing_v1",
+    "volatile_request_replay_v1"
   ],
   "supported_patient_ids": [
     "seoyun",

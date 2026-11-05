@@ -15,6 +15,15 @@ class Settings:
     vllm_api_key: str = ""
     model_config: str = "ai/configs/seoyun.json"
     mock: bool = False
+    code_revision: str = "unknown"
+    queue_timeout_seconds: float = 30.0
+    # A long evaluation can need several evidence calls before scoring. Individual
+    # model calls still time out after 180s; disconnected clients can rejoin the work.
+    operation_timeout_seconds: float = 600.0
+    max_pending_requests: int = 16
+    response_cache_seconds: float = 600.0
+    response_cache_entries: int = 256
+    response_cache_bytes: int = 32 * 1024 * 1024
 
     @classmethod
     def from_env(cls):
@@ -25,6 +34,7 @@ class Settings:
             vllm_api_key=os.getenv("SEOYUN_VLLM_API_KEY", ""),
             model_config=os.getenv("SEOYUN_MODEL_CONFIG", cls.model_config),
             mock=os.getenv("SEOYUN_MOCK", "0") == "1",
+            code_revision=os.getenv("AI_CODE_REVISION", "unknown"),
         )
 
     @property

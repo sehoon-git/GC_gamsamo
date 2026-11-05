@@ -423,8 +423,8 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 - 상점·프로필·사진·설정의 X와 `Esc`는 PC 바탕화면으로 돌아온다. 설정의 드롭다운이 열렸으면 드롭다운부터 닫는다. 바탕화면에서 다음 `Esc`는 상담실로 돌아간다. PC X는 내부 창과 PC를 함께 닫는다. 바깥 클릭도 가장 안쪽 창부터 닫는다.
 - 기록부와 PC는 동시에 표시하지 않는다. 닫힘 전환이 끝날 때까지 상담실 클릭을 차단하고 원래 버튼으로 초점을 복원한다. PC 재열기는 바탕화면에서 시작하며 상점 기본 탭은 창문이다.
-- 상점 5개 탭은 창문·문·서류철·PC·PC 배경화면이다. 원본 카탈로그의 각 8종, 총 40종을 썸네일·이름이 있는 동적 카드로 표시한다. 카드를 누르면 해당 외형과 `미리보기 중` 표시를 적용하며 `기본 복원`은 현재 분류만 되돌린다. 상점을 다시 열면 창문 탭부터 시작하지만 각 분류의 선택은 같은 Play 실행 동안 유지한다.
-- 카드에는 `미정`, 하단에는 `미리보기 · 가격 미정`, 잔액에는 `— C`를 표시한다. 새 원본 `catalog.json`의 `price_krw`는 40종 모두 `null`이며 무료·0원·구매 가능으로 해석하지 않는다. 원본 통화 `KRW`와 PNG의 `원`은 보존하고 화면에만 기존 게임 단위 C를 덧씌운다. 통화 환산·구매·소유권·지갑 연결은 없다. **7.5절의 6상품 가격표는 이전 설계안이며 새 40종에 가격을 부여한 표가 아니다.**
+- 상점 6개 탭은 창문·문·서류철·PC·PC 배경화면·벽지다. 원본 카탈로그의 각 8종, 총 48종을 썸네일·이름이 있는 동적 카드로 표시한다. 카드를 누르면 해당 외형과 `미리보기 중` 표시를 적용하며 `기본 복원`은 현재 분류만 되돌린다. 상점을 다시 열면 창문 탭부터 시작하지만 각 분류의 선택은 같은 Play 실행 동안 유지한다.
+- 카드에는 `미정`, 하단에는 `미리보기 · 가격 미정`, 잔액에는 `— C`를 표시한다. 새 원본 `catalog.json`의 `price_krw`는 48종 모두 `null`이며 무료·0원·구매 가능으로 해석하지 않는다. 원본 통화 `KRW`와 PNG의 `원`은 보존하고 화면에만 기존 게임 단위 C를 덧씌운다. 통화 환산·구매·소유권·지갑 연결은 없다. **7.5절의 6상품 가격표는 이전 설계안이며 새 48종에 가격을 부여한 표가 아니다.**
 - 창문 치장을 처음 선택하면 원본 미리보기와 같은 블라인드 절반 상태를 적용한다. 상점에서는 디자인만 선택하며 단계 버튼은 표시하지 않는다. PC를 닫고 상담실 창문을 클릭하면 `올림(0) → 절반(1) → 내림(2) → 올림(0)` 순서로 정적 상태 이미지를 바꾼다. 처음 절반에서 클릭하면 내림이 된다. 기본 창문에는 조절 기능이 없어 창문 클릭을 비활성화한다. 다른 디자인으로 바꿔도 현재 단계를 유지한다. PC·진료기록부와 열기·닫기 전환 중에는 창문 입력을 차단한다. 날씨를 바꿔도 테마·블라인드 단계는 유지하며, 내림 상태에서는 제공된 이미지처럼 바깥 날씨가 가려진다.
 - 서류철 선택은 책상 위 서류철·펜과 확대 기록부의 외형을 함께 바꾼다. 기록 내용 12개 필드와 빈 사진 칸은 보존한다. 미리보기는 PC 닫기·재열기 동안 유지되고 Play 종료 후 다음 실행에서는 초기화된다. 구매·보유·재화·게임 진행 저장을 변경하지 않는다.
 - 프로필에는 남녀 시각 아바타 2종과 이름·소속·한 줄 소개를 표시한다. 기본 그림은 여성 변형이며 실제 사용자나 환자의 성별을 추정하는 값이 아니다. 미설정 정보는 `—`이다. 아바타 선택 화면·프로필 저장은 아직 없다.
@@ -438,12 +438,12 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 | --- | --- |
 | `Assets/_Project/Art/UI/CounselingPack/room/` | 1920×1080 좌표의 기본 방·문·창문 3종·PC·서류철, 빈 사진 칸 기록부. 순서대로 합성해 기존 블러에 전달 |
 | `Assets/_Project/Art/UI/PcDesktop/` | 1520×657 좌표. 배경화면 → 새 투명 테두리 → 아이콘 순서로 조립 |
-| `Assets/_Project/Art/UI/CosmeticShop/` | 원본 1112×534 레이아웃의 8개 카드 좌표 유지. `templates/`의 빈 탭 PNG 5개를 9-slice로 표시해 하단만 40px 늘린 1112×574 창에 동적 카드 구성. `tabs/`의 완성 카드 PNG와 `layout.json`은 원본 기준 자료 |
+| `Assets/_Project/Art/UI/CosmeticShop/` | 원본 1112×534 레이아웃의 8개 카드 좌표 유지. `templates/`의 빈 탭 PNG 6개를 9-slice로 표시해 하단만 40px 늘린 1112×574 창에 동적 카드 구성. `tabs/`의 완성 카드 PNG와 `layout.json`은 원본 기준 자료 |
 | `Assets/_Project/Art/UI/CounselingPack/profile/`, `photos/`, `settings/` | 실제 내부 창 이미지와 배치 JSON, 설정 슬라이더 fill/thumb |
-| `Assets/_Project/Art/UI/CounselingPack/cosmetics/` | 40종 원본 카탈로그·썸네일·실제 외형·서류철 확대·창문 날씨/블라인드 이미지. PNG 202개·JSON 2개·TXT 안내 2개로 총 206개 원본 파일 |
+| `Assets/_Project/Art/UI/CounselingPack/cosmetics/` | 48종 원본 카탈로그·썸네일·실제 외형·서류철 확대·창문 날씨/블라인드 이미지. PNG 219개·JSON 2개·TXT 안내 2개로 총 223개 원본 파일 |
 | `Assets/_Project/Settings/CosmeticCatalog.asset` | 임포터가 원본 ID·분류·테마·Sprite 참조를 검증해 생성하는 런타임 카탈로그. 가격 수치·소유 상태를 만들지 않음 |
 
-이전 내부 창 적용에서는 신규 PNG 15개와 기존 동일 이미지 12개를 사용했다. 이번 치장 적용은 원본 PNG 202개와 빈 상점 템플릿 5개, **신규 PNG 총 207개**를 추가한다. 원본 안내 TXT 2개는 참고자료이며 사용자 요청·게임 규칙보다 우선하지 않는다. 상점 레이아웃의 카탈로그 상대 경로만 프로젝트 폴더 배치에 맞춰 `../CounselingPack/cosmetics/catalog.json`으로 보정한다. 원본 상품 ID·순서·가격 미정 값은 유지한다.
+이전 내부 창 적용에서는 신규 PNG 15개와 기존 동일 이미지 12개를 사용했다. 이번 치장 적용은 원본 PNG 219개와 빈 상점 템플릿 5개, **신규 PNG 총 207개**를 추가한다. 원본 안내 TXT 2개는 참고자료이며 사용자 요청·게임 규칙보다 우선하지 않는다. 상점 레이아웃의 카탈로그 상대 경로만 프로젝트 폴더 배치에 맞춰 `../CounselingPack/cosmetics/catalog.json`으로 보정한다. 원본 상품 ID·순서·가격 미정 값은 유지한다.
 
 `overview`·`preview`·`pc-open`·날씨별 완성 배경은 참고용이며 런타임 에셋으로 중복 추가하지 않는다. 입력 좌표는 JSON의 좌상단 px를 Unity 앵커로 변환한다. 방은 1920×1080, 기록부는 1024×1536, PC는 1520×657 좌표계를 사용한다. 모니터 윤곽만 PC 클릭 대상이며 키보드·마우스는 제외한다. 기록부 클릭에서 펜은 제외한다.
 
@@ -687,7 +687,7 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 - v0.7: 6명 전원 행복한 후일담 엔딩 확정. 중앙 제작진·양쪽 사진과 실제 플레이어 발언 한 줄, 위에서 아래로 내려오는 크레딧, 인용 검증·저장·다시 보기 규칙 추가.
 
-- 2026-11-05 PC 로컬 구현: 모니터 클릭·중앙 PC 바탕화면·상점 5개 탭·내부 창 닫기 구현과 에셋·함수·검증 연결을 기록. 실제 상품·지갑·구매·장착은 후속 작업.
+- 2026-11-05 PC 로컬 구현: 모니터 클릭·중앙 PC 바탕화면·상점 6개 탭·내부 창 닫기 구현과 에셋·함수·검증 연결을 기록. 실제 상품·지갑·구매·장착은 후속 작업.
 - v0.6: 총 질문 5개로 통일하고 후속질문 무료 규칙 폐기. 다섯 번째 답변 후 마무리·평가 흐름 제안, 우측 상단 확대 책 안내서와 페이지 구성 추가.
 
 - v0.5: 분산된 docs 문서를 plan01 하나로 통합. 최신 커밋 기준으로 중복을 정리하고 구현·검증·에셋 기록과 작업 이력을 보존.
@@ -706,7 +706,7 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 ## 15. 현재 구현과 연결 지점
 
-이 절은 Unity 상담실·기록부·PC·상점·프로필·사진·환경설정 UI, 40종 치장과 블라인드의 실행 중 미리보기, 사용자 설정 저장, 시작 화면 브라우저 시안, 독립 실행하는 서윤 AI 실험의 구현 상태를 기록한다. **Unity UI와 AI는 아직 연결되지 않았다.** AI의 대화·기억·평가·클라이언트 저장은 구현되어 있으나, 최신 총 질문 5개·공감 별도·자동 저장 전용 규칙과 차이가 있다. Unity의 질문 사용량·평가·보상·실제 상품 구매·게임 진행 자동 저장·책·엔딩 연결은 남아 있다. 각 작업의 검증 환경·시점은 별도로 기록한다.
+이 절은 Unity 상담실·기록부·PC·상점·프로필·사진·환경설정 UI, 48종 치장과 블라인드의 실행 중 미리보기, 사용자 설정 저장, 시작 화면 브라우저 시안, 독립 실행하는 서윤 AI 실험의 구현 상태를 기록한다. **Unity UI와 AI는 아직 연결되지 않았다.** AI의 대화·기억·평가·클라이언트 저장은 구현되어 있으나, 최신 총 질문 5개·공감 별도·자동 저장 전용 규칙과 차이가 있다. Unity의 질문 사용량·평가·보상·실제 상품 구매·게임 진행 자동 저장·책·엔딩 연결은 남아 있다. 각 작업의 검증 환경·시점은 별도로 기록한다.
 
 ### 시작 화면 로컬 시안 — Unity 외부 레이아웃 검토
 
@@ -737,7 +737,7 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 표 위에 12개 TextMeshPro 필드를 배치했다. 현재 내용은 `MedicalRecordData.CreateSample()`의 가상 환자 예시다. LLM 서버, 환자 원본 데이터, 진행도, 저장과는 아직 연결하지 않았다.
 
-모니터의 PC·상점 UI와 프로필·사진·설정 창을 추가했다. 상점은 원본 카탈로그 40종의 카드와 미리보기·분류별 기본 복원을 제공하며 블라인드 단계는 상담실 창문 클릭으로 조절한다. 프로필·사진은 실제 콘텐츠가 없으면 빈 상태를 표시한다. 열기·닫기·탭 동작과 제공 에셋 범위는 8.5절을 따른다. 배경 블러는 하나의 `ConsultationRoomController`가 관리하므로 상점만 닫거나 외형을 바꿀 때도 유지된다.
+모니터의 PC·상점 UI와 프로필·사진·설정 창을 추가했다. 상점은 원본 카탈로그 48종의 카드와 미리보기·분류별 기본 복원을 제공하며 블라인드 단계는 상담실 창문 클릭으로 조절한다. 프로필·사진은 실제 콘텐츠가 없으면 빈 상태를 표시한다. 열기·닫기·탭 동작과 제공 에셋 범위는 8.5절을 따른다. 배경 블러는 하나의 `ConsultationRoomController`가 관리하므로 상점만 닫거나 외형을 바꿀 때도 유지된다.
 
 ### 실행과 주요 파일
 
@@ -745,7 +745,7 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 2. `Assets/_Project/Scenes/ConsultationRoom.unity`를 열고 Play를 누른다.
 3. 왼쪽 아래 기록부를 열어 내용·블러를 확인한다. 펼친 기록부를 드래그해 옮기고 화면 경계 제한, 바깥 클릭·`Esc` 닫기, 다시 열 때 중앙 복귀를 확인한다.
 4. 오른쪽 모니터 → 상점 → 탭 5개와 각 카드 8개를 확인한다. 카드 선택·분류별 기본 복원을 확인하고, PC를 닫은 뒤 창문을 클릭해 블라인드 3단계를 조작한다. 내부 X·`Esc`는 바탕화면으로 돌아오고 PC X는 상담실로 돌아온다. PC를 닫고 기록부를 열면 선택한 서류철 확대 외형을 확인할 수 있다.
-5. Play 모드의 `Gamsamo > Run Cosmetic Checks`로 치장 40종·창문 72조합을 검사하고 `Gamsamo > Run PC UI Smoke Checks`로 PC 검사를 실행한다. 기존 기록부는 `Gamsamo > Run UI Smoke Checks`로 검사한다.
+5. Play 모드의 `Gamsamo > Run Cosmetic Checks`로 치장 48종·창문 72조합을 검사하고 `Gamsamo > Run PC UI Smoke Checks`로 PC 검사를 실행한다. 기존 기록부는 `Gamsamo > Run UI Smoke Checks`로 검사한다.
 
 | 위치 | 용도 |
 | --- | --- |
@@ -762,9 +762,9 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 | `Assets/_Project/Editor/PcDesktopSceneInstaller.cs` | 기존 씬·프리팹을 보존하며 PC UI를 추가하는 도구 |
 | `Assets/_Project/Editor/PcDesktopSmokeChecks.cs` | PC·상점·입력·블러·기록부와 상호 배제 검사 |
 | `Assets/_Project/Art/UI/PcDesktop/`, `CosmeticShop/` | PC·상점 PNG와 원본 레이아웃 |
-| `Assets/_Project/Art/UI/CosmeticShop/templates/` | 동적 상점의 빈 탭 배경 5개. 완성 카드가 들어 있는 `tabs/`와 구분 |
-| `Assets/_Project/Art/UI/CounselingPack/cosmetics/` | 원본 PNG 202개·JSON 2개·TXT 2개. 카탈로그 40종과 창문 상태 원본 |
-| `Assets/_Project/Settings/CosmeticCatalog.asset` | 원본 카탈로그에서 생성한 40종 Sprite 참조 |
+| `Assets/_Project/Art/UI/CosmeticShop/templates/` | 동적 상점의 빈 탭 배경 6개. 완성 카드가 들어 있는 `tabs/`와 구분 |
+| `Assets/_Project/Art/UI/CounselingPack/cosmetics/` | 원본 PNG 219개·JSON 2개·TXT 2개. 카탈로그 48종과 창문 상태 원본 |
+| `Assets/_Project/Settings/CosmeticCatalog.asset` | 원본 카탈로그에서 생성한 48종 Sprite 참조 |
 | `Assets/_Project/Scripts/UI/CosmeticCatalog.cs` | `CosmeticItem`·카탈로그 ID 조회와 분류별 조회 |
 | `Assets/_Project/Scripts/UI/CosmeticAppearanceController.cs` | 분류별 실행 중 선택·미리보기·기본 복원·창문 단계 |
 | `Assets/_Project/Scripts/UI/CosmeticShopView.cs` | 카드 8개·선택 배지·가격 미정·창문 클릭 안내 표시와 디자인 선택 입력 |
@@ -783,7 +783,7 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 | `MedicalRecordDragHandler.OnBeginDrag/OnDrag/OnEndDrag` | 기록부 이미지의 uGUI 드래그 이벤트를 Canvas 좌표로 변환해 `RecordDragRoot` 위치를 이동한다. `ClampToBounds()`는 실제 artwork 모서리를 전체 모달 경계 안으로 보정한다. `ResetPosition()`은 다시 열 때 중앙으로 돌린다. |
 | `ConsultationRoomController.OpenPc()` / `ClosePc()` | 중앙 PC 전체를 열고 닫는다. `IsPcOpen`은 논리적 상태이며 닫힘 전환 중에도 뒤쪽 입력은 차단된다. 기록부와 공유하는 블러·전환은 이 컨트롤러만 변경한다. |
 | `PcDesktopView.OpenShop()` / `CloseShop()` | 내부 상점을 열고 기본 탭을 선택하거나 바탕화면으로 돌아간다. 상점이 열리면 바탕화면 아이콘 입력을 막는다. |
-| `PcDesktopView.SelectTab(int)` | 0 창문, 1 문, 2 서류철, 3 PC, 4 PC 배경화면. `shopSprites`는 빈 템플릿 5개이고 `tabButtons`와 같은 순서다. `shopView.ShowCategory`를 호출해 실제 카드도 갱신한다. |
+| `PcDesktopView.SelectTab(int)` | 0 창문, 1 문, 2 서류철, 3 PC, 4 PC 배경화면, 5 벽지. `shopSprites`는 빈 템플릿 6개이고 `tabButtons`와 같은 순서다. `shopView.ShowCategory`를 호출해 실제 카드도 갱신한다. |
 | `PcDesktopView.CloseActiveWindow()` | 설정 드롭다운 또는 내부 창을 닫으면 true, 열린 창이 없으면 false를 반환한다. Esc·바깥 클릭의 순차 닫기에 사용한다. |
 | `PcDesktopView.ResetDesktop()` | PC 재열기·비활성화 시 내부 창과 탭 상태, 아이콘 입력, 잔액 미연결 표시를 초기화한다. 실행 중 치장 선택이나 실제 게임 데이터를 초기화하지 않는다. |
 | `MedicalRecordView.ShowRecord(MedicalRecordData)` | 12개 필드를 갱신한다. null 또는 빈 문자열은 `—`로 표시하고 기존 환자 내용이 남지 않도록 지운다. |
@@ -805,17 +805,17 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 | `RoomAssetPackInstaller.Apply(root)` | 레이어·기록부·모니터·창문 클릭 윤곽 연결. `WindowBlindHotspot`을 PC보다 뒤에 두며 반복 설치에도 순서·기존 12개 텍스트 참조 유지 |
 | `ConsultationRoomAppearance.SetWeather(Weather)` | Clear / Cloudy / Rain 변경. 합성 캐시와 블러를 갱신하고 열린 모달의 흐림 정도 유지 |
 | `ConsultationRoomAppearance.SetWindowVariant(Texture2D[], int)` / `SetBlindState(int)` | 날씨 3개 또는 블라인드×날씨 9개를 연결. 단계는 0 올림·1 절반·2 내림, 날씨는 Clear·Cloudy·Rain 순서. `TextureForLayer(Window)`가 단계와 현재 날씨에 맞는 이미지를 선택 |
-| `SetCosmetic(CosmeticLayer, Texture2D)` / `RestoreDefault(layer)` | Window / Door / Clipboard / Pc 전체 레이어 교체·해제. `RestoreDefaults()`는 모든 치장과 날씨를 기본값으로 복원 |
-| `ConsultationRoomAppearance.Rebuild()` | 기본 방→문→창문→PC→서류철을 1920×1080 RenderTexture로 합성. 매 프레임 합성하지 않음. `ValidateConfiguration`·`CompositionVersion`으로 구성·갱신 확인 |
-| `PcDesktopView.TryApplyCosmetic(string, Sprite)` | 기존 window / door / clipboard / pc / wallpaper 외형 교체 연결을 유지. null은 해당 기본값 복원. 구매·보유 검증을 하지 않음. 현재 미리보기 컨트롤러가 wallpaper에 사용하며 향후 영구 장착은 구매 서비스 승인 뒤 호출. 방 레이어는 아틀라스가 아닌 전체 Single Sprite 사용 |
+| `SetCosmetic(CosmeticLayer, Texture2D)` / `RestoreDefault(layer)` | Window / Door / Clipboard / Pc / RoomWallpaper 전체 레이어 교체·해제. `RestoreDefaults()`는 모든 치장과 날씨를 기본값으로 복원 |
+| `ConsultationRoomAppearance.Rebuild()` | 기본 방→벽지→문→창문→PC→서류철을 1920×1080 RenderTexture로 합성. 매 프레임 합성하지 않음. `ValidateConfiguration`·`CompositionVersion`으로 구성·갱신 확인 |
+| `PcDesktopView.TryApplyCosmetic(string, Sprite)` | 기존 window / door / clipboard / pc / wallpaper / room-wallpaper 외형 교체 연결을 유지. null은 해당 기본값 복원. 구매·보유 검증을 하지 않음. 현재 미리보기 컨트롤러가 wallpaper에 사용하며 향후 영구 장착은 구매 서비스 승인 뒤 호출. 방 레이어는 아틀라스가 아닌 전체 Single Sprite 사용 |
 | `CosmeticCatalog.Find(id)` / `GetItems(target)` | 원본 ID로 1개 조회하거나 원본 순서의 분류별 8개 반환. `CosmeticItem.hasPrice`는 false이며 숫자 가격·보유 상태 없음 |
-| `CosmeticCatalogImporter.Build()` | 원본 40개 ID·5분류·8테마·명시적 null 가격·블라인드 9상태·상점 순서·폴더 안 상대 PNG 경로를 검증한 뒤 동일 `CosmeticCatalog.asset` 갱신. 카탈로그와 창문 manifest의 경로 기준 차이를 확인 |
+| `CosmeticCatalogImporter.Build()` | 원본 48개 ID·6분류·8테마·명시적 null 가격·블라인드 9상태·상점 순서·폴더 안 상대 PNG 경로를 검증한 뒤 동일 `CosmeticCatalog.asset` 갱신. 카탈로그와 창문 manifest의 경로 기준 차이를 확인 |
 | `CosmeticAppearanceController.Preview(id)` | 유효한 상품 외형을 실행 중 적용. 서류철은 책상 레이어와 확대 기록부를 함께 변경. 창문 첫 선택은 절반, 이후 테마 변경은 단계 유지. 유효하지 않은 ID·필수 이미지 누락은 false |
-| `CosmeticAppearanceController.RestoreCategory(target)` / `RestoreAll()` | 해당 분류 또는 5분류를 기본 외형으로 복원하며 현재 날씨 보존. `SelectedId(target)`·`Changed`로 선택 조회·UI 갱신 |
+| `CosmeticAppearanceController.RestoreCategory(target)` / `RestoreAll()` | 해당 분류 또는 6분류를 기본 외형으로 복원하며 현재 날씨 보존. `SelectedId(target)`·`Changed`로 선택 조회·UI 갱신 |
 | `ConsultationRoomController.CycleWindowBlinds()` / `CanInteractWithRoom` | `windowBlindButton` 클릭으로 현재 단계에 1을 더하고 3으로 나눈 나머지를 적용. 상담실이 활성이고 모달·전환이 없을 때만 조작하며 기본 창문은 변경하지 않음. 외형 `Changed` 이벤트로 버튼 활성 갱신 |
 | `CosmeticAppearanceController.SetBlindState(int)` | 선택한 창문의 0 올림·1 절반·2 내림 변경. `CanControlBlinds`가 false인 기본 창문에서는 조절하지 않음 |
 | `CosmeticShopView.ShowCategory(int)` / `PreviewSlot(int)` | 분류의 카드 8개를 표시하고 선택을 Appearance로 전달. `ItemIdAt`·`ActiveTarget`으로 현재 카드 데이터 조회. 선택 배지·기본 복원 상태는 `Changed`로 갱신. 창문 탭만 `windowBlindHint`를 표시하고 예전 단계 버튼은 숨김 |
-| `CosmeticShopBuilder.Build(desktop, catalog, appearance, font)` | 빈 템플릿 5개를 `shopSprites`에 연결하고 상점 하단을 확장. `DynamicCosmeticShop`의 카드·상품명 바탕 `NamePaper`·하단 컨트롤을 생성·갱신. 기존 탭·닫기·다른 내부 창 유지, 재실행 시 중복 생성하지 않음 |
+| `CosmeticShopBuilder.Build(desktop, catalog, appearance, font)` | 빈 템플릿 6개를 `shopSprites`에 연결하고 상점 하단을 확장. `DynamicCosmeticShop`의 카드·상품명 바탕 `NamePaper`·하단 컨트롤을 생성·갱신. 기존 탭을 레이아웃 좌표에 맞추고 벽지 탭 추가. 닫기·다른 내부 창 유지, 재실행 시 중복 생성하지 않음 |
 | `CosmeticShopBuilder.PrepareTemplate(path)` | `Build`가 호출하는 내부 함수. 원본 PNG를 바꾸지 않고 Sprite border를 `(8, 12, 8, 500)`으로 맞추며 설정이 달라진 경우에만 재임포트 |
 | `CosmeticShopView.HideLegacyBlindControls()` | 내부 마이그레이션 함수. 이전 상점 단계 버튼을 숨기고 비활성화하며 단계 변경 이벤트를 연결하지 않음 |
 | `CosmeticShopBuilder.TextButton(...)` / `DisableStraightBorder(parent)` | `Build` 내부에서 기본 `UI/Skin/UISprite.psd`로 갈색 테두리·크림색 면·상단 밝은 선을 구성. 기존 직선 테두리 자식은 삭제하지 않고 비활성화해 직렬화된 ID 보존 |
@@ -847,9 +847,10 @@ room.SetRecord(null);
 - 상점 `shopSprites`에는 `templates/`의 빈 배경을 연결한다. `tabs/`의 완성 카드 이미지와 동적 카드 8개를 함께 사용하지 않는다. 카드 좌표는 `CosmeticShop/layout.json`을 유지하고, 하단 안내·복원 영역은 y=514~548, 구분선은 y=505·506에 둔다. 템플릿 border `(8, 12, 8, 500)`과 `Image.Type.Sliced`를 함께 유지해야 카드·하단 테두리가 늘어나지 않는다.
 - 카드의 `NamePaper`는 카드 좌표 `(12, 125, 148, 31)`의 불투명 종이색 `#FFF9EA`이며 원본 PNG에 박힌 상품명 자리의 가로선을 가린다. 첫 번째 자식으로 두어 상품명 텍스트 뒤에 표시하고 `raycastTarget=false`를 유지한다. 원본 PNG를 지우거나 반투명으로 바꾸지 않는다.
 - 하단 버튼은 기본 sliced Sprite의 갈색 테두리·크림색 면을 사용하며 비활성 색도 불투명하게 유지한다. 이전 블라인드 단계 버튼·선택 테두리는 직렬화된 참조 보존을 위해 비활성으로 남기되 런타임 입력에는 연결하지 않는다. 기존 직선 테두리 노드는 삭제하지 않고 비활성화해 씬·프리팹의 기존 ID를 보존한다.
-- 원본 카탈로그·블라인드 manifest·PNG는 치장 정의의 기준이다. 상점 레이아웃의 카탈로그 상대 경로는 프로젝트 배치에 맞춰 보정하되 원본 ID·순서·40개 null 가격을 바꾸지 않는다. 원본 통화 KRW를 C로 환산하거나 7.5절의 이전 가격을 새 상품에 임의 적용하지 않는다.
+- 원본 카탈로그·블라인드 manifest·PNG는 치장 정의의 기준이다. 상점 레이아웃의 카탈로그 상대 경로는 프로젝트 배치에 맞춰 보정하되 원본 ID·순서·48개 null 가격을 바꾸지 않는다. 원본 통화 KRW를 C로 환산하거나 7.5절의 이전 가격을 새 상품에 임의 적용하지 않는다.
 - `CosmeticAppearanceController`는 PC 내부 창이 아닌 상담실 루트에 둔다. 선택은 Play 실행 중에만 유지하고 종료 후 저장하지 않는다. 카드 클릭·기본 복원은 소유권·지갑·게임 저장에 접근하지 않는다. 구매와 영구 장착은 별도 확정·저장 서비스가 구현된 뒤 연결한다.
 - 창문 9개 완성 이미지는 올림(맑음·흐림·비) → 절반(같은 순서) → 내림(같은 순서)이다. 별도 오버레이를 중복 합성하지 않는다. `RestoreAll()`은 날씨를 보존하지만 저수준 `ConsultationRoomAppearance.RestoreDefaults()`는 맑음으로 초기화하므로 용도를 구분한다.
+- `room-wallpaper`는 상담실 벽지, `wallpaper`는 PC 배경화면이다. ID와 선택·복원을 분리한다. 벽지는 1920×1080 투명 PNG를 기본 방 바로 위, 문·창문·PC·서류철 아래에 합성한다. 기본 투명 `wallpaper-none.png`는 원래 벽을 드러낸다. `CosmeticLayer.RoomWallpaper`는 기존 enum 값 뒤에 추가해 직렬화 값을 보존한다. `RoomAssetPackInstaller`는 원본 JSON의 하이픈 키를 읽을 때만 `roomWallpaper` 필드로 매핑한다. `CosmeticShopBuilder`는 레이아웃 순서의 6개 탭을 이름으로 재사용·추가하며 기존 객체 ID를 보존한다.
 - 서류철 외형은 책상 레이어와 확대 기록부를 함께 바꾸거나 함께 복원한다. 12개 TMP 필드·환자 데이터·빈 사진 칸은 그대로 유지한다.
 - 치장 검사는 설정 창을 닫은 Play 모드에서 실행한다. 검사 전 선택·날씨·텍스처·블라인드·모달 상태를 캡처하고 공개 API로 복원한다. 런타임 MonoBehaviour 전체를 `EditorJsonUtility.FromJsonOverwrite`로 복원하면 씬 참조가 유실될 수 있으므로 사용하지 않는다. 결과와 화면 캡처는 커밋 제외인 `artifacts/ui/`에 남긴다.
 - 현재 씬과 프리팹은 독립 에셋이다. PC 설치 도구는 양쪽을 각각 보완하며, 이후 수동 편집도 양쪽에 반영해야 한다. 설치 메뉴는 저장되지 않은 상담실 씬이나 해당 프리팹 편집 모드에서 실행하지 않는다.
@@ -868,6 +869,8 @@ room.SetRecord(null);
 - 한글 폰트는 Noto Sans CJK KR이며 `Assets/_Project/Fonts/OFL.txt`를 유지한다. 동적 TMP 폰트가 추가 글리프를 만들 수 있도록 원본 `.otf`도 포함한다.
 
 ### 검증 결과와 제한
+
+- **벽지 추가 검사: 치장 825개 + PC 129개 = 954개 통과, 실패 0개.** 48개 상품, 벽지 8종의 실제 렌더 픽셀·다른 레이어 보존·PC 배경화면과 독립 복원·6번째 탭 입력을 확인했다. Unity 6000.3.28f1 Play 모드 결과와 제한은 17.20절에 기록한다.
 
 - 창문 클릭 전환 검사는 상점의 단계 버튼 제거, 8개 디자인의 실제 Raycaster·PointerClick 3회 순환, 기본 창문·복원 후 무반응, 테마·날씨 보존, PC·기록부 열림/닫힘 중 직접 호출 차단을 포함한다. 모달 활성화 직후의 동기적 입력 차단과 첫 player frame 이후의 Raycaster 등록을 나눠 검사한다. 최신 실제 검사 수와 결과는 17.19절에 기록한다.
 - **이전 내부 창·기본 레이어 에셋 적용 검사: PC 125개 + 상담실 외형 49개 + 기록부 52개 = 226개 통과, 실패 0개.** Unity 6000.3.28f1의 실제 Play 모드에서 수행했다. 프로필 텍스트 3개가 처음에 넘친 문제와 슬라이더 손잡이 높이를 수정한 뒤 재검증했다. 이 숫자는 이번 40종 동적 상점·블라인드 구현의 최종 검사 결과가 아니다.
@@ -895,12 +898,12 @@ room.SetRecord(null);
 
 ### 구현 우선순위
 
-PC 내부 네 화면, 기본 방 레이어·날씨, 원본 40종의 동적 카드·실행 중 미리보기·창문 블라인드 연결을 구현했다. 이전 치장 통합·회귀 검사는 총 801개, 이전 상점 하단·버튼·상품명 수정 검사는 치장·PC 772개를 통과했다. 블라인드 단계 조작은 이후 상담실 창문 클릭으로 이동했다. 사용자 설정 저장과 게임 진행 자동 저장은 별개이며 미리보기는 진행 저장을 만들지 않는다. 다음 연결은 실제 프로필·사진 콘텐츠, 음원, 새 40종의 확정 가격·소유·구매 데이터다. 화면 단위는 C이지만 원본 카탈로그 KRW·null 가격은 보존하며 환산 규칙은 없다.
+PC 내부 네 화면, 기본 방 레이어·날씨, 원본 48종의 동적 카드·실행 중 미리보기·창문 블라인드 연결을 구현했다. 이전 치장 통합·회귀 검사는 총 801개, 이전 상점 하단·버튼·상품명 수정 검사는 치장·PC 772개를 통과했다. 블라인드 단계 조작은 이후 상담실 창문 클릭으로 이동했다. 사용자 설정 저장과 게임 진행 자동 저장은 별개이며 미리보기는 진행 저장을 만들지 않는다. 다음 연결은 실제 프로필·사진 콘텐츠, 음원, 새 48종의 확정 가격·소유·구매 데이터다. 화면 단위는 C이지만 원본 카탈로그 KRW·null 가격은 보존하며 환산 규칙은 없다.
 
 1. **실제 환자 데이터 연결:** 환자 JSON·공개 상태를 `MedicalRecordData`로 변환해 `SetRecord()`에 전달한다. 현재 null·빈 문자열은 `—`로 표시하므로 기획의 미설정·미확인·해당 없음 구분을 추가해야 한다. 샘플 환자를 서윤 확정 설정으로 오인하지 않는다.
 2. **대화·진행 연결:** 서버 요청·응답 규격을 확정하고 입력창·응답 대기·오류 재시도·질문 사용량 바를 연결한다. 총 질문 5개 → 마지막 답변·마무리 → 원문 저장 → 두 축 평가 → 보상 정산 → 자동 저장 순서를 적용한다. 책 안내서 열람 중에는 확정 응답을 보존하고 화면 전환은 닫은 뒤 이어간다.
 3. **UI 확장 전 프리팹 연결:** 현재 씬과 프리팹의 독립 상태를 정리해 치장·대화 UI 변경의 중복 반영을 방지한다.
-4. **구매·소유·장착 저장 연결:** 7.4절 보상 설계와 새 40종의 가격·분류를 먼저 확정한다. 7.5절의 6상품 가격표는 이전 설계안으로 보존하며 새 상품 가격으로 재사용하지 않는다. 현재 미리보기와 분리해 Economy 상태, 잔액 검증·중복 구매 방지·소유권 확정·장착·자동 저장 실패 복원을 구현한다. 기존 클릭 영역·빈 사진 칸·날씨와 블라인드 상태를 유지한다.
+4. **구매·소유·장착 저장 연결:** 7.4절 보상 설계와 새 48종의 가격·분류를 먼저 확정한다. 7.5절의 6상품 가격표는 이전 설계안으로 보존하며 새 상품 가격으로 재사용하지 않는다. 현재 미리보기와 분리해 Economy 상태, 잔액 검증·중복 구매 방지·소유권 확정·장착·자동 저장 실패 복원을 구현한다. 기존 클릭 영역·빈 사진 칸·날씨와 블라인드 상태를 유지한다.
 5. **실행 검증:** 긴 기록 스크롤·페이지, 실제 마우스 클릭, 16:9·16:10 화면, Windows·macOS 빌드, 중복 정산·구매·저장 실패·새 실험 분리를 검증한다.
 6. **플레이 검증:** 6명 상담의 점수·획득·구매 데이터를 보고 경제 수치를 조정한다. 현재 금액 검산과 실제 재미·밸런스 검증을 구분한다.
 7. **엔딩 구현:** 11절의 6명 후일담 사진·실제 발언 원문 검증·제작진 명단을 준비하고, 위→아래 크레딧과 자동 저장·건너뛰기·다시 보기를 연결한다. 사진·한 줄·중앙 글의 가독성과 재생 시 보상 중복 방지를 확인한다.
@@ -1234,3 +1237,18 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 산출물·제한: `artifacts/ui/smoke-checks.txt`, `pc-smoke-checks.txt`, `cosmetic-checks.txt`, `record-open.png`, `record-dragged.png` 및 치장 캡처는 로컬 검증용으로 Git에서 제외한다. 새 컴파일 오류·예외는 없으나 TMP 말줄임표가 없어 Truncate로 대체하는 기존 폰트 경고 1건이 관찰됐다. 기록부 바깥의 기준은 artwork 사각형이므로 소폭 투명 여백도 내부로 취급한다. 실제 OS 마우스 클릭·드래그와 최신 Esc 수동 확인은 도구 입력/시간초과 문제로 완료하지 못했으며 Unity Raycaster·포인터 이벤트 검증과 구분한다. 목표별 화면 비율·실행 빌드는 미검증이다. 마지막 확인에서 Unity는 Play 모드였고 세션 이전 시 종료를 보장하지 않았다.
 - 데이터·보존 규칙: 드래그 위치는 표시용이며 영구 저장하지 않는다. 디자인 미리보기·블라인드는 기존 Play 내 상태만 바꾸며 구매·소유권·LLM·환자 데이터에 접근하지 않는다. 씬과 프리팹은 독립이므로 양쪽에 적용해야 한다. 기존 미추적 `ConsultationRoomUI 2.prefab`·메타는 사용자 파일로 보존하고 제출에서 제외한다. Library·Temp·Logs·UserSettings·artifacts도 제외한다.
 - 다음 추천 작업: (1) 실제 마우스·Esc와 16:9/16:10 실행 빌드 검증, 긴 기록 표시·말줄임표 폰트 확인. (2) 씬/프리팹 중복 연결 정리 후 가격·소유·구매·영구 장착·저장 연결. 환자·대화 기능의 전체 우선순위는 15절을 따른다. PR #19의 병합 여부와 실행은 사용자가 판단하며 자동 병합은 설정하지 않는다.
+
+
+### 17.20 상담실 벽지 8종과 상점 벽지 목록 추가
+
+- 구현·검증·문서 정리 완료 시각: **2026-11-06 01:06:07 KST (UTC+09:00)**.
+- 요청: 제공된 `counseling-game-assets (2)`의 새 벽지를 확인하고 상점에 목록 추가. 최신 `origin/feature/ui`의 `9b64006`을 풀한 `codex/shop-room-wallpaper`에서 작업했다. 사용자 복사 프리팹 `ConsultationRoomUI 2.prefab`과 메타는 그대로 제외한다.
+- 변경: 오크·월넛·세이지·라벤더·테라코타·미드나이트·빈티지 브라스·모던 화이트 벽지 8종을 여섯 번째 `벽지` 탭에 연결했다. 전체 카탈로그는 6분류×8테마=48종이다. 각 카드의 썸네일·이름·선택 배지·미리보기·현재 분류 기본 복원과 PC 재열기 후 선택 유지가 동작한다.
+- 주요 파일·실행: `Art/UI/CounselingPack/cosmetics/room-wallpaper/` 원본 17개 PNG, `room/wallpaper-none.png`, 갱신된 카탈로그·방 레이아웃·상점 템플릿 6개 및 메타를 반영했다. 기존 씬·프리팹·`Settings/CosmeticCatalog.asset`도 함께 갱신했다. Edit 모드의 `Gamsamo > Apply Counseling Asset Pack`으로 재연결하며, Play에서 PC → 상점 → 벽지 → 카드 선택 후 PC를 닫으면 적용된 벽이 보인다.
+- 함수·연결: `CosmeticCatalogImporter.Build()`는 48개 ID·null 가격·6개 탭 순서를 검증한다. `CosmeticShopBuilder.Build()`는 기존 탭을 이름으로 재사용하고 새 탭과 원본 클릭 좌표를 연결한다. `PcDesktopView.SelectTab(5)` → `CosmeticShopView.ShowCategory(5)` → `CosmeticAppearanceController.Preview("room-wallpaper.<theme>")` → `ConsultationRoomAppearance.SetCosmetic(RoomWallpaper, texture)`로 적용하며 `RestoreCategory("room-wallpaper")`로 벽지만 복원한다.
+- 데이터·규칙: `RoomWallpaper` enum은 마지막에 추가해 기존 직렬화 값을 유지한다. 기본 방 → 벽지 → 문 → 창문 → PC → 서류철 순서이며, 벽지의 투명 부분은 책상을 보존한다. `wallpaper`는 PC 배경화면, `room-wallpaper`는 상담실 벽지로 서로 선택·복원 상태를 공유하지 않는다. 48개 가격은 모두 원본 `null`을 유지하며 구매·소유권·지갑·게임 저장·LLM에는 접근하지 않는다. 원본 안내 TXT는 참고 자료다.
+- 검증: Unity 6000.3.28f1에서 컴파일 후 `Run Cosmetic Checks` **825 통과·0 실패**, `Run PC UI Smoke Checks` **129 통과·0 실패**. 벽지 8종의 서로 다른 실제 GPU 벽 픽셀, 문·창문·PC·서류철·책상 픽셀 보존, PC 배경화면과 독립 복원, 전체 복원, 6개 탭 클릭을 확인했다. `cosmetics-shop-room-wallpaper.png`와 `cosmetics-room-sage.png` 캡처의 목록·상담실 표시를 확인했다. 결과는 커밋 제외 `artifacts/ui/`에 있다.
+- 정적 확인: 새 벽지 17개 PNG가 제공 원본과 바이트 일치하며 카탈로그 48개 모두 가격 미정이다. 씬 기존 객체 1,154개·프리팹 1,142개의 ID를 전부 보존했고 각각 9개만 추가했다. 참조는 Assets와 Unity 패키지 메타 기준으로 모두 해결된다. 설치를 두 번 실행한 뒤 씬·프리팹 SHA-256이 동일했다. C#·Markdown `git diff --check` 통과. 원본 TXT의 CRLF와 Unity 생성 YAML의 빈 필드 공백은 원형을 보존한다.
+- 제한: 별도 Windows/macOS 실행 빌드와 해상도별 수동 검증은 수행하지 않았다. 최초 적용 과정에서 초기 PC 설치 도구의 5개 탭 제한이 발견되어 6개로 수정했고 이후 적용·실행 검사를 통과했다. 구매·영구 장착·게임 저장은 기존과 같이 미구현이다.
+- 다음 추천 작업: (1) 실제 게임 흐름에서 벽지 선택 화면 확인, (2) 48종 가격·소유·장착 저장 규칙 확정, (3) 구매 승인과 자동 저장 연결. 환자·대화 기능의 우선순위는 15절을 따른다.
+- Git 제출: 구현·에셋·문서를 같은 작업 브랜치의 커밋과 `base=feature/ui`인 PR 하나에 묶는다. 작업 브랜치 게시와 PR 생성의 실제 결과는 Git 이력·최종 보고로 확인한다. `main`·`feature/ui` 직접 푸시와 PR 병합은 수행하지 않는다.

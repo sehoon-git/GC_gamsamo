@@ -4,7 +4,7 @@
 
 작업 루틴은 **풀 → 요청한 작업 확인 → 작업 → PR**입니다. 별도 요청이 없으면 최신 `feature/ui` 변경을 풀한 뒤 [저장소 작업 지침](AGENTS.md)과 [통합 기획서 plan01](docs/plan01.md)을 읽고 요청 범위를 확인합니다. 작업 중 생긴 변경사항은 반드시 plan01의 기준·구현 상태와 [작업 이력](docs/plan01.md#work-history)에 반영합니다. 완료 시각·함수·규칙·검증·다음 작업을 기록하고 코드와 문서를 **`feature/ui` 대상 PR 하나**로 제출하며, 후속 수정도 같은 PR에 포함합니다. 원격 브랜치의 실제 표기는 소문자 `feature/ui`이며 `main` 대상 PR은 만들지 않습니다. `main` 직접 푸시·PR 병합·자동 병합 설정은 하지 않습니다. 병합 판단과 실행은 사용자가 맡습니다.
 
-현재 프로젝트에는 **상담실·진료기록부·PC·상점·프로필·사진·환경설정 UI**이 구현되어 있습니다. 왼쪽 아래 기록부는 환자 기록을, 모니터는 PC 바탕화면을 중앙에 표시하며 상담실 배경이 흐려집니다. 상점은 5개 분류마다 8종씩 총 40종의 치장을 미리보기로 적용하며 창문 블라인드를 조절할 수 있습니다. 표시 환자는 가상 예시이며, 대화 서버·게임 진행·실제 재화와 구매 기능은 아직 연결하지 않았습니다.
+현재 프로젝트에는 **상담실·진료기록부·PC·상점·프로필·사진·환경설정 UI**이 구현되어 있습니다. 왼쪽 아래 기록부는 환자 기록을, 모니터는 PC 바탕화면을 중앙에 표시하며 상담실 배경이 흐려집니다. 상점은 6개 분류마다 8종씩 총 48종의 치장을 미리보기로 적용하며 창문 블라인드를 조절할 수 있습니다. 표시 환자는 가상 예시이며, 대화 서버·게임 진행·실제 재화와 구매 기능은 아직 연결하지 않았습니다.
 
 시작 화면과 설정 화면의 배치·클릭 시안은 [시작 화면 미리보기](tools/ui-preview/start-menu/index.html)를 브라우저에서 열어 확인할 수 있습니다. `새 게임 / 불러오기 / 설정 / 게임 종료` 네 메뉴와 한 페이지의 상단 그래픽·하단 오디오 구성을 담았습니다. 실제 자동 저장이 연결되지 않아 불러오기는 비활성화되어 있습니다. Unity 시작 씬·실제 설정 적용·저장·앱 종료 기능과는 구분하며, 상세 동작과 연결 범위는 [plan01](docs/plan01.md)의 8.4절·15절에 있습니다.
 
@@ -20,7 +20,7 @@
 
 내 프로필은 남녀 아바타와 이름·소속·소개를 표시하고, 사진은 6개 슬롯을 제공합니다. 실제 프로필 정보·사진이 없으면 빈 상태입니다. 환경설정은 해상도·화면 모드와 전체/BGM/효과음 값을 편집하며 **적용으로 저장, 닫기·Esc로 미적용 변경 취소**합니다. 화면 변경은 실행 빌드에서 적용하고 Editor에서는 바꾸지 않습니다. 음원은 아직 없습니다.
 
-상점은 `미리보기 · 가격 미정`과 잔액 `— C`를 표시합니다. 새 원본 카탈로그의 40종 가격은 모두 `null`이며 무료·0원으로 해석하지 않습니다. 원본 통화 `KRW`는 보존하고 UI만 기존 게임 단위 C로 표시하며, 환산이나 지갑 연결은 없습니다. 치장 선택은 PC를 닫아도 같은 Play 실행 동안 유지되고, Play 종료 후 다음 실행에서는 기본 외형으로 시작합니다. 소유권·재화·게임 저장은 변경하지 않습니다. 서류철은 책상 위 모습과 확대 기록부를 함께 바꾸며 기록 내용·빈 사진 칸은 유지합니다.
+상점은 `미리보기 · 가격 미정`과 잔액 `— C`를 표시합니다. 새 원본 카탈로그의 48종 가격은 모두 `null`이며 무료·0원으로 해석하지 않습니다. 원본 통화 `KRW`는 보존하고 UI만 기존 게임 단위 C로 표시하며, 환산이나 지갑 연결은 없습니다. 치장 선택은 PC를 닫아도 같은 Play 실행 동안 유지되고, Play 종료 후 다음 실행에서는 기본 외형으로 시작합니다. 소유권·재화·게임 저장은 변경하지 않습니다. 서류철은 책상 위 모습과 확대 기록부를 함께 바꾸며 기록 내용·빈 사진 칸은 유지합니다. 벽지 8종은 마지막 `벽지` 탭에서 선택하며 PC 배경화면과 별도로 적용·복원됩니다.
 
 PC 창은 실제 상담실 배경 너비의 82% 안에서 비율을 유지합니다. 넓은 게임 뷰에 여백이 생겨도 PC와 상점이 상담실 화면 밖으로 커지지 않습니다.
 
@@ -30,7 +30,7 @@ UI 프리팹은 `Assets/_Project/Prefabs/ConsultationRoomUI.prefab`입니다. �
 
 Play 모드에서 `Gamsamo > Run UI Smoke Checks`로 클릭 영역, 모달 차단, 블러, 한글 표시, 텍스트 넘침, 기록부 드래그·화면 경계·바깥 클릭 닫기와 중앙 재열기를 검사합니다. 결과와 화면 캡처는 Git에서 제외된 `artifacts/ui/`에 저장됩니다. 씬을 처음 생성하는 도구는 `Gamsamo > Create Consultation Room Scene`이며, 기존 씬이 있으면 덮어쓰지 않습니다.
 
-치장 40종과 블라인드·날씨 조합은 Play 모드의 `Gamsamo > Run Cosmetic Checks`로 검사합니다. 결과는 `artifacts/ui/cosmetic-checks.txt`에 남고 해당 폴더는 커밋하지 않습니다. PC 검사는 Play 모드의 `Gamsamo > Run PC UI Smoke Checks`로 실행합니다. 새 레이어·날씨·치장 연결은 `Gamsamo > Run Room Appearance Checks`로 검사합니다. PC·상점은 저장된 씬과 프리팹에 이미 연결되어 있습니다. 기존 기록부 씬에 PC를 추가하는 도구는 `Gamsamo > Install PC Desktop UI`이며, 이미 설치된 UI를 다시 만들지 않습니다. 실행 전 해당 씬을 저장하고 상담실 프리팹 편집 모드를 닫아야 합니다.
+치장 48종과 블라인드·날씨 조합은 Play 모드의 `Gamsamo > Run Cosmetic Checks`로 검사합니다. 결과는 `artifacts/ui/cosmetic-checks.txt`에 남고 해당 폴더는 커밋하지 않습니다. PC 검사는 Play 모드의 `Gamsamo > Run PC UI Smoke Checks`로 실행합니다. 새 레이어·날씨·치장 연결은 `Gamsamo > Run Room Appearance Checks`로 검사합니다. PC·상점은 저장된 씬과 프리팹에 이미 연결되어 있습니다. 기존 기록부 씬에 PC를 추가하는 도구는 `Gamsamo > Install PC Desktop UI`이며, 이미 설치된 UI를 다시 만들지 않습니다. 실행 전 해당 씬을 저장하고 상담실 프리팹 편집 모드를 닫아야 합니다.
 
 새 에셋 갱신 메뉴는 Edit 모드의 `Gamsamo > Apply Counseling Asset Pack`입니다. 저장된 씬과 프리팹 양쪽을 갱신하며, 프로필·사진·설정 창과 동적 상점 카드를 중복 생성하지 않습니다. `CosmeticCatalogImporter.Build()`가 원본 카탈로그·가격 미정·블라인드 구성·상대 경로를 검증하고 `Assets/_Project/Settings/CosmeticCatalog.asset`을 생성·갱신합니다. `CosmeticShopBuilder.Build(...)`는 빈 탭 템플릿 위에 썸네일·이름·선택 표시를 구성합니다.
 
@@ -41,8 +41,8 @@ Play 모드에서 `Gamsamo > Run UI Smoke Checks`로 클릭 영역, 모달 차�
 - 상담실: `Assets/_Project/Art/UI/CounselingPack/room/` — 기본 방·문·창문 3종·PC·서류철을 1920×1080으로 조립하고 전체를 함께 흐리게 합니다. 기존 단일 배경은 초기 생성 도구와 시작 화면 시안용으로 보존합니다.
 - 기록부: `CounselingPack/room/medical-record-front.png` — 새 팩의 투명 외곽·빈 사진 칸 이미지를 사용합니다. 이전 `MedicalRecord.png`와 편집 기록은 보존합니다.
 - PC·내부 창: `Assets/_Project/Art/UI/PcDesktop/`, `CounselingPack/profile/`, `photos/`, `settings/` — 이전 적용에서 기존 PC·상점 PNG 12개를 재사용하고 `pc-frame.png` 등 PNG 15개를 추가했습니다. 완성 배경·overview·preview·pc-open은 참고용으로 보존합니다.
-- 치장: `Assets/_Project/Art/UI/CounselingPack/cosmetics/` — 원본 PNG 202개·JSON 2개·TXT 안내 2개로 총 206개 파일을 포함합니다. 원본 `catalog.json`과 `window/blind-states.json`을 기준으로 5분류×8테마를 연결합니다. 안내 문서는 참고자료이며 게임 규칙을 덮어쓰지 않습니다.
-- 동적 상점: `Assets/_Project/Art/UI/CosmeticShop/templates/`의 빈 탭 PNG 5개를 사용합니다. 이번 신규 PNG는 치장 원본 202개와 템플릿 5개를 합한 207개입니다. 기존 `tabs/`의 완성 카드 PNG 5개와 `layout.json`도 새 제공본으로 갱신하되, 실제 UI는 템플릿과 개별 카드 데이터로 구성합니다. 레이아웃의 카탈로그 경로는 프로젝트 배치에 맞춘 `../CounselingPack/cosmetics/catalog.json`입니다.
+- 치장: `Assets/_Project/Art/UI/CounselingPack/cosmetics/` — 원본 PNG 219개·JSON 2개·TXT 안내 2개로 총 223개 파일을 포함합니다. 원본 `catalog.json`과 `window/blind-states.json`을 기준으로 6분류×8테마를 연결합니다. 안내 문서는 참고자료이며 게임 규칙을 덮어쓰지 않습니다.
+- 동적 상점: `Assets/_Project/Art/UI/CosmeticShop/templates/`의 빈 탭 PNG 6개를 사용합니다. `tabs/`의 완성 카드 PNG 6개와 `layout.json`도 새 제공본으로 갱신하되, 실제 UI는 템플릿과 개별 카드 데이터로 구성합니다. 레이아웃의 카탈로그 경로는 프로젝트 배치에 맞춘 `../CounselingPack/cosmetics/catalog.json`입니다.
 - 기록부 편집에는 기본 제공 ImageGen을 사용했습니다. 편집 지시는 원본의 1024 × 1536 구도, 클립보드·종이 질감, 한글 제목·항목명·표 선을 유지하면서 외곽과 클립 구멍만 투명하게 만들고, 사진 속 인물만 제거해 테두리 안을 종이색 공백으로 채우는 내용입니다. [최종 편집 프롬프트](docs/plan01.md#asset-edit)는 통합 기획서에 보관합니다.
 - 한글은 [Noto Sans CJK KR](https://github.com/notofonts/noto-cjk/tree/main/Sans/OTF/Korean)의 프로젝트 포함 폰트를 사용합니다. 라이선스는 `Assets/_Project/Fonts/OFL.txt`에 있습니다. TextMeshPro 필수 리소스는 `Assets/TextMesh Pro/`에 포함되어 있습니다.
 
@@ -117,7 +117,7 @@ Unity 프로젝트는 저장소 루트에 있습니다. 이 UI 브랜치의 주�
 - 책 안내서의 페이지 구성·확대·넘김·닫기와 응답 대기 중 열람 처리 구현·검증. 현재 UI에는 아직 구현되지 않았습니다.
 - A6000에서 지정 모델·서버 구성의 구동·호환성·속도 검증과 한국어 품질 개선. 기존 RTX 5070 Ti 실험 결과 및 한계는 [AI 진행 상황](https://github.com/sehoon-git/GC_gamsamo/blob/b6e366f59a23f7c0db7d1522a01ae5d278902150/ai/progress.md)에 기록합니다.
 - 모니터 사진 폴더의 콘텐츠와 획득 조건, UI 세부 표현.
-- 새 치장 40종의 가격·소유·구매·장착 저장 규칙 확정과 보상·지갑 연결. [기획서](docs/plan01.md) 7.5절의 6상품 가격표는 이전 설계안으로 보존하며 새 40종의 확정 가격으로 사용하지 않습니다. 현재는 실행 중 미리보기만 제공하고, 구매·자동 저장·중복 결제 및 저장 실패 처리는 후속 작업입니다.
+- 새 치장 48종의 가격·소유·구매·장착 저장 규칙 확정과 보상·지갑 연결. [기획서](docs/plan01.md) 7.5절의 6상품 가격표는 이전 설계안으로 보존하며 새 48종의 확정 가격으로 사용하지 않습니다. 현재는 실행 중 미리보기만 제공하고, 구매·자동 저장·중복 결제 및 저장 실패 처리는 후속 작업입니다.
 
 이번 범위에서 음료 제조 기능은 제외합니다. 상세 구현은 각 팀원이 진행합니다.
 

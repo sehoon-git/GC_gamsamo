@@ -29,7 +29,7 @@
       "hit_rect": {
         "x": 34,
         "y": 89,
-        "width": 146,
+        "width": 119,
         "height": 48
       },
       "scene_asset_key": "window",
@@ -50,9 +50,9 @@
       "label": "문",
       "active_window_png": "tabs/door.png",
       "hit_rect": {
-        "x": 185,
+        "x": 158,
         "y": 89,
-        "width": 146,
+        "width": 100,
         "height": 48
       },
       "scene_asset_key": "door",
@@ -73,9 +73,9 @@
       "label": "서류철",
       "active_window_png": "tabs/clipboard.png",
       "hit_rect": {
-        "x": 336,
+        "x": 263,
         "y": 89,
-        "width": 146,
+        "width": 132,
         "height": 48
       },
       "scene_asset_key": "clipboard",
@@ -96,9 +96,9 @@
       "label": "PC",
       "active_window_png": "tabs/pc.png",
       "hit_rect": {
-        "x": 487,
+        "x": 400,
         "y": 89,
-        "width": 146,
+        "width": 96,
         "height": 48
       },
       "scene_asset_key": "pc",
@@ -119,9 +119,9 @@
       "label": "PC 배경화면",
       "active_window_png": "tabs/wallpaper.png",
       "hit_rect": {
-        "x": 638,
+        "x": 501,
         "y": 89,
-        "width": 155,
+        "width": 161,
         "height": 48
       },
       "pc_desktop_image_key": "wallpaper",
@@ -136,6 +136,29 @@
         "wallpaper.white"
       ],
       "empty_window_png": "templates/wallpaper.png"
+    },
+    {
+      "id": "room-wallpaper",
+      "label": "벽지",
+      "active_window_png": "tabs/room-wallpaper.png",
+      "hit_rect": {
+        "x": 667,
+        "y": 89,
+        "width": 119,
+        "height": 48
+      },
+      "scene_asset_key": "room-wallpaper",
+      "products": [
+        "room-wallpaper.oak",
+        "room-wallpaper.walnut",
+        "room-wallpaper.sage",
+        "room-wallpaper.lavender",
+        "room-wallpaper.terracotta",
+        "room-wallpaper.midnight",
+        "room-wallpaper.brass",
+        "room-wallpaper.white"
+      ],
+      "empty_window_png": "templates/room-wallpaper.png"
     }
   ],
   "balance": {

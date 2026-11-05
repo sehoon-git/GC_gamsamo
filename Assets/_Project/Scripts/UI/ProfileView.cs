@@ -22,6 +22,8 @@ namespace Gamsamo.UI
         public TMP_Text affiliationText;
         public TMP_Text introText;
         public Button closeButton;
+        public TMP_Text progressText;
+        private string progressLabel = "";
 
         [SerializeField] private string profileName;
         [SerializeField] private string affiliation;
@@ -29,6 +31,32 @@ namespace Gamsamo.UI
         [SerializeField] private ProfileAvatar avatar = ProfileAvatar.Female;
 
         public ProfileAvatar Avatar => avatar;
+
+        /// <summary>Displays B's authoritative labels/counts; no promotion or clear rules live here.</summary>
+        public void SetProgress(string certification, string currentPatient, string state, int clearedCount, int totalCount)
+        {
+            if (clearedCount < 0 || totalCount < clearedCount) throw new System.ArgumentOutOfRangeException(nameof(clearedCount));
+            progressLabel = "자격증: " + Value(certification) + "  ·  완료 " + clearedCount + " / " + totalCount
+                + "\n현재 내담자: " + Value(currentPatient) + "\n" + Value(state);
+            EnsureProgressLabel();
+            Refresh();
+        }
+
+        private void EnsureProgressLabel()
+        {
+            if (progressText != null || introText == null) return;
+            var obj = new GameObject("CommittedProgress", typeof(RectTransform));
+            obj.transform.SetParent(transform, false);
+            var rect = obj.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
+            rect.anchoredPosition = new Vector2(305, -355);
+            rect.sizeDelta = new Vector2(480, 95);
+            progressText = obj.AddComponent<TextMeshProUGUI>();
+            progressText.font = introText.font; progressText.fontSize = 18;
+            progressText.color = introText.color; progressText.raycastTarget = false;
+        }
+
+        private static string Value(string value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 
         public void SetProfile(string name, string affiliation, string intro,
             ProfileAvatar avatar = ProfileAvatar.Female)
@@ -52,6 +80,7 @@ namespace Gamsamo.UI
             SetText(nameText, profileName);
             SetText(affiliationText, affiliation);
             SetText(introText, introduction);
+            SetText(progressText, progressLabel);
         }
 
         private static void SetText(TMP_Text label, string value)

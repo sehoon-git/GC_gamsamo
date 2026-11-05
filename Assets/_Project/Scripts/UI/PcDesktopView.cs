@@ -95,10 +95,10 @@ namespace Gamsamo.UI
             Focus(shopButton);
         }
 
-        /// <summary>0 window, 1 door, 2 clipboard, 3 PC, 4 wallpaper.</summary>
+        /// <summary>0 window, 1 door, 2 clipboard, 3 PC, 4 PC wallpaper, 5 room wallpaper.</summary>
         public void SelectTab(int index)
         {
-            if (index < 0 || index >= 5 || shopSprites == null
+            if (index < 0 || shopSprites == null
                 || index >= shopSprites.Length || shopSprites[index] == null)
                 return;
             ActiveTabIndex = index;
@@ -201,6 +201,7 @@ namespace Gamsamo.UI
                 case "door": layer = ConsultationRoomAppearance.CosmeticLayer.Door; break;
                 case "clipboard": layer = ConsultationRoomAppearance.CosmeticLayer.Clipboard; break;
                 case "pc": layer = ConsultationRoomAppearance.CosmeticLayer.Pc; break;
+                case "room-wallpaper": layer = ConsultationRoomAppearance.CosmeticLayer.RoomWallpaper; break;
                 default: return false;
             }
             if (artwork == null) roomAppearance.RestoreDefault(layer);

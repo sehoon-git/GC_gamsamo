@@ -11,7 +11,7 @@ namespace Gamsamo.UI
     public sealed class CosmeticShopView : MonoBehaviour
     {
         public const int SlotCount = 8;
-        private static readonly string[] Targets = { "window", "door", "clipboard", "pc", "wallpaper" };
+        private static readonly string[] Targets = { "window", "door", "clipboard", "pc", "wallpaper", "room-wallpaper" };
 
         public CosmeticCatalog catalog;
         public CosmeticAppearanceController appearance;
@@ -23,6 +23,8 @@ namespace Gamsamo.UI
         public TMP_Text[] priceLabels;
         public TMP_Text statusText;
         public Button restoreCategoryButton;
+        public TMP_Text windowBlindHint;
+        // Retained for installed scenes/prefabs; blind operation now belongs to the room window hotspot.
         public GameObject blindControls;
         public Button[] blindButtons;
         public GameObject[] blindSelections;
@@ -33,14 +35,12 @@ namespace Gamsamo.UI
         private CosmeticItem[] visibleItems = Array.Empty<CosmeticItem>();
         private Button[] boundItems;
         private UnityAction[] itemActions;
-        private Button[] boundBlinds;
-        private UnityAction[] blindActions;
         private CosmeticAppearanceController subscribedAppearance;
 
         private void Awake()
         {
             BindButtons(itemButtons, index => PreviewSlot(index), out boundItems, out itemActions);
-            BindButtons(blindButtons, SetBlindState, out boundBlinds, out blindActions);
+            HideLegacyBlindControls();
             if (restoreCategoryButton != null)
                 restoreCategoryButton.onClick.AddListener(RestoreCategory);
         }
@@ -78,7 +78,12 @@ namespace Gamsamo.UI
                 SetText(At(selectedBadges, slot), "미리보기 중");
             }
             SetText(statusText, "미리보기 · 가격 미정");
-            if (blindControls != null) blindControls.SetActive(index == 0);
+            if (windowBlindHint != null)
+            {
+                SetText(windowBlindHint, "창문을 눌러 블라인드 조절");
+                windowBlindHint.gameObject.SetActive(index == 0);
+            }
+            HideLegacyBlindControls();
             RefreshSelection();
         }
 
@@ -99,12 +104,6 @@ namespace Gamsamo.UI
             if (appearance != null) appearance.RestoreCategory(ActiveTarget);
         }
 
-        private void SetBlindState(int index)
-        {
-            if (ActiveCategoryIndex == 0 && appearance != null && appearance.CanControlBlinds)
-                appearance.SetBlindState(index);
-        }
-
         private void RefreshSelection()
         {
             string selected = appearance != null ? appearance.SelectedId(ActiveTarget) : null;
@@ -117,14 +116,18 @@ namespace Gamsamo.UI
             if (restoreCategoryButton != null)
                 restoreCategoryButton.interactable = appearance != null && !string.IsNullOrEmpty(selected);
 
-            bool canControlBlinds = ActiveCategoryIndex == 0 && appearance != null && appearance.CanControlBlinds;
+            HideLegacyBlindControls();
+        }
+
+        private void HideLegacyBlindControls()
+        {
+            if (blindControls != null) blindControls.SetActive(false);
             for (int index = 0; index < 3; index++)
             {
                 Button button = At(blindButtons, index);
-                if (button != null) button.interactable = canControlBlinds;
+                if (button != null) button.interactable = false;
                 GameObject selection = At(blindSelections, index);
-                if (selection != null)
-                    selection.SetActive(canControlBlinds && appearance.BlindState == index);
+                if (selection != null) selection.SetActive(false);
             }
         }
 
@@ -170,7 +173,6 @@ namespace Gamsamo.UI
             if (restoreCategoryButton != null)
                 restoreCategoryButton.onClick.RemoveListener(RestoreCategory);
             Unbind(boundItems, itemActions);
-            Unbind(boundBlinds, blindActions);
         }
 
         private static void Unbind(Button[] buttons, UnityAction[] callbacks)

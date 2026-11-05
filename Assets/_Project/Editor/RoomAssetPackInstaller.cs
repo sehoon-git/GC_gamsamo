@@ -27,9 +27,12 @@ namespace Gamsamo.Editor
             if (roomFrame == null || recordImage == null || scaler == null)
                 throw new InvalidOperationException("RoomFrame, record artwork Image, or CanvasScaler is missing.");
 
-            var layout = JsonUtility.FromJson<RoomLayout>(File.ReadAllText(ArtRoot + "layout.json"));
+            // JsonUtility fields cannot contain the source's hyphenated property name.
+            string json = File.ReadAllText(ArtRoot + "layout.json").Replace("\"room-wallpaper\":", "\"roomWallpaper\":");
+            var layout = JsonUtility.FromJson<RoomLayout>(json);
             ValidateLayout(layout);
             Texture2D baseTexture = Texture(ArtRoot + layout.@base);
+            Texture2D wallpaper = Texture(ArtRoot + layout.assets.roomWallpaper.file);
             Texture2D door = Texture(ArtRoot + layout.assets.door.file);
             Texture2D clear = Texture(ArtRoot + layout.assets.window.clear.file);
             Texture2D cloudy = Texture(ArtRoot + layout.assets.window.cloudy.file);
@@ -57,12 +60,14 @@ namespace Gamsamo.Editor
             room.background.raycastTarget = false;
             recordImage.sprite = record;
             recordImage.preserveAspect = true;
+            ConfigureRecordInteraction(room);
 
             var appearance = GetOrAdd<ConsultationRoomAppearance>(root);
             appearance.room = room;
             appearance.compositeShader = shader;
             appearance.canvasSize = new Vector2Int(layout.canvas.width, layout.canvas.height);
             appearance.baseTexture = baseTexture;
+            appearance.defaultRoomWallpaper = wallpaper;
             appearance.defaultDoor = door;
             appearance.clearWindow = clear;
             appearance.cloudyWindow = cloudy;
@@ -79,6 +84,7 @@ namespace Gamsamo.Editor
             previews.SetSiblingIndex(room.background.transform.GetSiblingIndex() + 1);
             appearance.editorPreviewLayers = previews.gameObject;
             previews.gameObject.SetActive(true);
+            LayerPreview(previews, "RoomWallpaper", appearance.TextureForLayer(ConsultationRoomAppearance.CosmeticLayer.RoomWallpaper), layout.assets.roomWallpaper.ToRect(), layout);
             LayerPreview(previews, "Door", appearance.TextureForLayer(ConsultationRoomAppearance.CosmeticLayer.Door), appearance.doorRect, layout);
             LayerPreview(previews, "Window", appearance.TextureForLayer(ConsultationRoomAppearance.CosmeticLayer.Window), appearance.windowRect, layout);
             LayerPreview(previews, "Pc", appearance.TextureForLayer(ConsultationRoomAppearance.CosmeticLayer.Pc), appearance.pcRect, layout);
@@ -91,6 +97,32 @@ namespace Gamsamo.Editor
                 new Vector2(0, 297), new Vector2(527, 313), new Vector2(527, 5),
                 new Vector2(520, 0), new Vector2(15, 15), new Vector2(0, 20)
             });
+
+            var windowHotspot = ChildRect(roomFrame, "WindowBlindHotspot");
+            var windowGraphic = GetOrAdd<Image>(windowHotspot.gameObject);
+            windowGraphic.color = new Color(1, 1, 1, 0);
+            windowGraphic.raycastTarget = true;
+            var windowButton = GetOrAdd<Button>(windowHotspot.gameObject);
+            windowButton.targetGraphic = windowGraphic;
+            windowButton.transition = Selectable.Transition.None;
+            windowButton.navigation = new Navigation { mode = Navigation.Mode.None };
+            windowButton.interactable = false; // The default window has no blind variants.
+            room.windowBlindButton = windowButton;
+            Rect windowBounds = appearance.windowRect;
+            float monitorLeft = monitorBounds.xMin - windowBounds.xMin;
+            float monitorTop = monitorBounds.yMin - windowBounds.yMin;
+            // Follow the frame, excluding its cast shadow and the monitor's overlapping bottom-right area.
+            UpdateHotspot(windowButton, windowBounds, layout, new[]
+            {
+                new Vector2(29, 4), new Vector2(windowBounds.width - 6, 4),
+                new Vector2(windowBounds.width - 6, monitorTop), new Vector2(monitorLeft, monitorTop),
+                new Vector2(monitorLeft, windowBounds.height - 28), new Vector2(29, windowBounds.height - 28)
+            });
+            // The monitor stays in front even if an existing scene placed the room buttons in a different order.
+            int monitorIndex = room.openPcButton.transform.GetSiblingIndex();
+            if (windowHotspot.GetSiblingIndex() < monitorIndex) monitorIndex--;
+            windowHotspot.SetSiblingIndex(monitorIndex);
+
             // The pen is a separate visible part of the layer and must not open the record.
             Rect clipboardBounds = new Rect(layout.assets.clipboard.x, layout.assets.clipboard.y, 350, 250);
             UpdateHotspot(room.openRecordButton, clipboardBounds, layout, new[]
@@ -105,16 +137,45 @@ namespace Gamsamo.Editor
             EditorUtility.SetDirty(recordImage);
         }
 
+        internal static void ConfigureRecordInteraction(ConsultationRoomController room)
+        {
+            if (room.recordPanel == null || room.recordView == null || room.modal == null)
+                throw new InvalidOperationException("The existing record panel, artwork and modal are required.");
+            RectTransform panel = room.recordPanel;
+            var parent = panel.parent as RectTransform;
+            if (parent == null)
+                throw new InvalidOperationException("The record panel requires a RectTransform parent.");
+            // Move a separate wrapper so the panel's aspect fitter and transition scale remain independent.
+            RectTransform dragRoot = parent.name == "RecordDragRoot" ? parent : ChildRect(parent, "RecordDragRoot");
+            Stretch(dragRoot);
+            if (panel.parent != dragRoot) panel.SetParent(dragRoot, false);
+            var drag = GetOrAdd<MedicalRecordDragHandler>(room.recordView.gameObject);
+            drag.room = room;
+            drag.dragRoot = dragRoot;
+            drag.artwork = (RectTransform)room.recordView.transform;
+            drag.bounds = (RectTransform)room.modal.transform;
+            drag.ResetPosition();
+            room.recordDrag = drag;
+            if (room.closeRecordButton != null)
+            {
+                room.closeRecordButton.interactable = false;
+                room.closeRecordButton.gameObject.SetActive(false);
+            }
+            EditorUtility.SetDirty(drag);
+        }
+
         private static void ValidateLayout(RoomLayout layout)
         {
             if (layout?.canvas == null || layout.canvas.width != 1920 || layout.canvas.height != 1080
                 || layout.origin != "top-left" || layout.units != "px" || layout.assets?.door == null
                 || layout.assets.pc == null || layout.assets.clipboard == null || layout.assets.window?.clear == null
-                || layout.assets.window.cloudy == null || layout.assets.window.rain == null)
+                || layout.assets.window.cloudy == null || layout.assets.window.rain == null || layout.assets.roomWallpaper == null)
                 throw new InvalidOperationException("The supported room pack uses a complete 1920 x 1080 top-left pixel layout.");
             string order = layout.draw_order != null ? string.Join(",", layout.draw_order) : "";
-            if (order != "base,door,window,pc,clipboard")
+            if (order != "base,room-wallpaper,door,window,pc,clipboard")
                 throw new InvalidOperationException("The room pack draw order has changed; update the compositor before applying it.");
+            if (layout.assets.roomWallpaper.ToRect() != new Rect(0, 0, layout.canvas.width, layout.canvas.height))
+                throw new InvalidOperationException("Room wallpaper must cover the full canvas behind the furniture.");
             if (layout.assets.window.clear.ToRect() != layout.assets.window.cloudy.ToRect()
                 || layout.assets.window.clear.ToRect() != layout.assets.window.rain.ToRect())
                 throw new InvalidOperationException("Weather window variants must share the same room rectangle.");
@@ -195,7 +256,7 @@ namespace Gamsamo.Editor
             public Rect ToRect() => new Rect(x, y, width, height);
         }
         [Serializable] private sealed class Windows { public Layer clear; public Layer cloudy; public Layer rain; }
-        [Serializable] private sealed class RoomAssets { public Layer door; public Windows window; public Layer pc; public Layer clipboard; }
+        [Serializable] private sealed class RoomAssets { public Layer door; public Windows window; public Layer pc; public Layer clipboard; public Layer roomWallpaper; }
         [Serializable] private sealed class RoomLayout
         {
             public CanvasSize canvas;

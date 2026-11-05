@@ -613,3 +613,99 @@ MonoBehaviour:
     blindSprites: []
     blindOverlays: []
     hasPrice: 0
+  - id: room-wallpaper.oak
+    target: room-wallpaper
+    theme: oak
+    displayName: "\uB0B4\uCD94\uB7F4 \uC624\uD06C \uBCBD\uC9C0"
+    cardLabel: "\uB0B4\uCD94\uB7F4 \uC624\uD06C"
+    thumbnail: {fileID: 21300000, guid: a5cff28cb70a94926aeee776df8ae209, type: 3}
+    artwork: {fileID: 21300000, guid: 8456560fce4cb4ce5871e34d802206a6, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: room-wallpaper.walnut
+    target: room-wallpaper
+    theme: walnut
+    displayName: "\uC6D4\uB11B \uBCBD\uC9C0"
+    cardLabel: "\uC6D4\uB11B"
+    thumbnail: {fileID: 21300000, guid: 03dfab9013f124977aa6ef172dede750, type: 3}
+    artwork: {fileID: 21300000, guid: 8ea28bd97251f4a39bd682c8f67b4c1d, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: room-wallpaper.sage
+    target: room-wallpaper
+    theme: sage
+    displayName: "\uC138\uC774\uC9C0 \uBCBD\uC9C0"
+    cardLabel: "\uC138\uC774\uC9C0"
+    thumbnail: {fileID: 21300000, guid: f979fadace4944120a03f23bb51fb079, type: 3}
+    artwork: {fileID: 21300000, guid: c86d473aa84b24657a103084f7fbbe19, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: room-wallpaper.lavender
+    target: room-wallpaper
+    theme: lavender
+    displayName: "\uB77C\uBCA4\uB354 \uBCBD\uC9C0"
+    cardLabel: "\uB77C\uBCA4\uB354"
+    thumbnail: {fileID: 21300000, guid: 59aa3e9d7e7f746aa8fbb0b94251593e, type: 3}
+    artwork: {fileID: 21300000, guid: 3570e812c8f934b9f82af6fda1500c20, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: room-wallpaper.terracotta
+    target: room-wallpaper
+    theme: terracotta
+    displayName: "\uD14C\uB77C\uCF54\uD0C0 \uBCBD\uC9C0"
+    cardLabel: "\uD14C\uB77C\uCF54\uD0C0"
+    thumbnail: {fileID: 21300000, guid: 94bb3c846923d4f0abd3250b41d95431, type: 3}
+    artwork: {fileID: 21300000, guid: 7cf3dd6d891da40e0892c0a8cf9e7ae6, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: room-wallpaper.midnight
+    target: room-wallpaper
+    theme: midnight
+    displayName: "\uBBF8\uB4DC\uB098\uC774\uD2B8 \uBCBD\uC9C0"
+    cardLabel: "\uBBF8\uB4DC\uB098\uC774\uD2B8"
+    thumbnail: {fileID: 21300000, guid: c4a6e2c2083c646df8350179553a8bf2, type: 3}
+    artwork: {fileID: 21300000, guid: d94da9de75d2049d98f60c903ba9c922, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: room-wallpaper.brass
+    target: room-wallpaper
+    theme: brass
+    displayName: "\uBE48\uD2F0\uC9C0 \uBE0C\uB77C\uC2A4 \uBCBD\uC9C0"
+    cardLabel: "\uBE48\uD2F0\uC9C0 \uBE0C\uB77C\uC2A4"
+    thumbnail: {fileID: 21300000, guid: 1c2afd8caa8534aa1bd99a44e4ee9d8f, type: 3}
+    artwork: {fileID: 21300000, guid: 66b79ad67d0b4470a9c37a07469af452, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: room-wallpaper.white
+    target: room-wallpaper
+    theme: white
+    displayName: "\uBAA8\uB358 \uD654\uC774\uD2B8 \uBCBD\uC9C0"
+    cardLabel: "\uBAA8\uB358 \uD654\uC774\uD2B8"
+    thumbnail: {fileID: 21300000, guid: 77c224adddfe3446894b32fb7d5d81f7, type: 3}
+    artwork: {fileID: 21300000, guid: c4dc5b7ee317f4d40b712ea2bb29827a, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0

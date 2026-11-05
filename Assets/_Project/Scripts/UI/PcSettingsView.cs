@@ -68,9 +68,6 @@ namespace Gamsamo.UI
             HideDropdowns();
             draft = GameSettings.Current;
             resolutions = GameSettings.GetSupportedResolutions();
-            var committedSize = new Vector2Int(draft.width, draft.height);
-            // A window can be resized after loading; keep the committed choice representable until Apply.
-            if (!resolutions.Contains(committedSize)) resolutions.Add(committedSize);
             if (resolutionDropdown != null)
             {
                 resolutionDropdown.ClearOptions();

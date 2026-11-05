@@ -64,6 +64,10 @@
     {
       "id": "wallpaper",
       "name_ko": "PC 바탕화면"
+    },
+    {
+      "id": "room-wallpaper",
+      "name_ko": "벽지"
     }
   ],
   "equip_rects": {
@@ -101,6 +105,13 @@
       "y": 46,
       "width": 1506,
       "height": 603
+    },
+    "room-wallpaper": {
+      "space": "room",
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 1080
     }
   },
   "items": [
@@ -854,6 +865,102 @@
       "thumbnail": "thumbnails/wallpaper/white.png",
       "images": {
         "wallpaper": "wallpaper/white.png"
+      }
+    },
+    {
+      "id": "room-wallpaper.oak",
+      "theme": "oak",
+      "category": "room-wallpaper",
+      "name_ko": "내추럴 오크 벽지",
+      "card_label": "내추럴 오크",
+      "price_krw": null,
+      "thumbnail": "room-wallpaper/thumbs/oak.png",
+      "images": {
+        "sprite": "room-wallpaper/oak.png"
+      }
+    },
+    {
+      "id": "room-wallpaper.walnut",
+      "theme": "walnut",
+      "category": "room-wallpaper",
+      "name_ko": "월넛 벽지",
+      "card_label": "월넛",
+      "price_krw": null,
+      "thumbnail": "room-wallpaper/thumbs/walnut.png",
+      "images": {
+        "sprite": "room-wallpaper/walnut.png"
+      }
+    },
+    {
+      "id": "room-wallpaper.sage",
+      "theme": "sage",
+      "category": "room-wallpaper",
+      "name_ko": "세이지 벽지",
+      "card_label": "세이지",
+      "price_krw": null,
+      "thumbnail": "room-wallpaper/thumbs/sage.png",
+      "images": {
+        "sprite": "room-wallpaper/sage.png"
+      }
+    },
+    {
+      "id": "room-wallpaper.lavender",
+      "theme": "lavender",
+      "category": "room-wallpaper",
+      "name_ko": "라벤더 벽지",
+      "card_label": "라벤더",
+      "price_krw": null,
+      "thumbnail": "room-wallpaper/thumbs/lavender.png",
+      "images": {
+        "sprite": "room-wallpaper/lavender.png"
+      }
+    },
+    {
+      "id": "room-wallpaper.terracotta",
+      "theme": "terracotta",
+      "category": "room-wallpaper",
+      "name_ko": "테라코타 벽지",
+      "card_label": "테라코타",
+      "price_krw": null,
+      "thumbnail": "room-wallpaper/thumbs/terracotta.png",
+      "images": {
+        "sprite": "room-wallpaper/terracotta.png"
+      }
+    },
+    {
+      "id": "room-wallpaper.midnight",
+      "theme": "midnight",
+      "category": "room-wallpaper",
+      "name_ko": "미드나이트 벽지",
+      "card_label": "미드나이트",
+      "price_krw": null,
+      "thumbnail": "room-wallpaper/thumbs/midnight.png",
+      "images": {
+        "sprite": "room-wallpaper/midnight.png"
+      }
+    },
+    {
+      "id": "room-wallpaper.brass",
+      "theme": "brass",
+      "category": "room-wallpaper",
+      "name_ko": "빈티지 브라스 벽지",
+      "card_label": "빈티지 브라스",
+      "price_krw": null,
+      "thumbnail": "room-wallpaper/thumbs/brass.png",
+      "images": {
+        "sprite": "room-wallpaper/brass.png"
+      }
+    },
+    {
+      "id": "room-wallpaper.white",
+      "theme": "white",
+      "category": "room-wallpaper",
+      "name_ko": "모던 화이트 벽지",
+      "card_label": "모던 화이트",
+      "price_krw": null,
+      "thumbnail": "room-wallpaper/thumbs/white.png",
+      "images": {
+        "sprite": "room-wallpaper/white.png"
       }
     }
   ]

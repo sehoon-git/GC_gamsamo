@@ -210,7 +210,7 @@ namespace Gamsamo.Editor
             label.color = new Color32(72, 63, 52, 255);
             label.alignment = alignment;
             label.textWrappingMode = TextWrappingModes.NoWrap;
-            label.overflowMode = TextOverflowModes.Ellipsis;
+            label.overflowMode = TextOverflowModes.Truncate;
             label.richText = false;
             label.raycastTarget = false;
             label.text = text;

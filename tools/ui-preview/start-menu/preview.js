@@ -13,7 +13,7 @@
   });
   const SELECT_OPTIONS = {
     displayMode: ['windowed', 'fullscreen'],
-    resolution: ['1280x720', '1600x900', '1920x1080'],
+    resolution: ['1280x720', '1920x1080'],
     quality: ['low', 'medium', 'high']
   };
   const VOLUME_KEYS = ['masterVolume', 'bgmVolume', 'sfxVolume'];

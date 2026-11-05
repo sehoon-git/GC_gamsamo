@@ -83,22 +83,12 @@ namespace Gamsamo.UI
 
         public static List<Vector2Int> GetSupportedResolutions()
         {
-            var sizes = new HashSet<Vector2Int>();
-            foreach (Resolution resolution in Screen.resolutions)
-                AddResolution(sizes, resolution.width, resolution.height);
-            AddResolution(sizes, Screen.width, Screen.height);
-            if (sizes.Count == 0)
-                AddResolution(sizes, Screen.currentResolution.width, Screen.currentResolution.height);
-            if (sizes.Count == 0) sizes.Add(new Vector2Int(1280, 720));
-            var result = new List<Vector2Int>(sizes);
-            result.Sort((a, b) => a.x == b.x ? a.y.CompareTo(b.y) : a.x.CompareTo(b.x));
-            return result;
-        }
-
-        private static void AddResolution(HashSet<Vector2Int> sizes, int width, int height)
-        {
-            if (width >= 320 && height >= 180 && width <= 16384 && height <= 16384)
-                sizes.Add(new Vector2Int(width, height));
+            // Product choices are shared by the title and PC settings, independent of the display.
+            return new List<Vector2Int>
+            {
+                new Vector2Int(1280, 720),
+                new Vector2Int(1920, 1080)
+            };
         }
 
         private static Values Defaults()

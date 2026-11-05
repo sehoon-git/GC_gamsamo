@@ -9,6 +9,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <Compile Include="../../Assets/_Project/Scripts/Networking/Ai*.cs" />
     <Compile Include="../../Assets/_Project/Scripts/Networking/PatientAiAdapter.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Networking/PatientAiInputBridge.cs" />
     <Compile Include="../../Assets/_Project/Scripts/Dialogue/PatientVisitController.cs" />
     <Compile Include="../../Assets/_Project/Scripts/Dialogue/PatientDialogueView.cs" />
     <Compile Include="../../Assets/_Project/Scripts/Patients/PatientVisitDefinition.cs" />

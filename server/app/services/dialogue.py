@@ -96,7 +96,14 @@ class DialogueService:
                     "그에 대한 감정은 기쁨·서운함 등이 함께 남을 수 있도록 표현하세요. 사건을 상담자의 공로나 완치로 돌리지 마세요.")
             # Qwen's chat template requires a user query, including for a patient-first
             # opening. This provider-only cue is never appended to the transcript.
-            messages.append({"role": "user", "content": "[대화 시작 제어 신호 — 상담자 발언 아님] 위 지침에 따라 환자의 첫 발화만 생성하세요."})
+            cue = (f"[대화 시작 제어 신호 — 상담자 발언 아님] 지금은 {len(case.sessions)}번째 상담의 시작입니다. "
+                   "위 지침에 따라 환자의 첫 발화만 생성하세요.")
+            if len(case.sessions) > 1:
+                cue += " 이전 첫 인사를 그대로 반복하지 말고, 기억과 현재 상황을 이어 말하세요."
+            if new_events:
+                cue += " 이번 방문에서 먼저 이야기할 새 사건: " + compact(new_events)
+                cue += " 이 사건의 구체적인 장면을 자신의 말로 꺼내되 감정이나 선택이 해결되었다고 단정하지 마세요."
+            messages.append({"role": "user", "content": cue})
         else:
             messages.append({"role": "user", "content": work["request"].text})
         return messages

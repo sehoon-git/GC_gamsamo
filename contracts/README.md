@@ -1,6 +1,6 @@
 # 상담 게임 AI API · 형식 4
 
-환자가 먼저 이야기하고, 플레이어가 서술형으로 답하며, **플레이어가 `상담 마치기`를 선택할 때** 회차를 종료한다. 공감·제안·여러 질문을 한 발언에 섞을 수 있고 질문 횟수와 왕복 횟수에 상한이 없다. AI는 환자 발화·공개 후보·평가를 반환하며 **Unity가 공개 확정·자동 저장·게임 진행·보상**을 소유한다.
+환자가 먼저 이야기하고, 플레이어가 서술형으로 답하며, **플레이어가 `상담 그만하기`를 선택할 때** 회차를 종료한다. 공감·제안·여러 질문을 한 발언에 섞을 수 있고 질문 횟수와 왕복 횟수에 상한이 없다. AI는 환자 발화·공개 후보·평가를 반환하며 **Unity가 공개 확정·자동 저장·게임 진행·보상**을 소유한다.
 
 서버는 상담 상태를 보관하는 DB가 없다. 새 상담을 만드는 `/start`를 제외한 요청에는 클라이언트가 마지막으로 저장한 전체 상태를 보낸다. 계약은 게임 기획 [plan01](../docs/plan01.md)의 서술형 대화와 사용자 종료 기준을 따른다.
 
@@ -57,10 +57,10 @@ POST 요청은 서버에서 전달받은 `Authorization: Bearer <키>`를 사용
 
 ## 사용자 종료·평가·재상담
 
-1. `상담 마치기` 확인을 받으면 새 입력을 차단한다. 진행 중인 응답·저장이 있으면 종료 의사를 보관하고 **그 요청의 처리와 저장을 먼저 완료**한다. 종료 취소는 종료 의도를 확정·저장하기 전에 처리한다.
+1. `상담 그만하기` 확인을 받으면 새 입력을 차단한다. 진행 중인 응답·저장이 있으면 종료 의사를 보관하고 **그 요청의 처리와 저장을 먼저 완료**한다. 종료 취소는 종료 의도를 확정·저장하기 전에 처리한다.
 2. 종료 의도를 먼저 자동 저장한 뒤 `/close`를 호출한다. Python 참조 구현 `request_closing()`과 `SessionClient.finish()`는 `phase=closing`, `revision + 1`로 저장한다. Unity 어댑터는 대기 중 요청과 함께 로컬 저장 묶음의 `end_requested=true`를 저장하고 서버 상태는 `active`인 채 `/close`를 호출한다. 두 경로 모두 복원 시 새 입력을 차단하고 종료 처리를 이어간다. `finish()`는 진행 중 요청을 자체적으로 대기열에 넣지 않으므로 UI 어댑터가 종료 의사를 보관해야 한다.
 3. `/close`는 LLM 호출 없이 **상담은 여기까지 하겠습니다. 오늘 수고하셨습니다!**를 `closing_text`에 기록한다. `closing_speaker=counselor`, `phase=pending_evaluation`이다. 원문에는 `종료요청_ID:closing`, `kind=closing`, `speaker=counselor`로 저장한다. 마지막 환자 발화를 바꾸지 않는다.
-4. 종료 안내 저장이 끝나면 상담자/안내 영역에 표시하고 `/evaluate`를 호출한다. 결과와 `phase=evaluated`를 저장한 뒤 결과 화면을 보여준다. 질문이나 답변이 없더라도 종료할 수 있다.
+4. 종료 안내 저장이 끝나면 상담자/안내 영역에 표시하고 `/evaluate`를 호출한다. 결과와 `phase=evaluated`를 저장하고 책상 서류의 `상담 결과`에 반영한다. 별도의 평가 대화창은 만들지 않는다. 질문이나 답변이 없더라도 종료할 수 있다.
 5. 두 평가축 각각 70점 이상인 경우만 클리어한다. 방문 퇴장·여섯 명의 시연 종료·서버 오류를 클리어로 계산하지 않는다. Unity가 결과를 검증하고 게임의 완료 인원·보상 정책을 적용한다.
 6. 미달 재상담은 `/revisit`을 호출한다. 이전 원문·기억·확정 공개는 유지하고 새 회차 ID와 첫 환자 발화를 한 응답으로 추가한다. 성공 시 revision은 1 증가한다. CLI의 `next_session()` → 빈 회차 저장 → `/open` 방식도 제공하며 이 경우 각 저장 단계마다 revision이 증가한다. 이미 클리어한 실험은 재상담을 추가하지 않고 별도 case ID로 새 실험을 시작한다.
 
@@ -113,7 +113,7 @@ POST 요청은 서버에서 전달받은 `Authorization: Bearer <키>`를 사용
 | `retry`, `close-retry`, `evaluate-retry` | 확정된 요청 재전달 |
 | `stale-session`, `unauthorized`, `legacy` | 회차·인증·저장 형식 오류 |
 
-Unity는 `PatientVisitController.PatientArrived(visitId, patientId)`에서 지원 환자와 저장 상태를 확인한다. API 상담에서는 `useDemoDialogue=false`로 두고 확정 응답을 `PresentPatientLine(visitId, text)`에 전달한다. **텍스트 입력창·전송 버튼은 아직 구현하지 않았다.** 팀원이 아래 명세에 따라 입력 UI를 제작해 API 어댑터에 연결하며, 종료 확인 시 즉시 퇴장시키지 않는다. 저장된 결과를 보여준 뒤 `CompleteConsultation(visitId)`로 해당 방문을 마친다. 이 함수는 그 자체로 클리어·보상·게임 완료를 부여하지 않는다.
+Unity는 `PatientVisitController.PatientArrived(visitId, patientId)`에서 지원 환자와 저장 상태를 확인한다. API 상담에서는 `useDemoDialogue=false`로 두고 확정 응답을 `PresentPatientLine(visitId, text)`에 전달한다. `PatientAiInputBridge`가 기존 입력창·전송 버튼을 PR #24의 `PatientAiAdapter`에 연결한다. 종료 확인 시 즉시 퇴장시키지 않고 원문·고정 안내·평가를 저장한 뒤 `CompleteConsultation(visitId)`로 해당 방문을 마친다. 평가는 책상 기록부에 보관하며 결과 대화창을 따로 띄우지 않는다. 이 함수는 그 자체로 클리어·보상·게임 완료를 부여하지 않는다.
 
 진료 기록은 공개가 확정된 정보와 실제 원문만 반영하며 미제공 나이·성별·진단·약물·새 사건을 추측해서 채우지 않는다. 환자별 임상 콘텐츠, 단계별 해금, 승급, 코인 정산, 치장 구매, 최종 엔딩은 각 게임 시스템의 별도 구현 범위다. AI API가 이를 대신 완료한 것으로 취급하지 않는다.
 
@@ -122,12 +122,12 @@ Unity는 `PatientVisitController.PatientArrived(visitId, patientId)`에서 지�
 
 ## Unity 텍스트 입력 UI 연결 명세
 
-**이번 변경은 API 연결 계층과 기존 대사·종료 흐름을 제공한다. 입력창·전송 버튼·입력 키 처리는 팀원이 구현한다.** 입력 UI가 완성되면 `Gamsamo.Networking.PatientAiAdapter`의 공개 함수와 이벤트에 연결한다. UI에서 HTTP 요청·요청 ID·revision을 따로 만들거나 전체 상태 JSON을 일부 필드로 재구성하지 않는다.
+기존 입력창을 `Gamsamo.Networking.PatientAiInputBridge`로 `PatientAiAdapter`의 공개 함수와 이벤트에 연결했다. Enter는 줄바꿈, Ctrl+Enter 또는 전송 버튼은 전송이며 한글 조합 중에는 보내지 않는다. 지원 5명 모두 입력창을 사용하고 민석은 입력창을 숨긴 로컬 시연이다. 독립 `ConsultationApiClient`나 `UserSettings/CounselingApi.json`은 현재 연결에 사용하지 않는다. UI에서 HTTP 요청·요청 ID·revision을 따로 만들거나 전체 상태 JSON을 일부 필드로 재구성하지 않는다.
 
 ### 설정과 데이터 소유권
 
 - 연결 설정은 `Application.persistentDataPath/ai-connection.json`의 `api_url`, `api_key`다. `GAMSAMO_AI_CONNECTION` 환경변수로 다른 로컬 파일을 지정할 수 있다. 지정/기본 파일이 없을 때는 환경변수 `SEOYUN_API_URL`·`SEOYUN_API_KEY`를 사용한다. 실제 주소·키는 저장소·씬·프리팹·Inspector 직렬화·로그에 넣지 않는다.
-- 원격 API는 HTTPS와 Bearer 키를 요구한다. 개발용 HTTP는 loopback만 허용한다. `/health`로 준비 상태·형식 4·콘텐츠 해당 환자의 콘텐츠 버전·지원 여부를 확인한다. 모의 서버 연결과 실제 AI 연결을 구분한다.
+- 원격 API는 HTTPS와 Bearer 키를 요구한다. 개발용 HTTP는 loopback만 허용한다. `/health`로 준비 상태·형식 4·`supported_patients`에 있는 선택 환자의 콘텐츠 버전·지원 여부를 확인한다. 현재 게임은 담당자가 제공하는 실제 외부 AI 서버 설정을 사용하며, 임시 모의 서버로 연결 성공을 대체하지 않는다. 저장소의 모의 API·합성 예제는 개발 검사용이다.
 - `AiProtocol`은 전체 상태 JSON, 기존 원문·회차, 응답 ID/revision, 공개 후보 출처, 평가 합계와 원문 인용을 검증한다. 클라이언트가 이번 응답에서 검증한 후보만 공개 확정 목록에 합친다. 게임의 보상·승급·클리어 인원 증가는 별도 진행 서비스의 책임이다.
 - `AiSession`이 요청·초안·종료 의도를 관리하고 `AiSaveStore`가 `Application.persistentDataPath/ai-saves/<patient_id>/`에 상태와 원문 쌍을 저장한 뒤 현재 저장 포인터를 교체한다. Python CLI의 `v4/` 경로와는 별도이며 이전 형식 파일을 자동 변환하지 않는다. 상담 종료와 앱 종료는 다르다. 앱을 다시 열면 저장된 단계부터 복원한다. 초안만 바뀔 때는 입력 후 0.75초 대기해 저장하며 정상 비활성화·일시정지·종료 시 저장을 시도한다. 프로세스 강제 종료 때는 아직 저장되지 않은 초안이 사라질 수 있다. 전송 요청은 네트워크 호출 전에 원문을 즉시 저장한다.
 
@@ -135,11 +135,13 @@ Unity는 `PatientVisitController.PatientArrived(visitId, patientId)`에서 지�
 
 1. `ProjectSettings/ProjectVersion.txt`의 Unity 버전으로 열고 패키지 복원을 완료한다. JSON 라이브러리는 Unity 공식 `com.unity.nuget.newtonsoft-json` 3.2.2를 사용한다.
 2. `Gamsamo > AI > Import Connection JSON`에서 별도 전달받은 설정 파일을 가져온다. 파일은 프로젝트 밖의 기본 연결 경로에 저장된다. 주소가 바뀌면 다시 가져오고 `Retry Pending Operation (Play)`을 실행한다.
-3. `ConsultationRoom.unity`를 열고 `Gamsamo > AI > Validate Current Scene`으로 참조·콘텐츠 버전을 확인한다. 이 메뉴는 네트워크를 호출하지 않는다. Play 시작 시 `PatientAiBootstrap`이 기존 방문 컨트롤러에 환자별 어댑터를 자동 장착하며 씬·프리팹은 다시 생성하지 않는다.
-4. 문을 눌러 지원 환자가 착석한 뒤 첫 발화를 읽는다. 입력 UI 없이 API 흐름을 확인하려면 `Gamsamo > AI > Submit Sample Utterance (Play)`을 사용한다. 이 메뉴는 고정 합성 발언으로 `SubmitText`를 호출하는 **Editor 검증 도구**이며 게임 입력 UI가 아니다.
-5. 같은 메뉴의 `Request End`, `Confirm End`, `Cancel End`, `Retry Pending Operation`, `Revisit`, `Finish Visit`, `New Experiment`(모두 `Play` 표기)로 해당 공개 함수를 확인한다. `New Experiment`는 별도 실험 생성 확인을 거친다. 기존 종료 버튼도 유지된다. 종료 안내를 읽고 `계속 듣기`를 누르면 평가 결과, 결과의 마지막 페이지 다음에는 방문 종료로 진행한다.
+3. `ConsultationRoom.unity`를 열고 `Gamsamo > AI > Validate Current Scene`으로 참조·콘텐츠 버전을 확인한다. 이 메뉴는 네트워크를 호출하지 않는다. Play 시작 시 `PatientAiBootstrap`이 기존 방문 컨트롤러에 어댑터를 자동 장착하며 씬·프리팹은 다시 생성하지 않는다.
+4. 문을 눌러 지원 환자가 착석한 뒤 첫 발화를 읽고 입력창에 자유롭게 답변한다. Ctrl+Enter 또는 전송 버튼으로 보낸다. API 연결만 별도로 점검하려면 `Gamsamo > AI > Submit Sample Utterance (Play)`을 사용한다. 이 메뉴는 고정 합성 발언으로 `SubmitText`를 호출하는 **Editor 검증 도구**이며 게임 입력 UI가 아니다.
+5. 같은 메뉴의 `Request End`, `Confirm End`, `Cancel End`, `Retry Pending Operation`, `Revisit`, `Finish Visit`, `New Experiment`(모두 `Play` 표기)로 해당 공개 함수를 확인한다. `New Experiment`는 별도 실험 생성 확인을 거친다. 게임에서는 `상담 그만하기` 확인 후 원문·고정 안내·평가가 저장되면 방문을 마친다. 책상 서류의 `대화 원문 / 상담 결과` 탭에서 내용을 읽으며 별도의 결과 대화창은 띄우지 않는다. 기록부가 열려 있으면 닫힌 뒤 퇴장을 진행한다.
 
-런타임 어댑터의 Inspector에는 단계·입력 가능·대기·오류만 표시하고 주소·키·원문은 출력하지 않는다. 이전 `Run Patient Visit Checks`는 AI 어댑터가 붙어 있으면 사용자 저장과 외부 API 요청을 보호하기 위해 실행을 차단한다. 이번 AI 검증은 위 메뉴와 아래 수동 체크리스트를 사용한다. 이 도구를 추가했다는 사실은 Unity Editor에서 실제 실행한 결과가 아니다.
+런타임 어댑터의 Inspector에는 단계·입력 가능·대기·오류만 표시하고 주소·키·원문은 출력하지 않는다. 이전 `Run Patient Visit Checks`는 AI 어댑터가 붙어 있으면 사용자 저장과 외부 API 요청을 보호하기 위해 실행을 차단한다. 이번 AI 검증은 위 메뉴와 아래 수동 체크리스트를 사용한다. 이 도구를 추가했다는 사실은 Unity Editor에서 실제 실행한 결과가 아니다. `Revisit`는 평가된 활성 방문이 있을 때만 가능하며 현재 자동 퇴장 흐름 뒤 재상담 선택 UI는 아직 없다.
+
+PR #28에서 서윤을 대상으로 Unity Editor의 입력 브리지·저장/기록부 검사 28개와 실제 서버 CUA의 첫 발화·서술형 2턴·종료·원문/평가 열람을 확인했다. 상세 범위는 plan01 17.25절을 따른다. 완료 사례의 다음 Play 방문은 자동 퇴장하며 재상담/새 실험 게임 UI는 없다. 기록부의 실행 중 색인은 해당 환자 입장 시 저장 AI 상태로 재구성한다. 추가 4명의 Unity 화면 조작은 이번 PR의 체크리스트로 별도 확인한다.
 
 ### 공개 연결면
 
@@ -154,35 +156,35 @@ Unity는 `PatientVisitController.PatientArrived(visitId, patientId)`에서 지�
 | `CanRetry`, `Retry()` | 오류 후 재시도 버튼. 네트워크 실패는 같은 ID/본문, 받은 응답의 저장 실패는 저장만 재시도 |
 | `RequestEnd()`, `ConfirmEnd()`, `CancelEnd()` | 종료 확인 열기·확정·취소. 기존 상담 종료 버튼도 같은 흐름을 사용 |
 | `Evaluate()` | 종료 안내가 저장된 상태에서 평가 요청. 일반 흐름은 자동 진행하며 실패 재시도는 `Retry()` 사용. 오류를 0점으로 대신 표시하지 않음 |
-| `CanRevisit`, `Revisit()` | 평가 미달 후 같은 환자 기억·원문을 잇는 새 회차 |
-| `CanFinishVisit`, `FinishVisit()` | 저장된 결과 확인 후 방문 종료. 호출 자체는 클리어·보상 지급이 아님 |
+| `CanRevisit`, `Revisit()` | 평가 미달 후 같은 환자 기억·원문을 잇는 새 회차 API. 현재 게임은 저장 후 자동 퇴장하므로 퇴장 뒤 재상담 선택 UI는 후속 구현 |
+| `CanFinishVisit`, `FinishVisit()` | 평가·책상 기록 저장 후 방문 종료. 종료 확정에 따라 자동 진행하며 호출 자체는 클리어·보상 지급이 아님 |
 | `NewExperiment()` | 사용자가 별도 새 실험을 선택한 경우에만 호출. 연결 오류·씬 재시작에서 자동 호출하지 않음 |
 | `PatientId`, `CaseId`, `SessionId`, `Revision` | 별도 대화 로그 UI의 중복 표시 방지 기준. 복원 시 마지막 확정 이벤트가 다시 올 수 있으므로 같은 기록을 재삽입하지 않음 |
 | `LastPatientText`, `EvaluationJson`, `LastError` | 화면 재연결 시 마지막 확정 대사·결과·오류 조회. 오류와 상담 원문을 공개 로그로 남기지 않음 |
 | `event Action StateChanged` | 위 속성을 다시 읽어 입력 활성화·처리 상태·초안·재시도 상태 갱신 |
 | `event Action<string> PatientLineCommitted` | 응답 검증과 자동 저장이 끝난 환자 대사. 기존 대화창에도 연결되므로 별도 UI가 중복 출력하지 않도록 함 |
 | `event Action<string> CounselorNoticeCommitted` | 고정 상담자 종료 안내. 환자 이름 아래에 표시하지 않음 |
-| `event Action<string> EvaluationCommitted` | 검증·저장된 평가 JSON. 두 축과 통과 여부를 표시; 접속 오류와 구분 |
+| `event Action<string> EvaluationCommitted` | 검증·저장된 평가 JSON. 책상 서류의 상담 결과에 두 축·이유·근거를 표시; 접속 오류와 구분 |
 | `event Action<string> ErrorOccurred` | 사용자에게 오류와 가능한 재시도를 안내. 초안·확정 기록을 지우지 않음 |
 
 ### 입력과 표시 규칙
 
-1. **첫 환자 발화 저장 이후**에만 전송한다. `CanSubmit`이 거짓이면 버튼과 Enter 전송을 모두 막는다. 접속 준비·진행 중 요청·저장 실패·종료 요청·평가·팝업 차단도 반영한다.
+1. **첫 환자 발화 저장 이후**에만 전송한다. `CanSubmit`이 거짓이면 버튼과 Ctrl+Enter 전송을 모두 막는다. 접속 준비·진행 중 요청·저장 실패·종료 요청·평가·팝업 차단도 반영한다.
 2. 공백만 있는 입력은 전송하지 않는다. 공감·제안·질문·복수 질문·여러 줄 입력을 모두 허용한다. 문자열을 임의로 잘라 보내거나 질문 수로 제한하지 않는다. API에 보낼 원문은 trim·개행 재작성 없이 전달한다.
-3. 키보드 전송 정책은 **Enter 전송, Shift+Enter 줄바꿈**을 기준으로 구현한다. 한글 IME 조합 중 Enter는 글자 확정만 하고 전송하지 않는다. TMP의 제출 이벤트를 곧바로 `SubmitText`에 연결하지 말고 조합 중인지 확인한다. 마우스 전송도 최종 조합 문자열을 확정한 뒤 실행한다.
+3. 키보드 전송 정책은 **Enter 줄바꿈, Ctrl+Enter 전송**이다. 한글 IME 조합 중에는 키보드·버튼 전송을 모두 막는다. TMP의 제출 이벤트를 곧바로 `SubmitText`에 연결하지 말고 조합 중인지 확인한다. 마우스 전송도 최종 조합 문자열을 확정한 뒤 실행한다.
 4. 요청 접수 뒤 입력 편집·중복 전송을 막고 초안을 유지한다. 실패 시 같은 글을 확인할 수 있어야 한다. `StateChanged`에서 `Draft`를 반영할 때 `SetTextWithoutNotify` 등을 사용해 초안 저장 콜백이 다시 발생하지 않게 한다. 성공 여부를 HTTP 요청 시작 시점으로 판단하지 않는다.
 5. `context_overflow` 등 수정이 필요한 입력 오류는 초안을 돌려주며 사용자가 길이를 조정해 새로 전송한다. 네트워크 장애에서는 기존 요청을 그대로 재시도한다. 저장 실패에서 `SubmitText`를 다시 호출하지 않는다.
 6. 복원 시 마지막 확정 대사·평가 이벤트가 다시 발생할 수 있다. 별도 로그 UI는 `PatientId`·`CaseId`·`SessionId`·`Revision`으로 중복 삽입을 막거나 `LastPatientText`·`EvaluationJson`으로 화면을 교체한다. 표시용 타이핑·페이지 이동은 원문을 바꾸지 않는다. 출력은 리치 텍스트 해석을 끄고 원문을 그대로 표시한다. 표시 중 PC·기록부를 열어도 상담 상태·입력 초안은 유지한다.
 7. 종료 확인 **취소**는 상담을 계속한다. 종료 **확정**은 새 입력을 막고 현재 응답/저장을 먼저 끝낸 뒤 고정 안내 → 저장 → 평가로 진행한다. 사용자가 채팅에 “종료”라고 쓴 것만으로 종료 요청을 만들지 않는다.
 8. `pending_evaluation`에서는 “평가 중” 또는 평가 오류·재시도를 표시한다. 두 축의 점수는 저장된 평가에서 읽으며 서버 오류를 임의의 0점·클리어로 바꾸지 않는다.
 
-기존 입력창이 준비된 뒤의 연결 예시다. 아래 코드는 UI 생성이나 완성된 입력 컨트롤러가 아니며 `adapter`, `input`, `sendButton`은 팀원이 연결한 참조다.
+아래는 `PatientAiInputBridge`의 연결 원리를 줄인 예시다. 실제 브리지는 구독 해제·키 입력·초안 복원·재시도·기록부 열기와 미지원 환자 입력 숨김도 처리한다.
 
 ```csharp
 // input.onValueChanged -> 이 함수 연결
 void OnDraftChanged(string text) => adapter.UpdateDraft(text);
 
-// 전송 버튼 -> 이 함수 연결. Enter 처리에도 동일한 IME 확인이 필요하다.
+// 전송 버튼 -> 이 함수 연결. Ctrl+Enter 처리에도 동일한 IME 확인이 필요하다.
 void OnSendClicked()
 {
     if (!adapter.CanSubmit || !string.IsNullOrEmpty(UnityEngine.Input.compositionString)) return;
@@ -201,23 +203,23 @@ void RefreshInput()
 
 ### 팀원 실행 검증
 
-PR을 받은 팀원이 Unity Editor와 실제 시연 데스크톱에서 검증한다. 이 저장소의 C# 계약 검사와 Unity 대체 타입을 사용하는 어댑터 컴파일 검사는 Unity Editor의 정식 컴파일·실행·한글 IME·화면 배치 검사를 대신하지 않는다. 실제 접속 설정은 별도로 전달하며 결과를 공유할 때 키·주소·개인 상담 원문은 제거한다.
+아래는 Unity Editor와 실제 시연 데스크톱의 확인 기준이다. 서윤 UI의 기존 결과는 plan01 17.25절, 이번 5인 연결 결과는 17.26절을 따르며, 표의 항목을 작성했다는 사실은 검증 통과를 뜻하지 않는다. 이 저장소의 C# 계약 검사와 Unity 대체 타입을 사용하는 어댑터 컴파일 검사는 Unity Editor의 정식 컴파일·실행·한글 IME·화면 배치 검사를 대신하지 않는다. 실제 접속 설정은 별도로 전달하며 결과를 공유할 때 키·주소·개인 상담 원문은 제거한다.
 
-| 입력 UI 없이 확인 | 기대 결과 |
+| 방문·종료·기록부 확인 | 기대 결과 |
 |---|---|
 | 각 지원 환자 착석·첫 발화 | 준비 확인 후 환자만 먼저 한 번 발화. 가짜 상담자 인사 없음 |
 | PC·기록부 열기/닫기 | 뒤 입력 차단, 같은 방문·회차·대사 유지 |
 | 종료 확인 취소/확정 | 취소는 상담 유지. 확정은 고정 상담자 안내를 저장한 뒤 평가, 이후 방문 종료 가능 |
 | 첫 발화만 듣고 종료 | 상담자 근거가 없어 상담자 점수 0, 실제 오류와 구분 |
-| 평가 미달 후 재상담 | 이전 원문·공개 정보·기억 유지, 새 회차의 첫 발화 |
-| 다음 환자 | 지원 5명은 각자의 설정·저장, 민석은 로컬 시연. 다른 환자의 원문·초안·평가를 재사용하지 않음 |
+| 평가 미달 후 재상담 API | 이전 원문·공개 정보·기억 유지, 새 회차의 첫 발화. 현재 자동 퇴장 뒤 게임 내 선택 화면은 미구현 |
+| 다음 환자 | 지원 5명은 각자의 입력·이름·기록·평가를 사용. 민석만 로컬 시연이며 다른 환자의 요청·기억을 재사용하지 않음 |
 
-| 입력 UI 구현 후 확인 | 기대 결과 |
+| 입력·복구 확인 | 기대 결과 |
 |---|---|
-| 한글 조합·Enter·Shift+Enter·여러 줄·공백 | 조합 중 오발송 없음, 원문/줄바꿈 유지, 공백 입력 미전송 |
+| 한글 조합·Enter·Ctrl+Enter·여러 줄·공백 | 조합 중 오발송 없음, 원문/줄바꿈 유지, 공백 입력 미전송 |
 | 공감·복수 질문·6회 이상 대화 | 질문 제한/강제 분리/자동 종료 없이 계속 상담 |
 | 전송 연타·응답 대기 중 종료 확정 | 한 요청만 접수, 저장 이후 종료 처리, 누락·중복 없음 |
-| 긴 대사·페이지 이동 | 표시와 전체 원문 저장 일치, 페이지 이동은 새 턴이 아님 |
+| 긴 대사·서류 탭·페이지 이동 | 대사와 전체 원문 저장 일치, 원문·결과는 책상 서류에서 열람, 페이지 이동은 새 턴이 아님 |
 | 네트워크 끊기·잘못된 키·복구 후 재시도 | 오류와 초안 유지, 같은 요청 재시도, 가짜 성공·0점 평가 없음 |
 | 저장 실패 후 재시도 | 받은 응답을 보관하고 저장만 재시도 |
 | active/종료 예약/pending_evaluation에서 재시작 | 같은 실험·회차·단계 복원, 첫 발화·종료 안내·평가 중복 없음 |

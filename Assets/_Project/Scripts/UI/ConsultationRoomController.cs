@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using Gamsamo.Patients;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -44,6 +45,8 @@ namespace Gamsamo.UI
         private GameObject previousSelection;
         private Button returnButton;
         private ModalKind activeModal;
+        private readonly List<MedicalRecordData> patientRecords = new List<MedicalRecordData>();
+        private int selectedRecord;
 
         private CanvasGroup ActiveGroup => activeModal == ModalKind.Record ? modal
             : activeModal == ModalKind.Pc ? pcModal : null;
@@ -80,7 +83,8 @@ namespace Gamsamo.UI
                 pcBackdropButton.onClick.AddListener(ClosePcTopmost);
 
             if (recordView != null)
-                recordView.ShowRecord(record);
+                recordView.RecordNavigationRequested += NavigateRecord;
+            SetRecord(record);
 
             initialized = true;
             ResetClosed();
@@ -105,16 +109,40 @@ namespace Gamsamo.UI
         public void SetRecord(MedicalRecordData data)
         {
             record = data;
-            if (recordView != null)
-                recordView.ShowRecord(record);
+            if (data == null) return;
+            int index = patientRecords.FindIndex(item => item.registrationNumber == data.registrationNumber);
+            if (index < 0)
+            {
+                // The design preview is not a real patient's consultation archive.
+                patientRecords.RemoveAll(item => item.registrationNumber == "SAMPLE-001");
+                patientRecords.Add(data);
+                index = patientRecords.Count - 1;
+            }
+            else patientRecords[index] = data;
+            if (!IsRecordOpen) selectedRecord = index;
+            RefreshSelectedRecord();
+        }
+
+        private void NavigateRecord(int direction)
+        {
+            if (!IsRecordOpen || patientRecords.Count == 0) return;
+            selectedRecord = Mathf.Clamp(selectedRecord + direction, 0, patientRecords.Count - 1);
+            RefreshSelectedRecord();
+        }
+
+        private void RefreshSelectedRecord()
+        {
+            if (recordView == null || patientRecords.Count == 0) return;
+            selectedRecord = Mathf.Clamp(selectedRecord, 0, patientRecords.Count - 1);
+            recordView.ShowRecord(patientRecords[selectedRecord]);
+            recordView.SetRecordNavigation(selectedRecord, patientRecords.Count);
         }
 
         public void OpenRecord()
         {
             if (!isActiveAndEnabled || modal == null || IsRecordOpen)
                 return;
-            if (recordView != null)
-                recordView.ShowRecord(record);
+            RefreshSelectedRecord();
             OpenModal(ModalKind.Record, openRecordButton, closeRecordButton);
         }
 
@@ -317,6 +345,8 @@ namespace Gamsamo.UI
 
         private void OnDestroy()
         {
+            if (recordView != null)
+                recordView.RecordNavigationRequested -= NavigateRecord;
             if (openRecordButton != null)
                 openRecordButton.onClick.RemoveListener(OpenRecord);
             if (closeRecordButton != null)

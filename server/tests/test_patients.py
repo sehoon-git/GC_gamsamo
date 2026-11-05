@@ -7,9 +7,10 @@ from app.client import SaveStore, SessionClient
 from app.core.config import ExperimentError, Settings
 from app.llm.mock import MockLLM
 from app.main import create_app
-from app.schemas.models import CaseState, Classification, Metrics, OpenRequest, PATIENT_IDS, Session
+from app.schemas.models import CaseState, Classification, EvaluateRequest, Metrics, OpenRequest, PATIENT_IDS, Session
 from app.services.catalog import Catalog
 from app.services.dialogue import DialogueService
+from app.services.evaluation import EvaluationService
 
 
 @pytest.mark.asyncio
@@ -63,13 +64,18 @@ def test_opening_contains_only_this_character_and_available_story(patient_id):
     if patient_id != 'seoyun':
         assert '서윤' not in prompt and '면접 날짜만 잡히면' not in prompt
     if patient_id == 'yeonwoo':
-        assert '이거 꼭 보여줘!' not in prompt
+        assert all('이거 꼭 보여줘!' not in message['content'] for message in service.patient_messages(work))
+        evaluator = EvaluationService(MockLLM(settings), catalog)
+        evaluation_work = {'request': EvaluateRequest(state=state, session_id=state.current.id, request_id='evaluation')}
+        assert '이거 꼭 보여줘!' not in evaluator.messages(evaluation_work, 'evaluation', {})[1]['content']
         # The lifecycle test above independently validates a real revisit. Here inspect the authored scene selector.
         next_visit = state.model_copy(deep=True)
         next_visit.sessions.append(Session())
         work['case'] = next_visit
         assert '이거 꼭 보여줘!' in service.patient_messages(work)[0]['content']
         assert '이번 첫 발화에서 그 사건을 먼저 꺼내세요' in service.patient_messages(work)[0]['content']
+        assert '2번째 상담' in service.patient_messages(work)[-1]['content']
+        assert '이거 꼭 보여줘!' in service.patient_messages(work)[-1]['content']
 
 
 @pytest.mark.asyncio

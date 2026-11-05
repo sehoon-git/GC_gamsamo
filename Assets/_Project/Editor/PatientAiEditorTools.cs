@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Gamsamo.Editor
 {
-    /// <summary>Editor-only verification commands. No runtime input field or send-button implementation.</summary>
+    /// <summary>Editor-only connection and verification commands for the runtime input bridge.</summary>
     public static class PatientAiEditorTools
     {
         [MenuItem("Gamsamo/AI/Import Connection JSON")]
@@ -42,11 +42,14 @@ namespace Gamsamo.Editor
             if (!visits[0].ValidateConfiguration(out string reason)) throw new InvalidOperationException(reason);
             if (visits[0].dialogue.bodyText == null || visits[0].dialogue.speakerText == null)
                 throw new InvalidOperationException("Dialogue body/speaker references are missing.");
-            var patient = AiProtocol.Parse(File.ReadAllText(Path.Combine(Application.streamingAssetsPath, "GameData", "Patients", "seoyun.json")));
+            if (visits[0].dialogue.replyInput == null || visits[0].dialogue.sendButton == null || visits[0].dialogue.retryButton == null)
+                throw new InvalidOperationException("Run Install Patient Visits to bind the reply input, send and retry controls.");
             foreach (string file in Directory.GetFiles(Path.Combine(Application.streamingAssetsPath, "GameData", "Patients"), "*.json"))
                 AiProtocol.RegisterPatient(AiProtocol.Parse(File.ReadAllText(file)));
             if (Application.isPlaying && visits[0].GetComponent<PatientAiAdapter>() == null)
                 throw new InvalidOperationException("Runtime AI adapter is not attached.");
+            if (Application.isPlaying && visits[0].GetComponent<PatientAiInputBridge>() == null)
+                throw new InvalidOperationException("Runtime AI input bridge is not attached.");
             Debug.Log("AI scene references/content version passed. Network, input UI, IME, layout and save recovery still require Play checks. No request was sent.");
         }
 
@@ -94,7 +97,7 @@ namespace Gamsamo.Editor
             EditorGUILayout.LabelField("Busy / Submit / Edit", adapter.IsBusy + " / " + adapter.CanSubmit + " / " + adapter.CanEditDraft);
             EditorGUILayout.LabelField("End requested / Retry", adapter.EndRequested + " / " + adapter.CanRetry);
             if (!string.IsNullOrEmpty(adapter.LastError)) EditorGUILayout.HelpBox(adapter.LastError, MessageType.Warning);
-            EditorGUILayout.HelpBox("Text input UI belongs to the team. Bind SubmitText/UpdateDraft and committed events. Gamsamo > AI contains Editor-only test actions. Connection secrets and dialogue text are not shown here.", MessageType.Info);
+            EditorGUILayout.HelpBox("PatientAiInputBridge connects the dialogue input, send and retry controls. Saved conversation and evaluation are shown in the desk record. Connection secrets and dialogue text are not shown here.", MessageType.Info);
             if (Application.isPlaying) Repaint();
         }
     }

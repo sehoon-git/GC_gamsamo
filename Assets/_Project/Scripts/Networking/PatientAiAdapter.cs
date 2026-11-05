@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -31,7 +32,7 @@ namespace Gamsamo.Networking
         public static string SaveDirectory => SaveDirectoryFor("seoyun"); // Compatibility for the original client.
         public static string SaveDirectoryFor(string patientId)
         {
-            AiProtocol.Patient(patientId); // Validate before constructing a path.
+            AiProtocol.Require(UsesPatient(patientId), "지원하지 않는 환자의 저장 경로입니다.");
             return Path.Combine(Application.persistentDataPath, "ai-saves", patientId);
         }
         public string PatientId => activePatientId;
@@ -73,8 +74,6 @@ namespace Gamsamo.Networking
         private string patientName = "";
         private int generation;
         private int renderedRevision = -1;
-        private bool showingClosing;
-        private bool resultVisible;
         private string draftBuffer = "";
         private bool draftDirty;
         private float draftSaveAt;
@@ -121,7 +120,6 @@ namespace Gamsamo.Networking
             patientName = visits.CurrentPatient.displayName;
             localVisitId = visitId;
             renderedRevision = -1;
-            showingClosing = resultVisible = false;
             LastError = "";
             View.ShowLine(patientName, "");
             if (!InitializeSession()) return;
@@ -163,6 +161,9 @@ namespace Gamsamo.Networking
         private void Update()
         {
             if (draftDirty && Time.unscaledTime >= draftSaveAt && !IsBusy) FlushDraft();
+            // End was already explicitly confirmed. Once evaluation and the desk record are saved, leave without a result popup.
+            // A room overlay can delay departure, preserving the document the player is currently reading.
+            if (CanFinishVisit && FinishVisit()) return;
             bool canSubmit = CanSubmit, canEdit = CanEditDraft;
             bool canFinish = CanFinishVisit, canRevisit = CanRevisit;
             if (canSubmit != previousCanSubmit || canEdit != previousCanEdit || canFinish != previousCanFinish || canRevisit != previousCanRevisit)
@@ -254,7 +255,6 @@ namespace Gamsamo.Networking
         public bool Revisit()
         {
             if (!CanRevisit || !Schedule("revisit")) return false;
-            showingClosing = resultVisible = false;
             ContinueFlow(); return true;
         }
         public bool FinishVisit()
@@ -270,7 +270,7 @@ namespace Gamsamo.Networking
             if (!CanFinishVisit) return false;
             try { session.NewExperiment(); }
             catch (Exception) { Fail("새 실험을 저장하지 못했습니다. 기존 기록은 보존됩니다."); return false; }
-            draftDirty = showingClosing = resultVisible = false;
+            draftDirty = false;
             renderedRevision = -1;
             RenderCommitted(); ContinueFlow(); return true;
         }
@@ -392,52 +392,26 @@ namespace Gamsamo.Networking
             if (CurrentPhase == "active" || CurrentPhase == "closing")
             {
                 bool confirming = View.IsConfirming && !EndRequested;
-                showingClosing = resultVisible = false;
                 View.ShowLine(patientName, LastPatientText);
                 if (confirming) View.ShowConfirmation(true);
                 if (speech != null) Emit(PatientLineCommitted, LastPatientText);
             }
             else if (CurrentPhase == "pending_evaluation")
             {
-                showingClosing = true; resultVisible = false;
-                View.ShowLine("상담자", AiProtocol.ClosingText);
+                View.ShowLine("상담 안내", AiProtocol.ClosingText);
                 Emit(CounselorNoticeCommitted, AiProtocol.ClosingText);
             }
             else if (CurrentPhase == "evaluated")
             {
-                // Keep the closing notice visible until Next, even if mock evaluation returned immediately.
-                if (!showingClosing) ShowResult();
                 Emit(EvaluationCommitted, EvaluationJson);
             }
             UpdateRecord();
             Publish();
         }
-        private void ShowResult()
-        {
-            if (CurrentPhase != "evaluated") return;
-            var evaluation = AiProtocol.Object(AiProtocol.Current(committedState), "evaluation");
-            var text = new StringBuilder();
-            text.Append("환자 변화 ").Append(AiProtocol.Number(evaluation, "patient_score")).Append(" / 100\n")
-                .Append("상담자 대응 ").Append(AiProtocol.Number(evaluation, "counselor_score")).Append(" / 100\n")
-                .Append(AiProtocol.Flag(evaluation, "cleared") ? "두 기준을 충족했습니다." : "재상담에서 이야기를 이어갈 수 있습니다.");
-            foreach (JObject score in AiProtocol.Array(evaluation, "scores"))
-            {
-                string id = AiProtocol.Text(score, "criterion_id");
-                text.Append("\n\n").Append(criterionLabels.TryGetValue(id, out var label) ? label : "평가 항목")
-                    .Append(" · ").Append(AiProtocol.Number(score, "score")).Append(" / 25\n").Append((string)score["explanation"]);
-                foreach (JObject evidence in AiProtocol.Array(score, "evidence"))
-                    text.Append("\n").Append(AiProtocol.Flag(evidence, "counter") ? "반대 근거: “" : "근거: “")
-                        .Append(AiProtocol.Text(evidence, "quote")).Append("”");
-            }
-            showingClosing = false; resultVisible = true;
-            View.ShowLine("상담 결과", text.ToString());
-            View.SetNextAvailable(true);
-        }
         private void AdvanceCommittedView()
         {
             if (!CanInteract || CurrentPhase != "evaluated" || IsBusy) return;
-            if (showingClosing || !resultVisible) ShowResult();
-            else FinishVisit();
+            FinishVisit();
             Publish();
         }
         private void UpdateRecord()
@@ -446,28 +420,39 @@ namespace Gamsamo.Networking
             visits.room.SetRecord(new MedicalRecordData
             {
                 registrationNumber = activePatientId, patientName = this.patientName,
-                recordedDate = AiProtocol.Text(AiProtocol.Current(committedState), "started_at").Split('T')[0],
+                recordedDate = RecordedLocalDate(AiProtocol.Text(AiProtocol.Current(committedState), "started_at")),
                 visitReason = "상담에서 확인한 내용",
                 medicalHistory = "아직 확인하지 않음", medication = "아직 확인하지 않음",
-                consultationNotes = string.IsNullOrEmpty(LastPatientText) ? "첫 이야기를 기다리고 있습니다." : LastPatientText,
+                consultationNotes = CurrentPhase == "evaluated" ? "상담이 종료되었습니다. 전체 상담 기록과 평가 결과를 확인해 주세요."
+                    : string.IsNullOrEmpty(LastPatientText) ? "첫 이야기를 기다리고 있습니다." : "상담 진행 중 · 전체 대화는 대화 원문 탭에서 확인할 수 있습니다.",
+                consultationTranscript = AiRecordFormatter.Transcript(committedState),
+                consultationResult = AiRecordFormatter.Results(committedState, criterionLabels),
                 specialNotes = ConfirmedFacts.Count == 0 ? "아직 공개된 정보 없음" : string.Join("\n\n", ConfirmedFacts),
                 counselor = visits.room.record == null ? "" : visits.room.record.counselor
             });
+        }
+        private static string RecordedLocalDate(string startedAt)
+        {
+            if (DateTimeOffset.TryParse(startedAt, CultureInfo.InvariantCulture, DateTimeStyles.None, out var timestamp))
+                return timestamp.ToLocalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            string previousDate = startedAt == null ? "" : startedAt.Split('T')[0];
+            return DateTime.TryParseExact(previousDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _)
+                ? previousDate : "";
         }
         private void Publish()
         {
             if (HasActiveVisit && View != null)
             {
                 View.SetEndAvailable(session != null && CurrentPhase == "active" && !EndRequested);
-                View.SetNextAvailable(CurrentPhase == "evaluated" && !networkBusy && string.IsNullOrEmpty(LastError));
+                View.SetNextAvailable(false);
                 string status;
                 if (!string.IsNullOrEmpty(LastError)) status = "연결·자동 저장 확인 필요 · 재시도";
                 else if (session != null && session.HasPendingSave) status = "자동 저장을 기다리고 있어요";
-                else if (CurrentPhase == "evaluated") status = "평가 저장 완료 · 다음으로 결과 확인";
+                else if (CurrentPhase == "evaluated") status = "상담 저장 완료 · 책상 기록부에서 확인해 주세요";
                 else if (CurrentPhase == "pending_evaluation") status = "상담을 마쳤어요 · 평가 중";
                 else if (EndRequested) status = "응답 저장 후 상담을 마칠게요";
                 else if (networkBusy) status = patientName + "의 응답을 기다리고 있어요";
-                else status = IsMock ? "모의 AI · 입력 UI 연결 대기" : patientName + " 상담 중";
+                else status = "답변을 자유롭게 적어 주세요";
                 View.SetStatus(status);
             }
             Emit(StateChanged);
@@ -526,7 +511,10 @@ namespace Gamsamo.Networking
         public static void AttachAdapters()
         {
             foreach (var visits in UnityEngine.Object.FindObjectsByType<PatientVisitController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
                 if (visits.GetComponent<PatientAiAdapter>() == null) visits.gameObject.AddComponent<PatientAiAdapter>();
+                if (visits.GetComponent<PatientAiInputBridge>() == null) visits.gameObject.AddComponent<PatientAiInputBridge>();
+            }
         }
     }
 }

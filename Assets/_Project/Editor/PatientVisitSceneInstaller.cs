@@ -47,9 +47,13 @@ namespace Gamsamo.Editor
             if (panel == null || font == null)
                 throw new InvalidOperationException("The generated dialogue panel and Korean font are required.");
             string lettering = string.Join("", roster.patients.Select(p => p.displayName + string.Join("", p.demoLines)))
-                + "계속 듣기상담 마치기이번 상담을 마칠까요?환자가 퇴장하면 문을 눌러 다음 환자를 맞이할 수 있어요."
+                + "계속 듣기상담 그만하기이번 상담을 그만할까요?환자가 퇴장하면 문을 눌러 다음 환자를 맞이할 수 있어요."
                 + "계속 상담하기문을 눌러 환자를 맞이하세요내담자 정보를 확인해 주세요오늘의 상담을 모두 마쳤습니다"
-                + "내담자가 들어오고 있어요다음 만남을 준비하고 있어요상담 중 · 0123456 /…";
+                + "내담자가 들어오고 있어요다음 만남을 준비하고 있어요0123456 /…";
+            lettering += "답변을 자유롭게 적어 주세요전송다시 시도대화 기록대화로이전 쪽다음 쪽바로 보기확인 퇴장"
+                + "서윤 AI 연결임시 대화 시연AI 미연결상담 결과상담 안내환자의 변화상담자의 대응"
+                + "연결을 확인하고 있어요답변을 작성해 주세요이야기를 생각하고 있어요상담이 저장되었습니다"
+                + "상담 메모대화 원문이전 서류다음 서류저장된 대화가 아직 없습니다상담 결과가 아직 없습니다";
             char[] requiredGlyphs = lettering.Where(c => !char.IsWhiteSpace(c)).Distinct().ToArray();
             string toAdd = new string(requiredGlyphs.Where(c => !font.HasCharacter(c)).ToArray());
             if (toAdd.Length > 0) font.TryAddCharacters(toAdd, out _);
@@ -154,7 +158,7 @@ namespace Gamsamo.Editor
             controller.exitDuration = .3f;
 
             var panelRect = Child(layer, "PatientDialogue");
-            Place(panelRect, 455, 740, 880, 293);
+            Place(panelRect, 455, 690, 880, 370);
             var panelArt = GetOrAdd<Image>(panelRect.gameObject);
             panelArt.sprite = panel;
             panelArt.preserveAspect = false;
@@ -167,21 +171,60 @@ namespace Gamsamo.Editor
             view.root.interactable = false;
             view.speakerText = Text(panelRect, "SpeakerName", font, 32, 43, 135, 60, 26, FontStyles.Bold);
             view.speakerText.alignment = TextAlignmentOptions.Center;
-            view.bodyText = Text(panelRect, "PatientLine", font, 45, 112, 790, 100, 28);
+            view.connectionText = Text(panelRect, "ConnectionMode", font, 190, 52, 645, 32, 19);
+            view.connectionText.alignment = TextAlignmentOptions.MidlineRight;
+            view.statusText = Text(panelRect, "ConnectionStatus", font, 190, 84, 645, 40, 17);
+            view.statusText.alignment = TextAlignmentOptions.MidlineRight;
+            view.statusText.text = string.Empty;
+            view.bodyText = Text(panelRect, "PatientLine", font, 45, 134, 790, 93, 26);
             view.bodyText.alignment = TextAlignmentOptions.TopLeft;
-            view.bodyText.overflowMode = TextOverflowModes.Truncate;
-            view.nextButton = Button(panelRect, "ContinueDialogue", font, "계속 듣기", 525, 230, 155, 39, false);
-            view.endButton = Button(panelRect, "RequestEndVisit", font, "상담 마치기", 690, 230, 155, 39, true);
+            view.bodyText.overflowMode = TextOverflowModes.Page;
+            view.nextButton = Button(panelRect, "ContinueDialogue", font, "계속 듣기", 525, 315, 155, 39, false);
+            view.endButton = Button(panelRect, "RequestEndVisit", font, "상담 그만하기", 690, 315, 155, 39, true);
+            view.previousPageButton = Button(panelRect, "PreviousPage", font, "이전 쪽", 32, 315, 95, 39, false);
+            view.pageText = Text(panelRect, "PageNumber", font, 132, 315, 90, 39, 18);
+            view.pageText.alignment = TextAlignmentOptions.Center;
+            view.historyButton = Button(panelRect, "DialogueHistory", font, "대화 기록", 228, 315, 130, 39, false);
+            view.retryButton = Button(panelRect, "RetryRequest", font, "다시 시도", 368, 315, 145, 39, false);
+            var replyRoot = Child(panelRect, "ReplyComposer");
+            Place(replyRoot, 40, 236, 800, 65);
+            view.replyRoot = replyRoot.gameObject;
+            var inputRect = Child(replyRoot, "ReplyInput");
+            Place(inputRect, 0, 0, 650, 65);
+            var inputArt = GetOrAdd<Image>(inputRect.gameObject);
+            inputArt.color = new Color32(255, 248, 231, 255);
+            inputArt.raycastTarget = true;
+            var inputBorder = GetOrAdd<Outline>(inputRect.gameObject);
+            inputBorder.effectColor = new Color32(143, 111, 83, 255);
+            inputBorder.effectDistance = new Vector2(1, -1);
+            var textArea = Child(inputRect, "TextArea");
+            Place(textArea, 12, 5, 626, 55);
+            GetOrAdd<RectMask2D>(textArea.gameObject);
+            var inputText = Text(textArea, "Text", font, 0, 0, 626, 55, 22) as TextMeshProUGUI;
+            inputText.alignment = TextAlignmentOptions.TopLeft;
+            inputText.overflowMode = TextOverflowModes.Overflow;
+            var placeholder = Text(textArea, "Placeholder", font, 0, 0, 626, 55, 21);
+            placeholder.text = "답변을 자유롭게 적어 주세요";
+            placeholder.color = new Color32(137, 113, 91, 255);
+            placeholder.alignment = TextAlignmentOptions.TopLeft;
+            view.replyInput = GetOrAdd<TMP_InputField>(inputRect.gameObject);
+            view.replyInput.textViewport = textArea;
+            view.replyInput.textComponent = inputText;
+            view.replyInput.placeholder = placeholder;
+            view.replyInput.targetGraphic = inputArt;
+            view.replyInput.lineType = TMP_InputField.LineType.MultiLineNewline;
+            view.replyInput.contentType = TMP_InputField.ContentType.Standard;
+            view.replyInput.richText = false;
+            view.replyInput.characterLimit = 0;
+            view.replyInput.pointSize = 22;
+            view.replyInput.navigation = new Navigation { mode = Navigation.Mode.Automatic };
+            view.sendButton = Button(replyRoot, "SendReply", font, "전송", 665, 0, 135, 65, true);
+            // PR #24's bootstrap attaches the only API adapter and the input bridge at runtime.
+            // Connection credentials and network clients are never serialized into this scene.
 
-            var status = Child(layer, "VisitStatus");
-            Place(status, 178, 651, 375, 49);
-            var statusArt = GetOrAdd<Image>(status.gameObject);
-            statusArt.color = new Color(0.25f, .18f, .14f, .89f);
-            statusArt.raycastTarget = false;
-            view.statusText = Text(status, "StatusText", font, 12, 4, 351, 41, 21);
-            view.statusText.color = Paper;
-            view.statusText.alignment = TextAlignmentOptions.Center;
-            view.statusText.text = "문을 눌러 환자를 맞이하세요";
+            // Migrate older scenes/prefabs: the door must not retain a floating status/count box.
+            var previousStatus = layer.Find("VisitStatus");
+            if (previousStatus != null) UnityEngine.Object.DestroyImmediate(previousStatus.gameObject);
 
             var confirmation = Child(layer, "EndVisitConfirmation");
             Place(confirmation, 0, 0, 1920, 1080);
@@ -196,11 +239,11 @@ namespace Gamsamo.Editor
             var outline = GetOrAdd<Outline>(card.gameObject);
             outline.effectColor = new Color32(103, 73, 54, 255);
             outline.effectDistance = new Vector2(2, -2);
-            Text(card, "Title", font, 34, 24, 532, 46, 29, FontStyles.Bold).text = "이번 상담을 마칠까요?";
+            Text(card, "Title", font, 34, 24, 532, 46, 29, FontStyles.Bold).text = "이번 상담을 그만할까요?";
             var explanation = Text(card, "Explanation", font, 34, 78, 532, 90, 23);
             explanation.text = "환자가 퇴장하면 문을 눌러\n다음 환자를 맞이할 수 있어요.";
             view.cancelEndButton = Button(card, "KeepTalking", font, "계속 상담하기", 34, 177, 252, 51, false);
-            view.confirmEndButton = Button(card, "ConfirmEndVisit", font, "상담 마치기", 302, 177, 264, 51, true);
+            view.confirmEndButton = Button(card, "ConfirmEndVisit", font, "상담 그만하기", 302, 177, 264, 51, true);
             view.confirmationPanel = confirmation.gameObject;
             confirmation.gameObject.SetActive(false);
             EditorUtility.SetDirty(view);

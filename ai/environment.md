@@ -209,4 +209,7 @@ GPU는 `nvidia-smi`로 사용 가능한 장치를 확인해 선택하고 실제 
 
 `SEOYUN_MODEL_CONFIG`의 기본값은 `ai/configs/seoyun.json`이다. 후보 비교에는 `ai/configs/qwen38-27b-fp8.json` 또는 조건 확인 후 `ai/configs/exaone45-33b-awq.json`을 설정하고 다운로드·모델·API를 모두 같은 프로필로 실행한다. 예비 후보는 `ai/configs/gemma4-31b-qat.json`이며 앞선 후보가 기준에 미달할 때만 가중치를 준비한다. 가중치는 순차 준비하며 기존 기준 모델은 보존한다.
 
-`SEOYUN_MOCK=1` 또는 실행 도구의 `--mock`은 GPU 없는 모의 API를 선택한다. 실제 비교에서는 `/health`의 모드와 모델 리비전을 확인한다. 서버를 유지하려면 `--server-only`를 사용한다. 외부 PC 연결은 인증된 FastAPI에만 터널을 열고, 실행·접속 검사 명령은 [AI README](README.md#외부-pc-연결)를 따른다. `.env`와 접속 설정 파일은 로컬에서만 관리한다.
+`SEOYUN_MOCK=1` 또는 실행 도구의 `--mock`은 GPU 없는 개발 검사용 모의 API를 선택한다. 이번 Unity 입력·서류 UI는 담당자가 제공하는 외부 서버에 연결하며 임시 모의 서버를 게임 연결로 대체하지 않는다. 실제 비교에서는 `/health`의 모드와 모델 리비전을 확인한다. 서버를 유지하려면 `--server-only`를 사용한다. 외부 PC 연결은 인증된 FastAPI에만 터널을 열고, 실행·접속 검사 명령은 [AI README](README.md#외부-pc-연결)를 따른다. `.env`와 접속 설정 파일은 로컬에서만 관리한다.
+
+
+Unity는 `Gamsamo > AI > Import Connection JSON`으로 별도 전달받은 `api_url`·`api_key`를 `Application.persistentDataPath/ai-connection.json`에 저장한다. `GAMSAMO_AI_CONNECTION`으로 다른 로컬 파일을 지정할 수 있고 파일이 없으면 `SEOYUN_API_URL`·`SEOYUN_API_KEY`를 사용한다. 원격 HTTPS·키 검증과 접속 실패 재시도는 `AiConnection`·`PatientAiAdapter`가 담당한다. 이전 임시 `UserSettings/CounselingApi.json`은 사용하지 않는다. Unity 상담 저장은 `Application.persistentDataPath/ai-saves/seoyun/`이며 Python CLI의 `v4/`와 별도다. `상담 그만하기`는 저장된 종료·평가를 진행하고, 앱 종료는 진행 중 상담을 끝내지 않는다. 자세한 준비·입력·서류 표시 규칙은 [Unity 연결 명세](../contracts/README.md#unity-text-input)를 따른다.

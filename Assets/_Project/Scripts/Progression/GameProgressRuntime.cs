@@ -64,6 +64,15 @@ namespace Gamsamo.Progression
         public GamePresentationIntegration Presentation { get; private set; }
         private readonly Dictionary<string, string> settlementDescriptions = new Dictionary<string, string>();
         private string notifiedResult;
+        private Gamsamo.UI.Presentation.RoomStatusView roomStatus;
+        public bool RoomControlsAvailable => visits?.room == null || !visits.room.IsOverlayBlocking;
+        private void Awake()
+        {
+            var prefab = Resources.Load<GameObject>("Presentation/RoomStatus");
+            if (prefab == null) { Debug.LogError("RoomStatus presentation prefab is missing."); return; }
+            roomStatus = Instantiate(prefab).GetComponent<Gamsamo.UI.Presentation.RoomStatusView>();
+            roomStatus.Bind(this);
+        }
         private void Start()
         {
             visits = GetComponent<PatientVisitController>(); ai = GetComponent<PatientAiAdapter>();
@@ -234,17 +243,6 @@ namespace Gamsamo.Progression
             if (visits != null && visits.dialogue != null) visits.dialogue.SetStatus(LastError);
             Debug.LogWarning("Game progress: " + LastError);
         }
-        private void OnGUI()
-        {
-            GUILayout.BeginArea(new Rect(16, 16, 480, string.IsNullOrEmpty(LastError) ? 36 : 170), GUI.skin.box);
-            if (!string.IsNullOrEmpty(LastError))
-            {
-                GUILayout.Label("진행 저장·연결 확인 필요\n" + LastError);
-                if (Progress != null && GUILayout.Button("진행 저장 / 정산 재시도")) RetryProgress();
-            }
-            if (GUILayout.Button("시작 화면으로")) ReturnToStartMenu();
-            GUILayout.EndArea();
-        }
-        private void OnDestroy() { visits?.room?.pcDesktopView?.BindEconomy(null); if (visits?.room != null) visits.room.CommittedSettlementForRecord = null; if (ai != null) ai.StateChanged -= OnAiChanged; }
+        private void OnDestroy() { if (roomStatus != null) Destroy(roomStatus.gameObject); visits?.room?.pcDesktopView?.BindEconomy(null); if (visits?.room != null) visits.room.CommittedSettlementForRecord = null; if (ai != null) ai.StateChanged -= OnAiChanged; }
     }
 }

@@ -83,6 +83,7 @@ namespace Gamsamo.Editor.Presentation
             view.nextButton = Button("Next", paper, "다음", 900, 640, 190, 72);
             view.closeButton = Button("Close", paper, "닫기", 950, 48, 140, 66);
             view.initialFocus = view.closeButton;
+            RoomPaperPresentationBuilder.StyleGuide(view);
             view.panel.SetActive(false);
             return root;
         }

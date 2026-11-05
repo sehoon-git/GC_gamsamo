@@ -1,4 +1,5 @@
 using System;
+using Gamsamo.Economy;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -6,7 +7,7 @@ using UnityEngine.UI;
 
 namespace Gamsamo.UI
 {
-    /// <summary>Session-only appearance previews. This view never buys, grants or saves items.</summary>
+    /// <summary>Shop UI. Only a committed wallet change establishes ownership or equipment.</summary>
     [DisallowMultipleComponent]
     public sealed class CosmeticShopView : MonoBehaviour
     {
@@ -31,18 +32,54 @@ namespace Gamsamo.UI
 
         public int ActiveCategoryIndex { get; private set; }
         public string ActiveTarget => Targets[ActiveCategoryIndex];
+        public Button ItemActionButton { get; private set; }
 
         private CosmeticItem[] visibleItems = Array.Empty<CosmeticItem>();
         private Button[] boundItems;
         private UnityAction[] itemActions;
         private CosmeticAppearanceController subscribedAppearance;
+        private EconomyWallet wallet;
+        private CosmeticItem selectedItem;
+        private bool confirmingPurchase;
+        private int quotedPrice;
+        private bool invokingAction;
+        private string status;
+        private TMP_Text actionLabel, cancelLabel;
 
         private void Awake()
         {
             BindButtons(itemButtons, index => PreviewSlot(index), out boundItems, out itemActions);
             HideLegacyBlindControls();
             if (restoreCategoryButton != null)
-                restoreCategoryButton.onClick.AddListener(RestoreCategory);
+            {
+                // Use the installed footer control as a skin. Existing scenes need no prefab migration.
+                ItemActionButton = Instantiate(restoreCategoryButton, restoreCategoryButton.transform.parent);
+                ItemActionButton.name = "CosmeticItemAction";
+                var actionRect = (RectTransform)ItemActionButton.transform;
+                actionRect.anchoredPosition = new Vector2(347, actionRect.anchoredPosition.y);
+                ItemActionButton.onClick = new Button.ButtonClickedEvent();
+                ItemActionButton.onClick.AddListener(HandleItemAction);
+                restoreCategoryButton.onClick.AddListener(HandleFooterAction);
+                actionLabel = ItemActionButton.GetComponentInChildren<TMP_Text>(true);
+                cancelLabel = restoreCategoryButton.GetComponentInChildren<TMP_Text>(true);
+            }
+        }
+
+        public void BindEconomy(EconomyWallet confirmedWallet)
+        {
+            if (wallet != null) wallet.Changed -= OnWalletChanged;
+            wallet = confirmedWallet;
+            if (wallet != null) wallet.Changed += OnWalletChanged;
+            OnWalletChanged();
+        }
+
+        private void OnWalletChanged()
+        {
+            selectedItem = null;
+            confirmingPurchase = false;
+            status = null;
+            if (appearance != null) appearance.RestoreEquipped(wallet);
+            RefreshSelection();
         }
 
         private void OnEnable()
@@ -58,6 +95,7 @@ namespace Gamsamo.UI
         public void ShowCategory(int index)
         {
             if (index < 0 || index >= Targets.Length) return;
+            if (ActiveCategoryIndex != index) RestoreCategory();
             ActiveCategoryIndex = index;
             visibleItems = catalog != null ? catalog.GetItems(ActiveTarget) : null;
             if (visibleItems == null) visibleItems = Array.Empty<CosmeticItem>();
@@ -74,10 +112,7 @@ namespace Gamsamo.UI
                 }
                 SetText(At(itemLabels, slot), item == null ? "—"
                     : string.IsNullOrWhiteSpace(item.cardLabel) ? item.displayName : item.cardLabel);
-                SetText(At(priceLabels, slot), item != null ? "미정" : "");
-                SetText(At(selectedBadges, slot), "미리보기 중");
             }
-            SetText(statusText, "미리보기 · 가격 미정");
             if (windowBlindHint != null)
             {
                 SetText(windowBlindHint, "창문을 눌러 블라인드 조절");
@@ -96,25 +131,127 @@ namespace Gamsamo.UI
         public bool PreviewSlot(int index)
         {
             CosmeticItem item = ItemAt(index);
-            return item != null && appearance != null && appearance.Preview(item.id);
+            if (item == null || appearance == null || !appearance.Preview(item.id)) return false;
+            selectedItem = item;
+            confirmingPurchase = false;
+            status = null;
+            RefreshSelection();
+            return true;
         }
 
         public void RestoreCategory()
         {
-            if (appearance != null) appearance.RestoreCategory(ActiveTarget);
+            selectedItem = null;
+            confirmingPurchase = false;
+            status = null;
+            if (appearance != null) appearance.RestoreEquipped(ActiveTarget, wallet);
+            RefreshSelection();
+        }
+
+        private void HandleItemAction()
+        {
+            if (invokingAction || selectedItem == null) return;
+            if (confirmingPurchase) { RestoreCategory(); return; }
+            if (wallet == null || !wallet.IsReady) return;
+            if (!wallet.Owns(selectedItem.id))
+            {
+                if (!wallet.TryGetApprovedPrice(selectedItem.id, out int price)) return;
+                if (wallet.Balance < price) { status = "잔액이 부족합니다"; }
+                else
+                {
+                    confirmingPurchase = true;
+                    quotedPrice = price;
+                    status = price + " C에 구매할까요?";
+                }
+                RefreshSelection();
+                return;
+            }
+            string id = selectedItem.id;
+            bool unequip = wallet.GetEquipped(ActiveTarget) == id;
+            Perform(() => unequip ? wallet.Unequip(ActiveTarget) : wallet.Equip(id), unequip ? "장착 해제됨" : "장착됨");
+        }
+
+        private void HandleFooterAction()
+        {
+            if (invokingAction) return;
+            if (!confirmingPurchase) { RestoreCategory(); return; }
+            if (selectedItem == null || wallet == null || !wallet.IsReady) { RestoreCategory(); return; }
+            string id = selectedItem.id;
+            int price = quotedPrice;
+            confirmingPurchase = false;
+            Perform(() => wallet.Purchase(id, price), "구매 완료");
+        }
+
+        private void Perform(Func<EconomyStatus> operation, string successMessage)
+        {
+            invokingAction = true;
+            try
+            {
+                EconomyStatus result = operation();
+                // Even after a save failure, the artwork must reflect the committed equipment.
+                RestoreCategory();
+                switch (result)
+                {
+                    case EconomyStatus.Success: status = successMessage; break;
+                    case EconomyStatus.AlreadyOwned: status = "이미 보유한 상품입니다"; break;
+                    case EconomyStatus.InsufficientFunds: status = "잔액이 부족합니다"; break;
+                    case EconomyStatus.PricePending: status = "가격 미정"; break;
+                    case EconomyStatus.PriceChanged: status = "가격 변경 · 다시 확인해 주세요"; break;
+                    case EconomyStatus.NotOwned: status = "보유하지 않은 상품입니다"; break;
+                    case EconomyStatus.Busy: status = "저장 중입니다"; break;
+                    case EconomyStatus.Conflict: status = "상태 갱신 후 다시 선택해 주세요"; break;
+                    case EconomyStatus.SaveFailed: status = "저장 실패 · 다시 시도해 주세요"; break;
+                    case EconomyStatus.NoChange: status = "변경 사항 없음"; break;
+                    default: status = "현재 처리할 수 없습니다"; break;
+                }
+            }
+            finally { invokingAction = false; RefreshSelection(); }
         }
 
         private void RefreshSelection()
         {
-            string selected = appearance != null ? appearance.SelectedId(ActiveTarget) : null;
+            bool ready = wallet != null && wallet.IsReady;
+            string equipped = ready ? wallet.GetEquipped(ActiveTarget) : null;
             for (int index = 0; index < SlotCount; index++)
             {
+                CosmeticItem item = ItemAt(index);
+                bool isEquipped = item != null && equipped == item.id;
+                bool owned = item != null && ready && wallet.Owns(item.id);
+                bool previewed = item != null && selectedItem == item && !isEquipped;
+                string price = "";
+                if (item != null)
+                    price = owned ? "보유" : wallet != null && wallet.TryGetApprovedPrice(item.id, out int coins)
+                        ? coins + " C" : "미정";
+                TMP_Text priceLabel = At(priceLabels, index);
+                if (priceLabel != null)
+                {
+                    priceLabel.enableAutoSizing = true;
+                    priceLabel.fontSizeMin = 10;
+                    priceLabel.fontSizeMax = 16;
+                    SetText(priceLabel, price);
+                }
                 GameObject border = At(selectionBorders, index);
-                if (border != null)
-                    border.SetActive(!string.IsNullOrEmpty(selected) && selected == ItemIdAt(index));
+                if (border != null) border.SetActive(isEquipped || previewed);
+                SetText(At(selectedBadges, index), isEquipped ? "장착 중" : "미리보기 중");
+            }
+            bool hasItem = selectedItem != null;
+            bool selectedOwned = hasItem && ready && wallet.Owns(selectedItem.id);
+            bool canBuy = hasItem && ready && wallet.TryGetApprovedPrice(selectedItem.id, out _);
+            if (ItemActionButton != null)
+            {
+                ItemActionButton.gameObject.SetActive(hasItem);
+                ItemActionButton.interactable = !invokingAction && (selectedOwned || canBuy);
+                SetText(actionLabel, confirmingPurchase ? "취소" : selectedOwned
+                    ? (equipped == selectedItem.id ? "장착 해제" : "장착") : "구매");
             }
             if (restoreCategoryButton != null)
-                restoreCategoryButton.interactable = appearance != null && !string.IsNullOrEmpty(selected);
+                restoreCategoryButton.interactable = hasItem && !invokingAction;
+            SetText(cancelLabel, confirmingPurchase ? "구매 확정" : "미리보기 취소");
+            string message = ready ? "상품을 선택하세요" : "지갑 연결 대기";
+            if (hasItem && !confirmingPurchase)
+                message = selectedOwned ? (equipped == selectedItem.id ? "장착 중" : "보유 상품")
+                    : canBuy ? "미리보기 중" : ready ? "미리보기 · 가격 미정" : "미리보기 · 지갑 연결 대기";
+            SetText(statusText, status ?? message);
 
             HideLegacyBlindControls();
         }
@@ -166,12 +303,15 @@ namespace Gamsamo.UI
             if (subscribedAppearance != null)
                 subscribedAppearance.Changed -= RefreshSelection;
             subscribedAppearance = null;
+            OnWalletChanged();
         }
 
         private void OnDestroy()
         {
             if (restoreCategoryButton != null)
-                restoreCategoryButton.onClick.RemoveListener(RestoreCategory);
+                restoreCategoryButton.onClick.RemoveListener(HandleFooterAction);
+            if (ItemActionButton != null) ItemActionButton.onClick.RemoveListener(HandleItemAction);
+            if (wallet != null) wallet.Changed -= OnWalletChanged;
             Unbind(boundItems, itemActions);
         }
 

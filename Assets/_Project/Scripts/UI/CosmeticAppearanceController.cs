@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
+using Gamsamo.Economy;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Gamsamo.UI
 {
     /// <summary>
-    /// Session-only cosmetic previews. Does not purchase items, grant ownership, charge a wallet,
-    /// or write save data. Lives on the room root so closing the PC does not clear a selection.
+    /// Applies room and desktop artwork. The wallet owns the committed equipment.
     /// </summary>
     [DefaultExecutionOrder(-50), DisallowMultipleComponent]
     public sealed class CosmeticAppearanceController : MonoBehaviour
@@ -97,6 +97,25 @@ namespace Gamsamo.UI
             if (!RestoreCategoryInternal(target)) return;
             selected.Remove(target);
             Changed?.Invoke();
+        }
+
+        /// <summary>Reapply the committed design, or the default if the save has no design for this category.</summary>
+        public void RestoreEquipped(string target, EconomyWallet wallet)
+        {
+            string equipped = wallet != null && wallet.IsReady ? wallet.GetEquipped(target) : null;
+            if (string.IsNullOrEmpty(equipped))
+            {
+                if (!string.IsNullOrEmpty(SelectedId(target))) RestoreCategory(target);
+                return;
+            }
+            if (SelectedId(target) == equipped) return;
+            if (catalog != null && catalog.Find(equipped)?.target == target && Preview(equipped)) return;
+            RestoreCategory(target);
+        }
+
+        public void RestoreEquipped(EconomyWallet wallet)
+        {
+            foreach (string target in Targets) RestoreEquipped(target, wallet);
         }
 
         /// <summary>Restores all cosmetic categories without changing the game's current weather.</summary>

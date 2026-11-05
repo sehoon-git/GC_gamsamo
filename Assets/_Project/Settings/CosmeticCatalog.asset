@@ -709,3 +709,148 @@ MonoBehaviour:
     blindSprites: []
     blindOverlays: []
     hasPrice: 0
+  coinPrices:
+  - itemId: window.oak
+    approved: 0
+    coins: -1
+  - itemId: window.walnut
+    approved: 0
+    coins: -1
+  - itemId: window.sage
+    approved: 0
+    coins: -1
+  - itemId: window.lavender
+    approved: 0
+    coins: -1
+  - itemId: window.terracotta
+    approved: 0
+    coins: -1
+  - itemId: window.midnight
+    approved: 0
+    coins: -1
+  - itemId: window.brass
+    approved: 0
+    coins: -1
+  - itemId: window.white
+    approved: 0
+    coins: -1
+  - itemId: door.oak
+    approved: 0
+    coins: -1
+  - itemId: door.walnut
+    approved: 0
+    coins: -1
+  - itemId: door.sage
+    approved: 0
+    coins: -1
+  - itemId: door.lavender
+    approved: 0
+    coins: -1
+  - itemId: door.terracotta
+    approved: 0
+    coins: -1
+  - itemId: door.midnight
+    approved: 0
+    coins: -1
+  - itemId: door.brass
+    approved: 0
+    coins: -1
+  - itemId: door.white
+    approved: 0
+    coins: -1
+  - itemId: clipboard.oak
+    approved: 0
+    coins: -1
+  - itemId: clipboard.walnut
+    approved: 0
+    coins: -1
+  - itemId: clipboard.sage
+    approved: 0
+    coins: -1
+  - itemId: clipboard.lavender
+    approved: 0
+    coins: -1
+  - itemId: clipboard.terracotta
+    approved: 0
+    coins: -1
+  - itemId: clipboard.midnight
+    approved: 0
+    coins: -1
+  - itemId: clipboard.brass
+    approved: 0
+    coins: -1
+  - itemId: clipboard.white
+    approved: 0
+    coins: -1
+  - itemId: pc.oak
+    approved: 0
+    coins: -1
+  - itemId: pc.walnut
+    approved: 0
+    coins: -1
+  - itemId: pc.sage
+    approved: 0
+    coins: -1
+  - itemId: pc.lavender
+    approved: 0
+    coins: -1
+  - itemId: pc.terracotta
+    approved: 0
+    coins: -1
+  - itemId: pc.midnight
+    approved: 0
+    coins: -1
+  - itemId: pc.brass
+    approved: 0
+    coins: -1
+  - itemId: pc.white
+    approved: 0
+    coins: -1
+  - itemId: wallpaper.oak
+    approved: 0
+    coins: -1
+  - itemId: wallpaper.walnut
+    approved: 0
+    coins: -1
+  - itemId: wallpaper.sage
+    approved: 0
+    coins: -1
+  - itemId: wallpaper.lavender
+    approved: 0
+    coins: -1
+  - itemId: wallpaper.terracotta
+    approved: 0
+    coins: -1
+  - itemId: wallpaper.midnight
+    approved: 0
+    coins: -1
+  - itemId: wallpaper.brass
+    approved: 0
+    coins: -1
+  - itemId: wallpaper.white
+    approved: 0
+    coins: -1
+  - itemId: room-wallpaper.oak
+    approved: 0
+    coins: -1
+  - itemId: room-wallpaper.walnut
+    approved: 0
+    coins: -1
+  - itemId: room-wallpaper.sage
+    approved: 0
+    coins: -1
+  - itemId: room-wallpaper.lavender
+    approved: 0
+    coins: -1
+  - itemId: room-wallpaper.terracotta
+    approved: 0
+    coins: -1
+  - itemId: room-wallpaper.midnight
+    approved: 0
+    coins: -1
+  - itemId: room-wallpaper.brass
+    approved: 0
+    coins: -1
+  - itemId: room-wallpaper.white
+    approved: 0
+    coins: -1

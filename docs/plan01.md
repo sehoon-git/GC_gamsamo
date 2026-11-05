@@ -1143,6 +1143,12 @@ PC 내부 네 화면, 기본 방 레이어·날씨, 원본 48종의 동적 카�
 
 상담 메모·대화 원문·상담 결과는 진료 기록 칸 상단의 종이 색인으로 선택한다. 선택된 색인은 아래쪽이 본문으로 이어지고 글씨가 굵어진다. 여러 쪽인 내용의 이전·다음 쪽은 같은 칸 아래에 인쇄형 화살표로 표시한다. 서류 번호는 제목 왼쪽, 이전·다음 서류는 제목 오른쪽에 표시한다. 한 장뿐일 때는 서류 이동을, 한 쪽뿐일 때는 쪽 이동을 숨긴다.
 
+### PR #48 대기실 창문 에셋의 실제 상담실 연결
+
+- 기본 맑음 창문은 `window-waiting-3-spaced.png`(3명·간격을 둔 좌석)를 표시한다. `ConsultationRoom.unity`와 `ConsultationRoomUI.prefab`의 `ConsultationRoomAppearance.clearWindow` 및 `RoomPackLayers/Window` 미리보기 RawImage가 같은 GUID를 참조한다.
+- `CounselingPack/room/layout.json`의 `assets.window.clear.file`도 같은 파일로 설정한다. `RoomAssetPackInstaller.Apply()`가 이 설정을 읽으므로 에셋 재적용 후에도 이전 하늘 이미지로 되돌아가지 않는다. 좌표 731,52·크기 1011×534·모니터 앞뒤 순서와 기존 치장 우선순위를 유지한다.
+- 실제 대기 인원/환자 ID에 따른 자동 교체는 별도 기능이다. 이번 연결은 고정 기본 배경이며 진행·AI·저장·보상 상태를 바꾸지 않는다. 흐림·비와 장착한 창문/블라인드는 기존 변형을 사용한다. 다른 세 대기실 PNG도 보존한다.
+
 ## 16. 진료기록부 에셋 편집 기록
 
 - 사용 도구: 기본 제공 ImageGen. CLI 대체 경로는 사용하지 않았음.
@@ -1760,3 +1766,12 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 재현은 상담실에서 서류철을 열고 대화 원문 탭을 선택한다. 두 쪽 이상이면 기록 칸 아래에서, 두 서류 이상이면 제목 오른쪽에서 이동할 수 있다. 다음에 양식 원화의 비율을 바꿀 때는 인쇄 영역과 클릭 영역을 함께 확인한다.
 
 - 2026-11-06 08:13:28 KST (UTC+09:00) PR #45 충돌 해결: 최신 main `9c2cbba`와 기록부 UI `17cbe7c`를 통합했다. 15절의 종이 안내서·진료기록부 설명을 모두 보존하고, 17절의 안내서 17.34·AI 17.35를 유지하면서 기록부 이력을 17.36으로 구분했다. 양쪽 문서 행 보존, 중복 절 번호, 충돌 표식, diff 형식과 UI 소스/메타 동일성을 확인했다. 충돌 해결 과정에서 UI 동작·씬·프리팹·AI·저장 규칙은 수정하지 않는다. 위 89개 검사는 원래 UI 구현 당시 결과이며 이번 문서 충돌 해결에서 재실행한 결과가 아니다. 이번에는 사용자가 충돌 해결과 main 병합을 명시적으로 요청했으므로, 기존 PR 갱신 후 GitHub 병합 상태를 확인하고 병합된 버전을 Unity 테스트 체크아웃에 반영한다. 창문 대기실 에셋의 화면 연결은 별도 작업으로 남는다.
+
+### 17.37 병합된 대기실 창문을 실제 게임에 연결
+
+- 완료 시각: 2026-11-06 08:24:39 KST (UTC+09:00). 최신 main `5cec436`에서 `codex/waiting-corridor-window-connection`을 만들었다. #48은 PNG/메타 8개만 추가했으며 씬·프리팹은 이전 하늘 GUID를 유지하고 있어 pull 이후에도 화면이 바뀌지 않았다.
+- 변경: 원본 PNG/메타는 그대로 사용하고 씬·프리팹 각각 런타임/미리보기 참조 2곳과 layout 기본 창문 파일 1곳을 교체했다. 기존 `TextureForLayer()`·`Rebuild()`·`RestoreDefault()`·`RoomAssetPackInstaller.Apply()` 경로를 사용하며 새 런타임 코드나 임의의 대기 인원 규칙은 추가하지 않았다.
+- 정적 확인: PNG 1011×534, GUID, layout 파일 존재, 씬/프리팹 런타임과 미리보기 참조, 기본 weather=0, diff 형식을 확인했다. Unity 테스트 체크아웃의 기존 한이수 연결·폰트·프로젝트 설정은 보존했다.
+- 실제 Unity 검증: 6000.3.28f1 DX12에서 실제 상담실을 복제한 임시 씬에서 진행·AI 컴포넌트를 제외하고 제품명 `GC_gamsamo_Corridor_Visual_Check`로 실행했다. Computer Use로 창문 너머 세 사람과 PC 앞뒤 배치를 확인했다. 기존 `RoomAppearanceSmokeChecks` 49개, `CosmeticSmokeChecks` 827개가 모두 통과했다. 세 날씨의 GPU 합성, PC/기록부 블러, 창문 치장/기본 복원, 블라인드 변형 및 검사 후 상태 복원을 포함한다.
+- Windows 검증 빌드 성공. 이는 AI·진행·보상·저장을 제외한 화면 검증 빌드이며 실제 AI 상담 E2E 완료를 뜻하지 않는다. 보고서·기본 배경 캡처·Windows 빌드는 로컬 `artifacts/corridor-connection/`에 보존한다. 임시 씬과 검증 도우미는 제거하고 기존 시작 씬·제품명을 복원했으며 ProjectSettings 원본 바이트가 보존되었는지 확인했다.
+- 로컬 Unity 프로젝트에는 구현 커밋을 적용했다. PR에는 씬·프리팹·layout·이 문서만 포함하며 main 직접 push/병합과 서버 배포는 하지 않는다. 다음 작업은 이 연결 PR 병합 후 팀원이 최신 main을 pull하고 Play를 재시작해 기본 창문을 확인하는 일이다. 대기 인원에 따른 네 이미지의 자동 선택은 표시 규칙 결정 후 별도로 연결한다.

@@ -1,0 +1,284 @@
+{
+  "canvas": {
+    "width": 1011,
+    "height": 534
+  },
+  "scene_position": {
+    "x": 731,
+    "y": 52
+  },
+  "paths_relative_to": "window folder",
+  "state_labels": {
+    "up": "올림",
+    "half": "절반 내림",
+    "down": "완전 내림"
+  },
+  "weather": [
+    "clear",
+    "cloudy",
+    "rain"
+  ],
+  "shop_preview_state": "half",
+  "draw_order": [
+    "base_window_for_weather",
+    "blind_overlay_for_height"
+  ],
+  "themes": [
+    {
+      "id": "oak",
+      "name": "내추럴 오크",
+      "product_id": "window.oak",
+      "base": {
+        "clear": "oak/clear.png",
+        "cloudy": "oak/cloudy.png",
+        "rain": "oak/rain.png"
+      },
+      "overlay": {
+        "up": "oak/blinds/up.png",
+        "half": "oak/blinds/half.png",
+        "down": "oak/blinds/down.png"
+      },
+      "composed": {
+        "up": {
+          "clear": "oak/states/up/clear.png",
+          "cloudy": "oak/states/up/cloudy.png",
+          "rain": "oak/states/up/rain.png"
+        },
+        "half": {
+          "clear": "oak/states/half/clear.png",
+          "cloudy": "oak/states/half/cloudy.png",
+          "rain": "oak/states/half/rain.png"
+        },
+        "down": {
+          "clear": "oak/states/down/clear.png",
+          "cloudy": "oak/states/down/cloudy.png",
+          "rain": "oak/states/down/rain.png"
+        }
+      }
+    },
+    {
+      "id": "walnut",
+      "name": "월넛",
+      "product_id": "window.walnut",
+      "base": {
+        "clear": "walnut/clear.png",
+        "cloudy": "walnut/cloudy.png",
+        "rain": "walnut/rain.png"
+      },
+      "overlay": {
+        "up": "walnut/blinds/up.png",
+        "half": "walnut/blinds/half.png",
+        "down": "walnut/blinds/down.png"
+      },
+      "composed": {
+        "up": {
+          "clear": "walnut/states/up/clear.png",
+          "cloudy": "walnut/states/up/cloudy.png",
+          "rain": "walnut/states/up/rain.png"
+        },
+        "half": {
+          "clear": "walnut/states/half/clear.png",
+          "cloudy": "walnut/states/half/cloudy.png",
+          "rain": "walnut/states/half/rain.png"
+        },
+        "down": {
+          "clear": "walnut/states/down/clear.png",
+          "cloudy": "walnut/states/down/cloudy.png",
+          "rain": "walnut/states/down/rain.png"
+        }
+      }
+    },
+    {
+      "id": "sage",
+      "name": "세이지",
+      "product_id": "window.sage",
+      "base": {
+        "clear": "sage/clear.png",
+        "cloudy": "sage/cloudy.png",
+        "rain": "sage/rain.png"
+      },
+      "overlay": {
+        "up": "sage/blinds/up.png",
+        "half": "sage/blinds/half.png",
+        "down": "sage/blinds/down.png"
+      },
+      "composed": {
+        "up": {
+          "clear": "sage/states/up/clear.png",
+          "cloudy": "sage/states/up/cloudy.png",
+          "rain": "sage/states/up/rain.png"
+        },
+        "half": {
+          "clear": "sage/states/half/clear.png",
+          "cloudy": "sage/states/half/cloudy.png",
+          "rain": "sage/states/half/rain.png"
+        },
+        "down": {
+          "clear": "sage/states/down/clear.png",
+          "cloudy": "sage/states/down/cloudy.png",
+          "rain": "sage/states/down/rain.png"
+        }
+      }
+    },
+    {
+      "id": "lavender",
+      "name": "라벤더",
+      "product_id": "window.lavender",
+      "base": {
+        "clear": "lavender/clear.png",
+        "cloudy": "lavender/cloudy.png",
+        "rain": "lavender/rain.png"
+      },
+      "overlay": {
+        "up": "lavender/blinds/up.png",
+        "half": "lavender/blinds/half.png",
+        "down": "lavender/blinds/down.png"
+      },
+      "composed": {
+        "up": {
+          "clear": "lavender/states/up/clear.png",
+          "cloudy": "lavender/states/up/cloudy.png",
+          "rain": "lavender/states/up/rain.png"
+        },
+        "half": {
+          "clear": "lavender/states/half/clear.png",
+          "cloudy": "lavender/states/half/cloudy.png",
+          "rain": "lavender/states/half/rain.png"
+        },
+        "down": {
+          "clear": "lavender/states/down/clear.png",
+          "cloudy": "lavender/states/down/cloudy.png",
+          "rain": "lavender/states/down/rain.png"
+        }
+      }
+    },
+    {
+      "id": "terracotta",
+      "name": "테라코타",
+      "product_id": "window.terracotta",
+      "base": {
+        "clear": "terracotta/clear.png",
+        "cloudy": "terracotta/cloudy.png",
+        "rain": "terracotta/rain.png"
+      },
+      "overlay": {
+        "up": "terracotta/blinds/up.png",
+        "half": "terracotta/blinds/half.png",
+        "down": "terracotta/blinds/down.png"
+      },
+      "composed": {
+        "up": {
+          "clear": "terracotta/states/up/clear.png",
+          "cloudy": "terracotta/states/up/cloudy.png",
+          "rain": "terracotta/states/up/rain.png"
+        },
+        "half": {
+          "clear": "terracotta/states/half/clear.png",
+          "cloudy": "terracotta/states/half/cloudy.png",
+          "rain": "terracotta/states/half/rain.png"
+        },
+        "down": {
+          "clear": "terracotta/states/down/clear.png",
+          "cloudy": "terracotta/states/down/cloudy.png",
+          "rain": "terracotta/states/down/rain.png"
+        }
+      }
+    },
+    {
+      "id": "midnight",
+      "name": "미드나이트",
+      "product_id": "window.midnight",
+      "base": {
+        "clear": "midnight/clear.png",
+        "cloudy": "midnight/cloudy.png",
+        "rain": "midnight/rain.png"
+      },
+      "overlay": {
+        "up": "midnight/blinds/up.png",
+        "half": "midnight/blinds/half.png",
+        "down": "midnight/blinds/down.png"
+      },
+      "composed": {
+        "up": {
+          "clear": "midnight/states/up/clear.png",
+          "cloudy": "midnight/states/up/cloudy.png",
+          "rain": "midnight/states/up/rain.png"
+        },
+        "half": {
+          "clear": "midnight/states/half/clear.png",
+          "cloudy": "midnight/states/half/cloudy.png",
+          "rain": "midnight/states/half/rain.png"
+        },
+        "down": {
+          "clear": "midnight/states/down/clear.png",
+          "cloudy": "midnight/states/down/cloudy.png",
+          "rain": "midnight/states/down/rain.png"
+        }
+      }
+    },
+    {
+      "id": "brass",
+      "name": "빈티지 브라스",
+      "product_id": "window.brass",
+      "base": {
+        "clear": "brass/clear.png",
+        "cloudy": "brass/cloudy.png",
+        "rain": "brass/rain.png"
+      },
+      "overlay": {
+        "up": "brass/blinds/up.png",
+        "half": "brass/blinds/half.png",
+        "down": "brass/blinds/down.png"
+      },
+      "composed": {
+        "up": {
+          "clear": "brass/states/up/clear.png",
+          "cloudy": "brass/states/up/cloudy.png",
+          "rain": "brass/states/up/rain.png"
+        },
+        "half": {
+          "clear": "brass/states/half/clear.png",
+          "cloudy": "brass/states/half/cloudy.png",
+          "rain": "brass/states/half/rain.png"
+        },
+        "down": {
+          "clear": "brass/states/down/clear.png",
+          "cloudy": "brass/states/down/cloudy.png",
+          "rain": "brass/states/down/rain.png"
+        }
+      }
+    },
+    {
+      "id": "white",
+      "name": "모던 화이트",
+      "product_id": "window.white",
+      "base": {
+        "clear": "white/clear.png",
+        "cloudy": "white/cloudy.png",
+        "rain": "white/rain.png"
+      },
+      "overlay": {
+        "up": "white/blinds/up.png",
+        "half": "white/blinds/half.png",
+        "down": "white/blinds/down.png"
+      },
+      "composed": {
+        "up": {
+          "clear": "white/states/up/clear.png",
+          "cloudy": "white/states/up/cloudy.png",
+          "rain": "white/states/up/rain.png"
+        },
+        "half": {
+          "clear": "white/states/half/clear.png",
+          "cloudy": "white/states/half/cloudy.png",
+          "rain": "white/states/half/rain.png"
+        },
+        "down": {
+          "clear": "white/states/down/clear.png",
+          "cloudy": "white/states/down/cloudy.png",
+          "rain": "white/states/down/rain.png"
+        }
+      }
+    }
+  ]
+}

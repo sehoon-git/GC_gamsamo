@@ -1,0 +1,194 @@
+{
+  "canvas": {
+    "width": 1000,
+    "height": 510
+  },
+  "origin": "top-left",
+  "units": "px",
+  "panel": "settings-panel.png",
+  "icon_generation": {
+    "tool": "ImageGen",
+    "prompt": "Restyle the two section pictograms from the first reference (the monitor and the speaker in the brown settings window) as two polished desktop icons in the exact cohesive game-art family of the second reference gear shortcut and the third reference blue desktop. Output ONLY an isolated two-sprite production sheet with true transparent background. Each icon is completely separate, one at 25% and one at 75% of sheet width, with a very wide transparent gap down entire center; equal visible heights, full clear silhouettes, no contact between sprites. Left sprite: A single friendly chunky 2000s CRT computer monitor, muted sage-gray PC casing and navy/charcoal edges, with modest stand. On its inset display, a very simplified blue sky, distant one small cream cloud, two bright green hills evoking the provided game's wallpaper. Simple crisp 3/4 view just like the reference desktop shortcut art. Right sprite: a compact single vintage desktop computer loudspeaker, same volume and dark outline as left, charcoal inset baffle, two simple round drivers (one round tweeter, one main big round woofer), muted tan ivory outer enclosure with sage-gray face and slate blue-gray cone, one tiny muted golden highlight. Maintain the original desktop game's icon art: stout dark warm gray ink-line silhouette, offset cream rim highlights, two or three bands of cel shading, gentle drawn irregularity, strong readability scaled to 64x64. Subtle 3/4 form, low chroma, friendly video game desktop illustration. No rendering of windows, no UI, no text/captions, no cables, no keyboards, no checkerboard, no glow or stray graphics, absolutely no drawn ground shadows outside sprites, no hardware-brand logos. Both objects isolated on actual transparency. Wide landscape 2:1 composition with consistent scale and ample alpha padding."
+  },
+  "draw_order": [
+    "panel",
+    "slider-fill",
+    "slider-thumb",
+    "value-text"
+  ],
+  "typography": {
+    "value": {
+      "family": "Malgun Gothic",
+      "size": 20,
+      "color": "#354653"
+    },
+    "percent": {
+      "family": "Segoe UI",
+      "size": 17,
+      "weight": 600,
+      "color": "#4c675e"
+    }
+  },
+  "selectors": [
+    {
+      "id": "resolution",
+      "label": "해상도",
+      "bounds": {
+        "x": 46,
+        "y": 203,
+        "width": 392,
+        "height": 43
+      },
+      "text_baseline": [
+        62,
+        232
+      ],
+      "preview_value": "1920 × 1080",
+      "options_source": "game-supported resolutions"
+    },
+    {
+      "id": "screen-mode",
+      "label": "화면 모드",
+      "bounds": {
+        "x": 46,
+        "y": 306,
+        "width": 392,
+        "height": 43
+      },
+      "text_baseline": [
+        62,
+        335
+      ],
+      "preview_value": "창 모드",
+      "options": [
+        "창 모드",
+        "전체 화면",
+        "테두리 없는 창"
+      ]
+    }
+  ],
+  "sliders": [
+    {
+      "id": "master",
+      "label": "전체 음량",
+      "min": 0,
+      "max": 100,
+      "preview_value": 100,
+      "bounds": {
+        "x": 520,
+        "y": 194,
+        "width": 430,
+        "height": 30
+      },
+      "track_start": [
+        532,
+        209
+      ],
+      "track_end": [
+        938,
+        209
+      ],
+      "fill": "slider-fill.png",
+      "fill_height": 6,
+      "fill_top": 206,
+      "thumb": "slider-thumb.png",
+      "thumb_anchor": [
+        10,
+        12
+      ],
+      "percent_baseline": [
+        951,
+        189
+      ],
+      "percent_align": "right"
+    },
+    {
+      "id": "music",
+      "label": "배경음악",
+      "min": 0,
+      "max": 100,
+      "preview_value": 70,
+      "bounds": {
+        "x": 520,
+        "y": 272,
+        "width": 430,
+        "height": 30
+      },
+      "track_start": [
+        532,
+        287
+      ],
+      "track_end": [
+        938,
+        287
+      ],
+      "fill": "slider-fill.png",
+      "fill_height": 6,
+      "fill_top": 284,
+      "thumb": "slider-thumb.png",
+      "thumb_anchor": [
+        10,
+        12
+      ],
+      "percent_baseline": [
+        951,
+        267
+      ],
+      "percent_align": "right"
+    },
+    {
+      "id": "effects",
+      "label": "효과음",
+      "min": 0,
+      "max": 100,
+      "preview_value": 80,
+      "bounds": {
+        "x": 520,
+        "y": 350,
+        "width": 430,
+        "height": 30
+      },
+      "track_start": [
+        532,
+        365
+      ],
+      "track_end": [
+        938,
+        365
+      ],
+      "fill": "slider-fill.png",
+      "fill_height": 6,
+      "fill_top": 362,
+      "thumb": "slider-thumb.png",
+      "thumb_anchor": [
+        10,
+        12
+      ],
+      "percent_baseline": [
+        951,
+        345
+      ],
+      "percent_align": "right"
+    }
+  ],
+  "buttons": {
+    "apply": {
+      "x": 705,
+      "y": 440,
+      "width": 119,
+      "height": 42
+    },
+    "close": {
+      "x": 837,
+      "y": 440,
+      "width": 119,
+      "height": 42
+    },
+    "title_close": {
+      "x": 944,
+      "y": 2,
+      "width": 50,
+      "height": 40
+    }
+  }
+}

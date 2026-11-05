@@ -1,0 +1,61 @@
+{
+  "coordinate_system": {
+    "origin": "top-left",
+    "units": "px",
+    "local_to": "window"
+  },
+  "window_rect_in_pc": {
+    "x": 340,
+    "y": 118,
+    "width": 840,
+    "height": 460
+  },
+  "variants": {
+    "female": "female.png",
+    "male": "male.png"
+  },
+  "close_hit_rect": {
+    "x": 784,
+    "y": 2,
+    "width": 50,
+    "height": 40
+  },
+  "fields": [
+    {
+      "id": "name",
+      "label": "이름",
+      "value_rect": {
+        "x": 305,
+        "y": 151,
+        "width": 456,
+        "height": 30
+      }
+    },
+    {
+      "id": "affiliation",
+      "label": "소속",
+      "value_rect": {
+        "x": 305,
+        "y": 232,
+        "width": 456,
+        "height": 30
+      }
+    },
+    {
+      "id": "bio",
+      "label": "한 줄 소개",
+      "value_rect": {
+        "x": 305,
+        "y": 312,
+        "width": 456,
+        "height": 30
+      }
+    }
+  ],
+  "artwork": {
+    "field_labels": "baked",
+    "portraits": "baked_per_variant",
+    "field_values": "blank"
+  },
+  "notes_ko": "선택한 프로필 PNG 한 장을 그린 뒤 값이 있는 경우 value_rect에 표시합니다. 닫기 영역과 값 영역은 원본 그림을 기준으로 설정했습니다."
+}

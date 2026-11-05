@@ -1,0 +1,615 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 175820d755e894396828ba7ef8df56de, type: 3}
+  m_Name: CosmeticCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::Gamsamo.UI.CosmeticCatalog
+  items:
+  - id: window.oak
+    target: window
+    theme: oak
+    displayName: "\uB0B4\uCD94\uB7F4 \uC624\uD06C \uCC3D\uBB38"
+    cardLabel: "\uB0B4\uCD94\uB7F4 \uC624\uD06C"
+    thumbnail: {fileID: 21300000, guid: 8a56da41d7be1484996997ba3a617c01, type: 3}
+    artwork: {fileID: 21300000, guid: 8a1b33215d3474605856d1c7075c9787, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites:
+    - {fileID: 21300000, guid: e17fabfe58b804e81b885b083e09cbf9, type: 3}
+    - {fileID: 21300000, guid: fee27f6ad6542458aa938ca0c3d5530f, type: 3}
+    - {fileID: 21300000, guid: 7eb09e0f52b084d9698357bccf44df6b, type: 3}
+    blindSprites:
+    - {fileID: 21300000, guid: 226fbab600ded4252b6d46dfad667138, type: 3}
+    - {fileID: 21300000, guid: add4d9011af71452aac94f47a9a335cf, type: 3}
+    - {fileID: 21300000, guid: d58de1123d8634fb88d171646cf2d04a, type: 3}
+    - {fileID: 21300000, guid: 8a1b33215d3474605856d1c7075c9787, type: 3}
+    - {fileID: 21300000, guid: 7ca21fee2295e4a3e87029fa8e946ec7, type: 3}
+    - {fileID: 21300000, guid: 1103b5236fed043b8894679dd566e921, type: 3}
+    - {fileID: 21300000, guid: 3724f0197eb8f4489bbfb9277546a1c9, type: 3}
+    - {fileID: 21300000, guid: c2f2de915a41941b7be2c57d6e6eca5e, type: 3}
+    - {fileID: 21300000, guid: c2ff5f577b8a94477b6929ec7e9fa6c9, type: 3}
+    blindOverlays:
+    - {fileID: 21300000, guid: fe9ef186338ee4165a0b1b45ffcdf83d, type: 3}
+    - {fileID: 21300000, guid: b45c5172eb59b4858a086f840e232dbd, type: 3}
+    - {fileID: 21300000, guid: 17c5367b38cf9489287273b1e2fb1938, type: 3}
+    hasPrice: 0
+  - id: window.walnut
+    target: window
+    theme: walnut
+    displayName: "\uC6D4\uB11B \uCC3D\uBB38"
+    cardLabel: "\uC6D4\uB11B"
+    thumbnail: {fileID: 21300000, guid: cd9ca6a60fd4d478d904787806e8f358, type: 3}
+    artwork: {fileID: 21300000, guid: def8d628ad7914f4a8a8f46c9267853f, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites:
+    - {fileID: 21300000, guid: a131e148c961944ae887f53c8e2c624c, type: 3}
+    - {fileID: 21300000, guid: 76c11f56659664f5981ecf11a5294aec, type: 3}
+    - {fileID: 21300000, guid: e00e1240947604ce5aa4b385507f878b, type: 3}
+    blindSprites:
+    - {fileID: 21300000, guid: f2e6300572a37498e994ba2fc056ef51, type: 3}
+    - {fileID: 21300000, guid: cf2e38a4451094dfcac386b9476303a9, type: 3}
+    - {fileID: 21300000, guid: 038eb7fdb242443c68a45c18be421a9c, type: 3}
+    - {fileID: 21300000, guid: def8d628ad7914f4a8a8f46c9267853f, type: 3}
+    - {fileID: 21300000, guid: 3847c1f41dade4ba0b1c20377f25fcba, type: 3}
+    - {fileID: 21300000, guid: 41f8e03cf23f248059f1335da304718d, type: 3}
+    - {fileID: 21300000, guid: f0c65a088c6e04311a32dfb3c4e80eb1, type: 3}
+    - {fileID: 21300000, guid: 6ec49d44dea4c4e6e8e1cc6930e8d982, type: 3}
+    - {fileID: 21300000, guid: ee0a259a351754dee92f8e30d75bd97c, type: 3}
+    blindOverlays:
+    - {fileID: 21300000, guid: 2aa409b543eb1430d8b3e0bc178407e2, type: 3}
+    - {fileID: 21300000, guid: db6f470b85cd942ee8c85c25147c1ddf, type: 3}
+    - {fileID: 21300000, guid: 778ffb92263ac4cbabf78fac0c2cba2b, type: 3}
+    hasPrice: 0
+  - id: window.sage
+    target: window
+    theme: sage
+    displayName: "\uC138\uC774\uC9C0 \uCC3D\uBB38"
+    cardLabel: "\uC138\uC774\uC9C0"
+    thumbnail: {fileID: 21300000, guid: 27ad771a659e8484ebe125a0a218bd87, type: 3}
+    artwork: {fileID: 21300000, guid: e74cb01235f05452eba8c8a4e88f9e01, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites:
+    - {fileID: 21300000, guid: 1bf61fd91fa7443bab1de4b05188fd15, type: 3}
+    - {fileID: 21300000, guid: 8164e45162fe144198ee57f5c66718fe, type: 3}
+    - {fileID: 21300000, guid: 5794b2c89f5ca470585f28916e8a9371, type: 3}
+    blindSprites:
+    - {fileID: 21300000, guid: 170fe533208db4ccdb34b8ce143eddc8, type: 3}
+    - {fileID: 21300000, guid: 1828f0999596f437fb0e21a311fb725f, type: 3}
+    - {fileID: 21300000, guid: 6e46e99015860426ba7122cfc0448ed0, type: 3}
+    - {fileID: 21300000, guid: e74cb01235f05452eba8c8a4e88f9e01, type: 3}
+    - {fileID: 21300000, guid: 2f85880b7ea4148b586339bfe1daf4ed, type: 3}
+    - {fileID: 21300000, guid: 14531607616314039ae844b3f83b142f, type: 3}
+    - {fileID: 21300000, guid: 7f1eab6c7dd564bea82588adc9a06e7e, type: 3}
+    - {fileID: 21300000, guid: 05bef730fabad4ef4ac9b27074632ff9, type: 3}
+    - {fileID: 21300000, guid: 884a86b7325614e9f9631daa1cf5e84c, type: 3}
+    blindOverlays:
+    - {fileID: 21300000, guid: 3b7bf114ae561400282238ef32140bea, type: 3}
+    - {fileID: 21300000, guid: a14bd458f33ef497fb2305f5d859c89c, type: 3}
+    - {fileID: 21300000, guid: 7e0facef376124e06a6c3ca4cfdf86fa, type: 3}
+    hasPrice: 0
+  - id: window.lavender
+    target: window
+    theme: lavender
+    displayName: "\uB77C\uBCA4\uB354 \uCC3D\uBB38"
+    cardLabel: "\uB77C\uBCA4\uB354"
+    thumbnail: {fileID: 21300000, guid: 8c54661631ce7448d92f02014f277795, type: 3}
+    artwork: {fileID: 21300000, guid: 0f8238ac590f64463874c2a6a2be04ee, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites:
+    - {fileID: 21300000, guid: 704f0ecc7541d48be83aa2ab78fb0955, type: 3}
+    - {fileID: 21300000, guid: b81ae3bd7b8a04b4688388113af7ee73, type: 3}
+    - {fileID: 21300000, guid: b77a7486669ef4a64b177628861d8170, type: 3}
+    blindSprites:
+    - {fileID: 21300000, guid: 9723bf4ef74674163b670f2874b114fa, type: 3}
+    - {fileID: 21300000, guid: cbf1f6429f1694308b2b21c8189df3ac, type: 3}
+    - {fileID: 21300000, guid: 040c88aacf9d34ee69b4b97173f7a44e, type: 3}
+    - {fileID: 21300000, guid: 0f8238ac590f64463874c2a6a2be04ee, type: 3}
+    - {fileID: 21300000, guid: 3f506cf972d944cf7a8c274dff2312ea, type: 3}
+    - {fileID: 21300000, guid: 0c1dc923982ee4ff090b0418c7172ec0, type: 3}
+    - {fileID: 21300000, guid: 18b4916492e594be19889e0d9e81bf58, type: 3}
+    - {fileID: 21300000, guid: 2d31f397e46ca45bd891d09df693cb78, type: 3}
+    - {fileID: 21300000, guid: 54121245e690a4ad6952433f4a445c18, type: 3}
+    blindOverlays:
+    - {fileID: 21300000, guid: 3d6e8a660f8b34dd5970c000198f097c, type: 3}
+    - {fileID: 21300000, guid: 49b67535c083441f0a33fce2b913a154, type: 3}
+    - {fileID: 21300000, guid: 595a4c39f3b2d47e588c2d3be5cdf61f, type: 3}
+    hasPrice: 0
+  - id: window.terracotta
+    target: window
+    theme: terracotta
+    displayName: "\uD14C\uB77C\uCF54\uD0C0 \uCC3D\uBB38"
+    cardLabel: "\uD14C\uB77C\uCF54\uD0C0"
+    thumbnail: {fileID: 21300000, guid: 2686799b526b1467f935906e3d79abd2, type: 3}
+    artwork: {fileID: 21300000, guid: e9680e3425c9d47d5a64c4b2a9aeeb83, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites:
+    - {fileID: 21300000, guid: a819abd8392e2462c83318e79a793951, type: 3}
+    - {fileID: 21300000, guid: 0ba7a3afcedfe4209bfa69f1517ff452, type: 3}
+    - {fileID: 21300000, guid: fe3a0d7d87c26462194b156a277c42f2, type: 3}
+    blindSprites:
+    - {fileID: 21300000, guid: a1fdca6b4c5324a63b178bc199265814, type: 3}
+    - {fileID: 21300000, guid: 92a6112ab66d6453996605348472b140, type: 3}
+    - {fileID: 21300000, guid: b6aa32445210344479f882e296dc21e8, type: 3}
+    - {fileID: 21300000, guid: e9680e3425c9d47d5a64c4b2a9aeeb83, type: 3}
+    - {fileID: 21300000, guid: b21f8a58c09694de2b06db8eeaaff617, type: 3}
+    - {fileID: 21300000, guid: f298da266feee4fc5b3edad2bc64d162, type: 3}
+    - {fileID: 21300000, guid: 25a3b0e6b21c44e42ab9da240ae51c69, type: 3}
+    - {fileID: 21300000, guid: 83b972e2edd8a46f09ffc7525523b1b9, type: 3}
+    - {fileID: 21300000, guid: 2e8829e911a6042b3b2336ed4511e2a9, type: 3}
+    blindOverlays:
+    - {fileID: 21300000, guid: eb7eb13483e3b4343b27ef98a3fc350e, type: 3}
+    - {fileID: 21300000, guid: 8ffa060e5dfae4555ac94b5a97bf6310, type: 3}
+    - {fileID: 21300000, guid: dddabae4fc8064df4ad6126b9a853214, type: 3}
+    hasPrice: 0
+  - id: window.midnight
+    target: window
+    theme: midnight
+    displayName: "\uBBF8\uB4DC\uB098\uC774\uD2B8 \uCC3D\uBB38"
+    cardLabel: "\uBBF8\uB4DC\uB098\uC774\uD2B8"
+    thumbnail: {fileID: 21300000, guid: 5d5c6c7696b3a45d1a468a02f307d6a0, type: 3}
+    artwork: {fileID: 21300000, guid: 6226e42437074442c9ad4f2ec7d49f41, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites:
+    - {fileID: 21300000, guid: 0d9b2c70bca364694aa6fd3207c3baa6, type: 3}
+    - {fileID: 21300000, guid: c1c2c866c4fe1416191130c4014054ea, type: 3}
+    - {fileID: 21300000, guid: 0653d07e3510246a485e042c5a250868, type: 3}
+    blindSprites:
+    - {fileID: 21300000, guid: e9c0bab9dbca24c05926b7f60ddec40e, type: 3}
+    - {fileID: 21300000, guid: fcfe38f2d643c461ca71daaa28bc29a8, type: 3}
+    - {fileID: 21300000, guid: 3b778b703ce4d450e8fc5465b5bbea81, type: 3}
+    - {fileID: 21300000, guid: 6226e42437074442c9ad4f2ec7d49f41, type: 3}
+    - {fileID: 21300000, guid: a2cae733c98fc48719493aa8a2b8ae2c, type: 3}
+    - {fileID: 21300000, guid: 70584c6cf5107484bb8cb7829a8c4733, type: 3}
+    - {fileID: 21300000, guid: e4103d6321cd846eca28af9dd595d012, type: 3}
+    - {fileID: 21300000, guid: 1d96ecde5161c42bf885c10c9eeb4f1d, type: 3}
+    - {fileID: 21300000, guid: a5de9fb29a7a14812bba9cb2ec8c50d6, type: 3}
+    blindOverlays:
+    - {fileID: 21300000, guid: 3de6e8b90503945a6b55e08b27ebecf4, type: 3}
+    - {fileID: 21300000, guid: bacfb8743cd50459999ab69c69c4efaf, type: 3}
+    - {fileID: 21300000, guid: ca5dac14823c342fe99156d84f99451e, type: 3}
+    hasPrice: 0
+  - id: window.brass
+    target: window
+    theme: brass
+    displayName: "\uBE48\uD2F0\uC9C0 \uBE0C\uB77C\uC2A4 \uCC3D\uBB38"
+    cardLabel: "\uBE48\uD2F0\uC9C0 \uBE0C\uB77C\uC2A4"
+    thumbnail: {fileID: 21300000, guid: 27b6ae9ee95364f33b1aa14fc9aadf98, type: 3}
+    artwork: {fileID: 21300000, guid: 77c2d04862e4448cab62be0c24349fbd, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites:
+    - {fileID: 21300000, guid: f7d64c65252c848deaffb6c05c6614de, type: 3}
+    - {fileID: 21300000, guid: 435b53cc5a9804b4e86787de9aa068b5, type: 3}
+    - {fileID: 21300000, guid: 62329fe2b2375444cbb24e6dfe5dd9ab, type: 3}
+    blindSprites:
+    - {fileID: 21300000, guid: 34b36753e68c44988ac0e36664fd0875, type: 3}
+    - {fileID: 21300000, guid: 94c38475ac6d04913be8756faa2bcd5f, type: 3}
+    - {fileID: 21300000, guid: d26adc0db9bf04facb38ce977a034e95, type: 3}
+    - {fileID: 21300000, guid: 77c2d04862e4448cab62be0c24349fbd, type: 3}
+    - {fileID: 21300000, guid: da5879639d67f4b23b89cc6e2c60327f, type: 3}
+    - {fileID: 21300000, guid: d41d013e038d44564bbdb5a6e06f4988, type: 3}
+    - {fileID: 21300000, guid: 69831cdd7816f4bc18474de4c25449de, type: 3}
+    - {fileID: 21300000, guid: 80261a6b3f2de46a4b150780ecc094a2, type: 3}
+    - {fileID: 21300000, guid: d9e1ad0e993e64e1391b134a5e87801b, type: 3}
+    blindOverlays:
+    - {fileID: 21300000, guid: d1ce2e4451de24cdfa013e862ce17d0e, type: 3}
+    - {fileID: 21300000, guid: 47dd900648ed84b5bb0e4d20b4ea8e2d, type: 3}
+    - {fileID: 21300000, guid: 2f86590f5a9504443b567f60d13e608a, type: 3}
+    hasPrice: 0
+  - id: window.white
+    target: window
+    theme: white
+    displayName: "\uBAA8\uB358 \uD654\uC774\uD2B8 \uCC3D\uBB38"
+    cardLabel: "\uBAA8\uB358 \uD654\uC774\uD2B8"
+    thumbnail: {fileID: 21300000, guid: fe56bc697c2b643a0b9845bd62ca762d, type: 3}
+    artwork: {fileID: 21300000, guid: 7dc029d3efe814e95b15306eff8c769e, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites:
+    - {fileID: 21300000, guid: 1b226c407be40407c89085861420931a, type: 3}
+    - {fileID: 21300000, guid: bbe0d9d9006ed4adab117cef3835eecf, type: 3}
+    - {fileID: 21300000, guid: eeceb7532d5c6477698953e61498ee0f, type: 3}
+    blindSprites:
+    - {fileID: 21300000, guid: eaa2934e20531480482b24aac8ac1079, type: 3}
+    - {fileID: 21300000, guid: 5af2ce130ba644ff29db49ac8728a1f6, type: 3}
+    - {fileID: 21300000, guid: cd9dad32a2c57422f9d0d7eab9d84db8, type: 3}
+    - {fileID: 21300000, guid: 7dc029d3efe814e95b15306eff8c769e, type: 3}
+    - {fileID: 21300000, guid: 1d8e1ce3a0473497f8e2ede8299412a0, type: 3}
+    - {fileID: 21300000, guid: 6254d2bb65bd247f4a8184f90d20f4c2, type: 3}
+    - {fileID: 21300000, guid: 2ba2c6adae65641f4971f1877133a5eb, type: 3}
+    - {fileID: 21300000, guid: e0b5fc8382f2f4551900c340846bad37, type: 3}
+    - {fileID: 21300000, guid: b2d7d65da1171467794d84b2f8b411f5, type: 3}
+    blindOverlays:
+    - {fileID: 21300000, guid: 0bab20c3a3520471eba98551b614366b, type: 3}
+    - {fileID: 21300000, guid: fa56dad0a3c4e49ac8f2923c4dca0273, type: 3}
+    - {fileID: 21300000, guid: ca4fcc5da9b114a11b59d1a75a4e1237, type: 3}
+    hasPrice: 0
+  - id: door.oak
+    target: door
+    theme: oak
+    displayName: "\uB0B4\uCD94\uB7F4 \uC624\uD06C \uBB38"
+    cardLabel: "\uB0B4\uCD94\uB7F4 \uC624\uD06C"
+    thumbnail: {fileID: 21300000, guid: b809019bf101a46479da1de03b53b43e, type: 3}
+    artwork: {fileID: 21300000, guid: f9dccd90d599c47d8bf3ea734b496a61, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: door.walnut
+    target: door
+    theme: walnut
+    displayName: "\uC6D4\uB11B \uBB38"
+    cardLabel: "\uC6D4\uB11B"
+    thumbnail: {fileID: 21300000, guid: 4c111150fcff140e3a1e48e672a197ca, type: 3}
+    artwork: {fileID: 21300000, guid: b24a2fd93344a4c698b76a0491d5bb62, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: door.sage
+    target: door
+    theme: sage
+    displayName: "\uC138\uC774\uC9C0 \uBB38"
+    cardLabel: "\uC138\uC774\uC9C0"
+    thumbnail: {fileID: 21300000, guid: 09b8dd409adf14fa68e253977c471c0e, type: 3}
+    artwork: {fileID: 21300000, guid: 159a18472f6ae481991f3948b800ee4f, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: door.lavender
+    target: door
+    theme: lavender
+    displayName: "\uB77C\uBCA4\uB354 \uBB38"
+    cardLabel: "\uB77C\uBCA4\uB354"
+    thumbnail: {fileID: 21300000, guid: ff3a3893702244acb8d0f5c018446e19, type: 3}
+    artwork: {fileID: 21300000, guid: 3dc1c2d2437234a4480bb75e36797aa4, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: door.terracotta
+    target: door
+    theme: terracotta
+    displayName: "\uD14C\uB77C\uCF54\uD0C0 \uBB38"
+    cardLabel: "\uD14C\uB77C\uCF54\uD0C0"
+    thumbnail: {fileID: 21300000, guid: 00d0f04ee4b2b4305b347f899f5134d0, type: 3}
+    artwork: {fileID: 21300000, guid: 77d22808d91e2411c8ddd3f824ea9901, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: door.midnight
+    target: door
+    theme: midnight
+    displayName: "\uBBF8\uB4DC\uB098\uC774\uD2B8 \uBB38"
+    cardLabel: "\uBBF8\uB4DC\uB098\uC774\uD2B8"
+    thumbnail: {fileID: 21300000, guid: 2a33f948750d244b3b010e7acba52894, type: 3}
+    artwork: {fileID: 21300000, guid: 69124b98437a94fd581042b466edf585, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: door.brass
+    target: door
+    theme: brass
+    displayName: "\uBE48\uD2F0\uC9C0 \uBE0C\uB77C\uC2A4 \uBB38"
+    cardLabel: "\uBE48\uD2F0\uC9C0 \uBE0C\uB77C\uC2A4"
+    thumbnail: {fileID: 21300000, guid: 19a70261c029f47629a8610e171b632e, type: 3}
+    artwork: {fileID: 21300000, guid: 85586f89a278340c3b2314cb24859d82, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: door.white
+    target: door
+    theme: white
+    displayName: "\uBAA8\uB358 \uD654\uC774\uD2B8 \uBB38"
+    cardLabel: "\uBAA8\uB358 \uD654\uC774\uD2B8"
+    thumbnail: {fileID: 21300000, guid: ff71a756e89f64f59aadd9b8937db08a, type: 3}
+    artwork: {fileID: 21300000, guid: 29af8b9f371114a5e98a3002992360d8, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: clipboard.oak
+    target: clipboard
+    theme: oak
+    displayName: "\uB0B4\uCD94\uB7F4 \uC624\uD06C \uC11C\uB958\uCCA0"
+    cardLabel: "\uB0B4\uCD94\uB7F4 \uC624\uD06C"
+    thumbnail: {fileID: 21300000, guid: fb7dff751b82f41ac8e8341b362a6cfb, type: 3}
+    artwork: {fileID: 21300000, guid: a8b38176589a14045b8d3ed80cf21a53, type: 3}
+    detailArtwork: {fileID: 21300000, guid: 158c4cab8307e43008e8a8e7331ffa7b, type: 3}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: clipboard.walnut
+    target: clipboard
+    theme: walnut
+    displayName: "\uC6D4\uB11B \uC11C\uB958\uCCA0"
+    cardLabel: "\uC6D4\uB11B"
+    thumbnail: {fileID: 21300000, guid: 942bb48414f814967a48ca5ff0d323a7, type: 3}
+    artwork: {fileID: 21300000, guid: 6db79de5cb4894ef6a761b041920832b, type: 3}
+    detailArtwork: {fileID: 21300000, guid: d3cff2634835e4cd1873d6c953fe0323, type: 3}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: clipboard.sage
+    target: clipboard
+    theme: sage
+    displayName: "\uC138\uC774\uC9C0 \uC11C\uB958\uCCA0"
+    cardLabel: "\uC138\uC774\uC9C0"
+    thumbnail: {fileID: 21300000, guid: 89ec532b758174c33949b742525cfae9, type: 3}
+    artwork: {fileID: 21300000, guid: 48ac705472bc54518b3b5b53bcea0717, type: 3}
+    detailArtwork: {fileID: 21300000, guid: 2852777758b344f70b89203a182f6025, type: 3}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: clipboard.lavender
+    target: clipboard
+    theme: lavender
+    displayName: "\uB77C\uBCA4\uB354 \uC11C\uB958\uCCA0"
+    cardLabel: "\uB77C\uBCA4\uB354"
+    thumbnail: {fileID: 21300000, guid: 4f47fb558741a415f9d709dee3f94fc0, type: 3}
+    artwork: {fileID: 21300000, guid: 822338fc23a5f4b6584402381382c086, type: 3}
+    detailArtwork: {fileID: 21300000, guid: 80e88209ebc5948b989d6713262d3f0a, type: 3}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: clipboard.terracotta
+    target: clipboard
+    theme: terracotta
+    displayName: "\uD14C\uB77C\uCF54\uD0C0 \uC11C\uB958\uCCA0"
+    cardLabel: "\uD14C\uB77C\uCF54\uD0C0"
+    thumbnail: {fileID: 21300000, guid: b080b1f4fac3a417388fca3037897b07, type: 3}
+    artwork: {fileID: 21300000, guid: 6c81c941cec9c429f918b02c0b64d5dc, type: 3}
+    detailArtwork: {fileID: 21300000, guid: fbe08b35dba364992a8de891e624fffb, type: 3}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: clipboard.midnight
+    target: clipboard
+    theme: midnight
+    displayName: "\uBBF8\uB4DC\uB098\uC774\uD2B8 \uC11C\uB958\uCCA0"
+    cardLabel: "\uBBF8\uB4DC\uB098\uC774\uD2B8"
+    thumbnail: {fileID: 21300000, guid: 5d5831aaf1bd94fe3be69db9ffb22ad4, type: 3}
+    artwork: {fileID: 21300000, guid: 4b22bcf36bd2e405bae1dde8ca406eb8, type: 3}
+    detailArtwork: {fileID: 21300000, guid: b7dcb6cbfe6b14b1ea372f61e14e8a24, type: 3}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: clipboard.brass
+    target: clipboard
+    theme: brass
+    displayName: "\uBE48\uD2F0\uC9C0 \uBE0C\uB77C\uC2A4 \uC11C\uB958\uCCA0"
+    cardLabel: "\uBE48\uD2F0\uC9C0 \uBE0C\uB77C\uC2A4"
+    thumbnail: {fileID: 21300000, guid: f0659ec9c7c0b486eb390fc7b8d0e31d, type: 3}
+    artwork: {fileID: 21300000, guid: 4267152e77d8c4cefa24785f4a3a3bb0, type: 3}
+    detailArtwork: {fileID: 21300000, guid: 58941ad04d7354523915f05d7c4e38c0, type: 3}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: clipboard.white
+    target: clipboard
+    theme: white
+    displayName: "\uBAA8\uB358 \uD654\uC774\uD2B8 \uC11C\uB958\uCCA0"
+    cardLabel: "\uBAA8\uB358 \uD654\uC774\uD2B8"
+    thumbnail: {fileID: 21300000, guid: 38914a15e4d944937a7ef50aecdf63a9, type: 3}
+    artwork: {fileID: 21300000, guid: 1d13b230cf0334b908d10c9dd7a9753a, type: 3}
+    detailArtwork: {fileID: 21300000, guid: 24a1ee9fe63934061a0a4f3d8e153a64, type: 3}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: pc.oak
+    target: pc
+    theme: oak
+    displayName: "\uB0B4\uCD94\uB7F4 \uC624\uD06C PC"
+    cardLabel: "\uB0B4\uCD94\uB7F4 \uC624\uD06C"
+    thumbnail: {fileID: 21300000, guid: 0b6c49e93073e4bcf8ba311f0e4cd626, type: 3}
+    artwork: {fileID: 21300000, guid: 65684458a9f38465eabeb323d0e3e7f0, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: pc.walnut
+    target: pc
+    theme: walnut
+    displayName: "\uC6D4\uB11B PC"
+    cardLabel: "\uC6D4\uB11B"
+    thumbnail: {fileID: 21300000, guid: 28cf8ba0628004194b1c79b9242552b0, type: 3}
+    artwork: {fileID: 21300000, guid: 51d00da1f82b34e318b671b31fe36a40, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: pc.sage
+    target: pc
+    theme: sage
+    displayName: "\uC138\uC774\uC9C0 PC"
+    cardLabel: "\uC138\uC774\uC9C0"
+    thumbnail: {fileID: 21300000, guid: 8b9e13c3a47a246c98d105185bfde4ab, type: 3}
+    artwork: {fileID: 21300000, guid: 702c2179a9107477fb4c7a5518118540, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: pc.lavender
+    target: pc
+    theme: lavender
+    displayName: "\uB77C\uBCA4\uB354 PC"
+    cardLabel: "\uB77C\uBCA4\uB354"
+    thumbnail: {fileID: 21300000, guid: 3aa85ccee1b064e3f881c02a3ba40133, type: 3}
+    artwork: {fileID: 21300000, guid: 4774e2f7ff9e844f2a192ce793f58f73, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: pc.terracotta
+    target: pc
+    theme: terracotta
+    displayName: "\uD14C\uB77C\uCF54\uD0C0 PC"
+    cardLabel: "\uD14C\uB77C\uCF54\uD0C0"
+    thumbnail: {fileID: 21300000, guid: 49105ff7fdfad4bae8c7de2d1f0071a6, type: 3}
+    artwork: {fileID: 21300000, guid: 10c28aee36bc64fd0a0be9fc7ea7e46b, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: pc.midnight
+    target: pc
+    theme: midnight
+    displayName: "\uBBF8\uB4DC\uB098\uC774\uD2B8 PC"
+    cardLabel: "\uBBF8\uB4DC\uB098\uC774\uD2B8"
+    thumbnail: {fileID: 21300000, guid: 12d0d68eba8794079afde31c6d631eb0, type: 3}
+    artwork: {fileID: 21300000, guid: d59a5990588b241b39711395c318c69a, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: pc.brass
+    target: pc
+    theme: brass
+    displayName: "\uBE48\uD2F0\uC9C0 \uBE0C\uB77C\uC2A4 PC"
+    cardLabel: "\uBE48\uD2F0\uC9C0 \uBE0C\uB77C\uC2A4"
+    thumbnail: {fileID: 21300000, guid: 17fa798fd75174473a9b643c714230c4, type: 3}
+    artwork: {fileID: 21300000, guid: 5e9b3aea5a2d2463d92c82685f678380, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: pc.white
+    target: pc
+    theme: white
+    displayName: "\uBAA8\uB358 \uD654\uC774\uD2B8 PC"
+    cardLabel: "\uBAA8\uB358 \uD654\uC774\uD2B8"
+    thumbnail: {fileID: 21300000, guid: 629845671a0884f0c811fa2bb3b0777a, type: 3}
+    artwork: {fileID: 21300000, guid: 3f5a7fdd7ec864a09aba15986a95c21c, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: wallpaper.oak
+    target: wallpaper
+    theme: oak
+    displayName: "\uB0B4\uCD94\uB7F4 \uC624\uD06C \xB7 \uCC38\uB098\uBB34 \uC5B8\uB355"
+    cardLabel: "\uCC38\uB098\uBB34 \uC5B8\uB355"
+    thumbnail: {fileID: 21300000, guid: 908aaf3b449d9471fa7c0db38d97397b, type: 3}
+    artwork: {fileID: 21300000, guid: 8eb54be82ef65479994619afde4337d3, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: wallpaper.walnut
+    target: wallpaper
+    theme: walnut
+    displayName: "\uC6D4\uB11B \xB7 \uAC00\uC744 \uC232\uAE38"
+    cardLabel: "\uAC00\uC744 \uC232\uAE38"
+    thumbnail: {fileID: 21300000, guid: 1d0aac58f99b148a7820025561a68850, type: 3}
+    artwork: {fileID: 21300000, guid: ba642ed751594485aa8089d009e65e76, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: wallpaper.sage
+    target: wallpaper
+    theme: sage
+    displayName: "\uC138\uC774\uC9C0 \xB7 \uC548\uAC1C \uB080 \uB2E4\uB791\uB17C"
+    cardLabel: "\uC548\uAC1C \uB080 \uB2E4\uB791\uB17C"
+    thumbnail: {fileID: 21300000, guid: 78898e922262844afaf9a311a2dc060a, type: 3}
+    artwork: {fileID: 21300000, guid: 6205b173e9afa4ba8a10b683d1ad3a14, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: wallpaper.lavender
+    target: wallpaper
+    theme: lavender
+    displayName: "\uB77C\uBCA4\uB354 \xB7 \uB77C\uBCA4\uB354 \uB4E4\uB158"
+    cardLabel: "\uB77C\uBCA4\uB354 \uB4E4\uB158"
+    thumbnail: {fileID: 21300000, guid: 831b70731e0634335b58102867a7db15, type: 3}
+    artwork: {fileID: 21300000, guid: edd94c2b838ed4da0a0f2bf95ec782e8, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: wallpaper.terracotta
+    target: wallpaper
+    theme: terracotta
+    displayName: "\uD14C\uB77C\uCF54\uD0C0 \xB7 \uBD89\uC740 \uC9C0\uBD95 \uB9C8\uC744"
+    cardLabel: "\uBD89\uC740 \uC9C0\uBD95 \uB9C8\uC744"
+    thumbnail: {fileID: 21300000, guid: ae247f995a35943a5a2312a5e05d2c58, type: 3}
+    artwork: {fileID: 21300000, guid: 5a7c5e54a78f1438296b3b38aee32349, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: wallpaper.midnight
+    target: wallpaper
+    theme: midnight
+    displayName: "\uBBF8\uB4DC\uB098\uC774\uD2B8 \xB7 \uB2EC\uBE5B \uD638\uC218"
+    cardLabel: "\uB2EC\uBE5B \uD638\uC218"
+    thumbnail: {fileID: 21300000, guid: b63de2d8045d34060ba9e29b66c23047, type: 3}
+    artwork: {fileID: 21300000, guid: 1315dfcc79ccf4e1482c041c75698add, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: wallpaper.brass
+    target: wallpaper
+    theme: brass
+    displayName: "\uBE48\uD2F0\uC9C0 \uBE0C\uB77C\uC2A4 \xB7 \uD669\uD63C\uC758 \uCC9C\uBB38\uB300"
+    cardLabel: "\uD669\uD63C\uC758 \uCC9C\uBB38\uB300"
+    thumbnail: {fileID: 21300000, guid: 3fc32338995954513bc9ea98f0ace74f, type: 3}
+    artwork: {fileID: 21300000, guid: ae4d46484ef2a4d5398b62473c2a2fff, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0
+  - id: wallpaper.white
+    target: wallpaper
+    theme: white
+    displayName: "\uBAA8\uB358 \uD654\uC774\uD2B8 \xB7 \uACA8\uC6B8 \uC790\uC791\uB098\uBB34"
+    cardLabel: "\uACA8\uC6B8 \uC790\uC791\uB098\uBB34"
+    thumbnail: {fileID: 21300000, guid: 15c4969e163a442f3b1776aa06293776, type: 3}
+    artwork: {fileID: 21300000, guid: 31834465d858b4873af32e27edb8c558, type: 3}
+    detailArtwork: {fileID: 0}
+    weatherSprites: []
+    blindSprites: []
+    blindOverlays: []
+    hasPrice: 0

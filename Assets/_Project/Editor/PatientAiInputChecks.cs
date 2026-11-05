@@ -48,6 +48,11 @@ namespace Gamsamo.Editor
                 visits.dialogue = view;
                 visits.room = room;
                 view.root = host.AddComponent<CanvasGroup>();
+                var portraitObject = new GameObject("Portrait", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+                portraitObject.transform.SetParent(host.transform, false);
+                visits.portraitRoot = portraitObject.GetComponent<RectTransform>();
+                visits.portraitGroup = portraitObject.GetComponent<CanvasGroup>();
+                visits.portraitImage = portraitObject.GetComponent<Image>();
                 var inputObject = new GameObject("ReplyInput", typeof(RectTransform));
                 inputObject.transform.SetParent(host.transform, false);
                 view.replyInput = inputObject.AddComponent<TMP_InputField>();
@@ -55,8 +60,26 @@ namespace Gamsamo.Editor
                 var sendObject = new GameObject("Send", typeof(RectTransform));
                 sendObject.transform.SetParent(host.transform, false);
                 view.sendButton = sendObject.AddComponent<Button>();
+                var endObject = new GameObject("End", typeof(RectTransform), typeof(Image));
+                endObject.transform.SetParent(host.transform, false);
+                view.endButton = endObject.AddComponent<Button>();
+                view.endButton.targetGraphic = endObject.GetComponent<Image>();
+                var nextObject = new GameObject("Next", typeof(RectTransform));
+                nextObject.transform.SetParent(host.transform, false);
+                view.nextButton = nextObject.AddComponent<Button>();
+                // The Edit-mode fixture deliberately does not call the visit's scene-only Awake.
+                // Wire its public click handler here; the Play checks cover the serialized scene binding.
+                view.DismissRequested += () => visits.DismissPatient();
+                view.NextRequested += visits.NextDemoLine;
+                int departureClicks = 0;
+                view.DismissRequested += () => departureClicks++;
                 Field(view, "bound", false);
                 Call(view, "BindButtons");
+                view.EnsureDepartureControl();
+                var departureButton = view.dismissButton;
+                view.EnsureDepartureControl();
+                Check(departureButton != null && view.dismissButton == departureButton,
+                    "Creating the departure control twice reuses one button");
                 Field(view, "visible", true);
                 Property(visits, "State", PatientVisitController.VisitState.Consulting);
                 Property(visits, "CurrentPatient", new PatientVisitDefinition { patientId = "seoyun", displayName = "서윤" });
@@ -79,6 +102,8 @@ namespace Gamsamo.Editor
                 var bridge = host.AddComponent<PatientAiInputBridge>();
                 Call(bridge, "Bind");
                 Check(adapter.CanSubmit && view.sendButton.interactable, "The real bridge enables sending after a committed first utterance");
+                Check(!visits.DismissPatient() && !adapter.FinishVisit() && !departureButton.gameObject.activeSelf,
+                    "An active consultation cannot be dismissed before evaluation is saved");
                 string input = "  한글 질문과 공감\n두 번째 줄 <b>원문</b>  ";
                 view.replyInput.text = input;
                 Check(adapter.Draft == input, "Input changes reach UpdateDraft without trimming whitespace or markup");
@@ -95,6 +120,8 @@ namespace Gamsamo.Editor
                 Check(adapter.RequestEnd() && adapter.ConfirmEnd(), "Confirmed end is accepted while the response is pending");
                 Check(session.EndRequested && AiProtocol.Encode(session.PendingRequest) == pending,
                     "End intent is durable without replacing the pending utterance");
+                Check(!visits.DismissPatient() && !adapter.FinishVisit(),
+                    "A confirmed end with a pending response cannot dismiss the patient");
 
                 var evaluated = AiSaveStore.NewSnapshot();
                 evaluated["state"] = Example("evaluate.response")["state"].DeepClone();
@@ -106,6 +133,7 @@ namespace Gamsamo.Editor
                 Field(adapter, "session", completedSession);
                 Field(adapter, "committedState", completedSession.State);
                 Field(adapter, "networkBusy", false);
+                Field(adapter, "draftDirty", false);
                 Field(adapter, "renderedRevision", -1);
                 var bodyObject = new GameObject("PatientText", typeof(RectTransform));
                 bodyObject.transform.SetParent(host.transform, false);
@@ -118,9 +146,56 @@ namespace Gamsamo.Editor
                 Check(!string.IsNullOrWhiteSpace(room.record.consultationResult) && room.record.consultationResult.Contains("환자 변화"),
                     "The desk record receives saved evaluation scores and reasons");
                 Check(typeof(PatientAiAdapter).GetMethod("ShowResult", Private) == null, "No result-dialogue renderer remains in the adapter");
-                completedSession.CompleteVisit();
+                Check(visits.IsAwaitingDeparture && adapter.CanFinishVisit && departureButton.gameObject.activeSelf
+                    && departureButton.interactable && !view.endButton.gameObject.activeSelf,
+                    "A saved evaluation exposes the explicit departure button and replaces the end action");
+                for (int frame = 0; frame < 3; frame++) Call(adapter, "Update");
+                view.RevealAll();
+                visits.NextDemoLine();
+                Check(visits.State == PatientVisitController.VisitState.Consulting && !completedSession.VisitCompleted,
+                    "Evaluated state remains seated across Update and next-page input");
+                Check(!visits.MarkConsultationEnded("wrong-session"), "A foreign session cannot mark this visit ready for departure");
+                var modalField = typeof(ConsultationRoomController).GetField("activeModal", Private);
+                modalField.SetValue(room, Enum.Parse(modalField.FieldType, "Record"));
+                Call(visits, "RefreshInput");
+                Check(!visits.DismissPatient() && !adapter.FinishVisit() && !departureButton.interactable,
+                    "Reading the record blocks departure without losing the evaluated visit");
+                modalField.SetValue(room, Enum.Parse(modalField.FieldType, "None"));
+                Call(visits, "RefreshInput");
+                Field(adapter, "networkBusy", true);
+                Call(adapter, "Publish");
+                Check(!adapter.CanFinishVisit && !visits.DismissPatient(), "Pending work blocks explicit departure");
+                Field(adapter, "networkBusy", false);
+                Property(adapter, "LastError", "isolated saved-result error");
+                Call(adapter, "Publish");
+                Check(!adapter.CanFinishVisit && !visits.DismissPatient(), "An unresolved save or transport error blocks departure");
+                Property(adapter, "LastError", "");
+                Call(adapter, "Publish");
+                // Exercise the same persisted result being restored after reopening the game.
+                session = completedSession = new AiSession(resultStore);
+                Field(adapter, "session", completedSession);
+                Field(adapter, "committedState", completedSession.State);
+                Field(adapter, "renderedRevision", -1);
+                Call(adapter, "RenderCommitted");
+                Call(adapter, "Update");
+                Check(visits.State == PatientVisitController.VisitState.Consulting && !completedSession.VisitCompleted
+                    && departureButton.interactable, "Restoring an evaluated save waits for an explicit departure click");
+                departureButton.onClick.Invoke();
+                Check(visits.State == PatientVisitController.VisitState.Leaving && string.IsNullOrEmpty(visits.CurrentSessionId),
+                    "The departure button invokes the adapter and invalidates the local visit once");
+                departureButton.onClick.Invoke();
+                Check(!adapter.FinishVisit() && !visits.DismissPatient() && visits.CompletedCount == 0 && departureClicks == 1,
+                    "Repeated departure clicks cannot start another departure or count another patient");
                 Check(new AiSession(resultStore).VisitCompleted && !string.IsNullOrWhiteSpace(room.record.consultationResult),
-                    "Completing the saved visit retains its desk record");
+                    "Explicit departure durably completes the visit and retains its desk record");
+                // Return only this isolated fixture to active state for the existing multi-patient input checks.
+                Property(visits, "State", PatientVisitController.VisitState.Consulting);
+                Property(visits, "CurrentSessionId", "local_check");
+                Property(visits, "IsAwaitingDeparture", false);
+                Field(adapter, "localVisitId", "local_check");
+                Field(adapter, "healthReady", true);
+                Field(view, "visible", true);
+                view.SetDepartureAvailable(false);
                 CheckRecordPages(host.transform, Check);
                 foreach (string id in new[] { "seoyun", "dohyeon", "taejun", "yeonwoo", "harin" })
                 {

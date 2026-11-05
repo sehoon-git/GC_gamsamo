@@ -34,6 +34,7 @@ namespace Gamsamo.Dialogue
         // A runtime adapter opts in per patient. The remaining local demos keep their own rules.
         public Func<string, bool> UsesExternalDialogue;
         public Func<string, bool> ExternalConfirmEnd;
+        public Func<bool> ExternalFinishVisit;
         public Action ExternalNextRequested;
 
         public VisitState State { get; private set; } = VisitState.Waiting;
@@ -41,6 +42,7 @@ namespace Gamsamo.Dialogue
         public int AdmittedCount => nextPatientIndex;
         public string CurrentSessionId { get; private set; } = string.Empty;
         public PatientVisitDefinition CurrentPatient { get; private set; }
+        public bool IsAwaitingDeparture { get; private set; }
         public string CurrentPatientId => CurrentPatient != null ? CurrentPatient.patientId : string.Empty;
         public bool IsConsultationActive => State == VisitState.Entering || State == VisitState.Consulting || State == VisitState.Leaving;
 
@@ -70,6 +72,7 @@ namespace Gamsamo.Dialogue
                 dialogue.EndRequested += RequestEndConsultation;
                 dialogue.ConfirmEndRequested += ConfirmEndConsultation;
                 dialogue.CancelEndRequested += CancelEndConsultation;
+                dialogue.DismissRequested += OnDismissRequested;
                 dialogue.Hide();
             }
             SetPortraitAlpha(0f);
@@ -136,6 +139,7 @@ namespace Gamsamo.Dialogue
             // Reserve the slot and lock the door synchronously, before any animation yields.
             CurrentPatient = patients[nextPatientIndex++];
             CurrentSessionId = Guid.NewGuid().ToString("N");
+            IsAwaitingDeparture = false;
             demoLineIndex = 0;
             portraitImage.sprite = CurrentPatient.portrait;
             portraitImage.preserveAspect = true;
@@ -195,6 +199,7 @@ namespace Gamsamo.Dialogue
                 return;
             }
             if (dialogue.AdvancePage()) return;
+            if (IsAwaitingDeparture) return;
             if (UsesExternalDialogueNow())
             {
                 ExternalNextRequested?.Invoke();
@@ -209,7 +214,7 @@ namespace Gamsamo.Dialogue
         /// <summary>LLM integration seam. Late replies from departed/replaced visits are rejected.</summary>
         public bool PresentPatientLine(string sessionId, string text)
         {
-            if (!isActiveAndEnabled || State != VisitState.Consulting || string.IsNullOrEmpty(sessionId)
+            if (!isActiveAndEnabled || State != VisitState.Consulting || IsAwaitingDeparture || string.IsNullOrEmpty(sessionId)
                 || sessionId != CurrentSessionId || string.IsNullOrWhiteSpace(text)) return false;
             dialogue.ShowLine(CurrentPatient.displayName, text);
             dialogue.SetNextAvailable(false);
@@ -218,7 +223,7 @@ namespace Gamsamo.Dialogue
 
         public void RequestEndConsultation()
         {
-            if (CanUseDialogue()) dialogue.ShowConfirmation(true);
+            if (CanUseDialogue() && !IsAwaitingDeparture) dialogue.ShowConfirmation(true);
         }
 
         public void CancelEndConsultation()
@@ -228,20 +233,62 @@ namespace Gamsamo.Dialogue
 
         public void ConfirmEndConsultation()
         {
-            if (!isActiveAndEnabled || RoomBlocked || State != VisitState.Consulting || dialogue == null || !dialogue.IsConfirming) return;
-            if (UsesExternalDialogueNow() && ExternalConfirmEnd != null && ExternalConfirmEnd(CurrentSessionId)) return;
-            CompleteConsultation(CurrentSessionId);
+            if (!isActiveAndEnabled || RoomBlocked || State != VisitState.Consulting || IsAwaitingDeparture
+                || dialogue == null || !dialogue.IsConfirming) return;
+            // A missing/rejected AI handler must never fall through to local demo completion.
+            if (UsesExternalDialogueNow())
+            {
+                ExternalConfirmEnd?.Invoke(CurrentSessionId);
+                return;
+            }
+            dialogue.ShowConfirmation(false);
+            MarkConsultationEnded(CurrentSessionId);
+            dialogue.SetStatus("상담을 마쳤습니다 · 환자 내보내기를 눌러 주세요");
         }
 
         private bool UsesExternalDialogueNow() => UsesExternalDialogue != null && UsesExternalDialogue(CurrentPatientId);
 
-        /// <summary>Ends only this local visit. It does not grant a clear, reward, or saved progress.</summary>
+        /// <summary>Called after local confirmation or a durably saved AI evaluation; never moves the patient.</summary>
+        public bool MarkConsultationEnded(string sessionId)
+        {
+            if (!isActiveAndEnabled || State != VisitState.Consulting || dialogue == null
+                || string.IsNullOrEmpty(sessionId) || sessionId != CurrentSessionId) return false;
+            IsAwaitingDeparture = true;
+            dialogue.ShowConfirmation(false);
+            dialogue.SetEndAvailable(false);
+            dialogue.SetNextAvailable(false);
+            dialogue.SetDepartureAvailable(true);
+            return true;
+        }
+
+        /// <summary>A new AI round in the same seated visit must clear the previous departure permission.</summary>
+        public bool ClearConsultationEnded(string sessionId)
+        {
+            if (!isActiveAndEnabled || State != VisitState.Consulting || dialogue == null
+                || string.IsNullOrEmpty(sessionId) || sessionId != CurrentSessionId) return false;
+            IsAwaitingDeparture = false;
+            dialogue.SetDepartureAvailable(false);
+            return true;
+        }
+
+        private void OnDismissRequested() => DismissPatient();
+
+        /// <summary>Only an explicit dismissal action may release an ended consultation's door lock.</summary>
+        public bool DismissPatient()
+        {
+            if (!IsAwaitingDeparture || !CanUseDialogue() || !dialogue.IsVisible) return false;
+            if (UsesExternalDialogueNow()) return ExternalFinishVisit != null && ExternalFinishVisit();
+            return CompleteConsultation(CurrentSessionId);
+        }
+
+        /// <summary>Departs an ended local visit. It does not grant a clear, reward, or saved game progress.</summary>
         public bool CompleteConsultation(string sessionId)
         {
-            if (!isActiveAndEnabled || RoomBlocked || State != VisitState.Consulting
+            if (!isActiveAndEnabled || RoomBlocked || State != VisitState.Consulting || !IsAwaitingDeparture
                 || string.IsNullOrEmpty(sessionId) || sessionId != CurrentSessionId) return false;
             // Invalidate pending external replies as soon as leaving begins.
             CurrentSessionId = string.Empty;
+            IsAwaitingDeparture = false;
             dialogue.Hide();
             SetState(VisitState.Leaving);
             transition = StartCoroutine(LeavePatient());
@@ -345,6 +392,7 @@ namespace Gamsamo.Dialogue
             if (transition != null) StopCoroutine(transition);
             transition = null;
             CurrentSessionId = string.Empty;
+            IsAwaitingDeparture = false;
             CurrentPatient = null;
             CompletedCount = nextPatientIndex = demoLineIndex = 0;
             if (dialogue != null) dialogue.Hide();
@@ -364,6 +412,7 @@ namespace Gamsamo.Dialogue
             dialogue.EndRequested -= RequestEndConsultation;
             dialogue.ConfirmEndRequested -= ConfirmEndConsultation;
             dialogue.CancelEndRequested -= CancelEndConsultation;
+            dialogue.DismissRequested -= OnDismissRequested;
         }
     }
 }

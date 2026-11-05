@@ -119,6 +119,8 @@ namespace Gamsamo.Editor
                 Check(view.speakerText.text == expectedName && room.record.patientName == expectedName, prefix + "speaker and record use this patient's name");
                 Check(visit.portraitImage.sprite == visit.patients[patientIndex].portrait && visit.portraitGroup.alpha == 1f, prefix + "correct portrait is visible");
                 Check(!visit.doorButton.IsInteractable() && !visit.TryAdmitNextPatient(), prefix + "unfinished consultation locks the door");
+                Check(!visit.IsAwaitingDeparture && !visit.DismissPatient() && !visit.CompleteConsultation(session),
+                    prefix + "an unfinished consultation cannot be dismissed directly");
                 Check(!visit.CompleteConsultation("wrong-session") && !visit.PresentPatientLine("wrong-session", "잘못 도착한 대사"), prefix + "foreign session updates are rejected");
                 view.RevealAll();
                 yield return .1f;
@@ -166,6 +168,18 @@ namespace Gamsamo.Editor
                 Check(!view.IsConfirming && visit.CurrentSessionId == session && visit.CompletedCount == patientIndex, prefix + "cancel keeps the current consultation");
                 Click(view.endButton);
                 Click(view.confirmEndButton);
+                Check(visit.State == PatientVisitController.VisitState.Consulting && visit.IsAwaitingDeparture
+                    && !view.IsConfirming && visit.CompletedCount == patientIndex,
+                    prefix + "ending the consultation keeps the patient seated until explicit departure");
+                Check(view.dismissButton != null && view.dismissButton.gameObject.activeSelf && view.dismissButton.IsInteractable()
+                    && !view.endButton.gameObject.activeSelf, prefix + "the departure button replaces the consultation-end action");
+                yield return .15f;
+                Check(FrontmostIs(view.dismissButton), prefix + "the UI raycaster reaches the departure button");
+                Check(!visit.TryAdmitNextPatient(), prefix + "the door stays locked while awaiting departure");
+                visit.NextDemoLine();
+                Check(visit.State == PatientVisitController.VisitState.Consulting && visit.IsAwaitingDeparture,
+                    prefix + "paging or continuing dialogue never dismisses an ended consultation");
+                Click(view.dismissButton);
                 Check(visit.State == PatientVisitController.VisitState.Leaving && !visit.TryAdmitNextPatient(), prefix + "departure remains locked");
                 Check(!visit.CompleteConsultation(session), prefix + "duplicate completion cannot count the same patient twice");
                 Check(!visit.PresentPatientLine(session, "늦게 도착한 대사"), prefix + "departing patient's late response is rejected");

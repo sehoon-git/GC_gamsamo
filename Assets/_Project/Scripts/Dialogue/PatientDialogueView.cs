@@ -17,6 +17,7 @@ namespace Gamsamo.Dialogue
         public TMP_Text statusText;
         public Button nextButton;
         public Button endButton;
+        public Button dismissButton;
         public GameObject confirmationPanel;
         public Button confirmEndButton;
         public Button cancelEndButton;
@@ -32,6 +33,7 @@ namespace Gamsamo.Dialogue
 
         public event Action NextRequested;
         public event Action EndRequested;
+        public event Action DismissRequested;
         public event Action ConfirmEndRequested;
         public event Action CancelEndRequested;
         public event Action<string> SendRequested;
@@ -56,8 +58,10 @@ namespace Gamsamo.Dialogue
         private bool canEdit;
         private bool canSend;
         private bool canEnd = true;
+        private bool canDepart;
         private bool canRetry;
         private bool canReadHistory;
+        private Button boundDismissButton;
         private string nextCaption = "계속 듣기";
 
         private void Awake() => BindButtons();
@@ -113,6 +117,28 @@ namespace Gamsamo.Dialogue
         {
             canEnd = available;
             RefreshVisibility();
+        }
+
+        /// <summary>The visit owner enables departure only after the consultation is safely finished.</summary>
+        public void SetDepartureAvailable(bool available)
+        {
+            canDepart = available;
+            BindButtons();
+            RefreshVisibility();
+        }
+
+        /// <summary>Adds the departure control to older scenes without replacing their serialized UI.</summary>
+        public void EnsureDepartureControl()
+        {
+            if (dismissButton != null || endButton == null) return;
+            var buttonObject = Instantiate(endButton.gameObject, endButton.transform.parent, false);
+            buttonObject.name = "DismissPatientButton";
+            dismissButton = buttonObject.GetComponent<Button>();
+            // A copied UnityEvent can include persistent end-consultation listeners as well as runtime ones.
+            dismissButton.onClick = new Button.ButtonClickedEvent();
+            TMP_Text label = dismissButton.GetComponentInChildren<TMP_Text>(true);
+            if (label != null) { label.richText = false; label.text = "환자 내보내기"; }
+            buttonObject.SetActive(false);
         }
 
         /// <summary>Retains the PR24 adapter/controller paging API.</summary>
@@ -205,6 +231,7 @@ namespace Gamsamo.Dialogue
             StopTyping();
             visible = false;
             IsConfirming = false;
+            canDepart = false;
             RefreshVisibility();
         }
 
@@ -243,22 +270,38 @@ namespace Gamsamo.Dialogue
             bool interactive = shown && !IsConfirming;
             if (nextButton != null)
             {
-                nextButton.interactable = interactive && (allowNext || IsTyping || HasMorePages);
+                nextButton.interactable = interactive && ((allowNext && !canDepart) || IsTyping || HasMorePages);
                 TMP_Text label = nextButton.GetComponentInChildren<TMP_Text>();
                 if (label != null) label.text = IsTyping ? "바로 보기" : HasMorePages ? "다음 쪽" : nextCaption;
             }
             if (previousPageButton != null) previousPageButton.interactable = interactive && CurrentPage > 1;
             if (pageText != null) pageText.text = PageCount > 1 ? CurrentPage + " / " + PageCount : string.Empty;
-            if (endButton != null) endButton.interactable = interactive && canEnd;
+            if (endButton != null)
+            {
+                endButton.gameObject.SetActive(!canDepart);
+                endButton.interactable = interactive && canEnd && !canDepart;
+            }
+            if (dismissButton != null)
+            {
+                dismissButton.gameObject.SetActive(canDepart);
+                dismissButton.interactable = interactive && canDepart;
+            }
             if (replyRoot != null) replyRoot.SetActive(apiMode);
-            if (replyInput != null) replyInput.interactable = interactive && apiMode && canEdit;
-            if (sendButton != null) sendButton.interactable = interactive && apiMode && canSend;
+            if (replyInput != null) replyInput.interactable = interactive && apiMode && canEdit && !canDepart;
+            if (sendButton != null) sendButton.interactable = interactive && apiMode && canSend && !canDepart;
             if (retryButton != null) { retryButton.gameObject.SetActive(apiMode && canRetry); retryButton.interactable = interactive && canRetry; }
             if (historyButton != null) { historyButton.gameObject.SetActive(apiMode); historyButton.interactable = interactive && canReadHistory; }
         }
 
         private void BindButtons()
         {
+            EnsureDepartureControl();
+            if (boundDismissButton != dismissButton)
+            {
+                if (boundDismissButton != null) boundDismissButton.onClick.RemoveListener(NotifyDismiss);
+                boundDismissButton = dismissButton;
+                if (boundDismissButton != null) boundDismissButton.onClick.AddListener(NotifyDismiss);
+            }
             if (bound) return;
             if (nextButton != null) nextButton.onClick.AddListener(NotifyNext);
             if (endButton != null) endButton.onClick.AddListener(NotifyEnd);
@@ -271,13 +314,14 @@ namespace Gamsamo.Dialogue
             bound = true;
         }
 
-        private void NotifyNext() { if (IsVisible && !IsConfirming) NextRequested?.Invoke(); }
-        private void NotifyEnd() { if (IsVisible && !IsConfirming) EndRequested?.Invoke(); }
+        private void NotifyNext() { if (IsVisible && !IsConfirming && (!canDepart || IsTyping || HasMorePages)) NextRequested?.Invoke(); }
+        private void NotifyEnd() { if (IsVisible && !IsConfirming && canEnd && !canDepart) EndRequested?.Invoke(); }
+        private void NotifyDismiss() { if (isActiveAndEnabled && IsVisible && !IsConfirming && canDepart) DismissRequested?.Invoke(); }
         private void NotifyConfirm() { if (IsVisible && IsConfirming) ConfirmEndRequested?.Invoke(); }
         private void NotifyCancel() { if (IsVisible && IsConfirming) CancelEndRequested?.Invoke(); }
         private void NotifySend()
         {
-            if (IsVisible && !IsConfirming && apiMode && canSend && string.IsNullOrEmpty(Input.compositionString)
+            if (IsVisible && !IsConfirming && apiMode && canSend && !canDepart && string.IsNullOrEmpty(Input.compositionString)
                 && !string.IsNullOrWhiteSpace(Draft)) SendRequested?.Invoke(Draft);
         }
         private void NotifyRetry() { if (IsVisible && !IsConfirming && canRetry) RetryRequested?.Invoke(); }
@@ -295,6 +339,7 @@ namespace Gamsamo.Dialogue
         {
             if (nextButton != null) nextButton.onClick.RemoveListener(NotifyNext);
             if (endButton != null) endButton.onClick.RemoveListener(NotifyEnd);
+            if (boundDismissButton != null) boundDismissButton.onClick.RemoveListener(NotifyDismiss);
             if (confirmEndButton != null) confirmEndButton.onClick.RemoveListener(NotifyConfirm);
             if (cancelEndButton != null) cancelEndButton.onClick.RemoveListener(NotifyCancel);
             if (sendButton != null) sendButton.onClick.RemoveListener(NotifySend);

@@ -406,7 +406,7 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 | 영역·순서 | 항목 | 조작과 초기 기준 |
 | --- | --- | --- |
 | 위: 그래픽 1 | 화면 모드 | 창 모드 / 전체 화면 |
-| 위: 그래픽 2 | 해상도 | 시안은 1280×720 / 1600×900 / 1920×1080. 실제 게임에서는 지원 가능한 값만 제공 |
+| 위: 그래픽 2 | 해상도 | Unity 시작 화면·PC 설정과 브라우저 시안 모두 1280×720 / 1920×1080 두 값만 제공 |
 | 위: 그래픽 3 | 그래픽 품질 | 낮음 / 보통 / 높음. 실제 차이는 배경 효과·렌더링 범위로 제한하고 글자 가독성·게임 판정은 유지 |
 | 아래: 오디오 1 | 전체 음량 | 0~100 슬라이더와 숫자 |
 | 아래: 오디오 2 | 배경음 | 0~100 슬라이더와 숫자 |
@@ -716,6 +716,8 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 - 새 게임은 0.3초 페이드 후 기존 `ConsultationRoom`을 Single 방식으로 불러온다. 요청 즉시 입력을 잠가 중복 클릭을 막으며 설정값을 초기화하지 않는다. 실제 게임 진행을 만들었다거나 저장했다고 표시하지 않는다.
 - 기본 선택은 새 게임이다. 마우스·방향키·Enter 및 메뉴 Tab 이동을 지원하며 저장 없는 불러오기는 건너뛴다. 올리브색 점·밑줄을 선택 버튼에 표시한다. 설정·종료 팝업은 뒤의 메뉴 입력을 차단하고 닫으면 해당 메뉴로 초점을 돌린다.
 - 시작 설정은 그래픽(화면 모드·해상도) 위, 오디오(전체·배경음·효과음) 아래의 한 페이지다. 기존 `PcSettingsView`와 `GameSettings`를 재사용해 PC와 같은 적용값·PlayerPrefs 키를 공유한다. 적용은 창을 유지하며 저장하고 상태 문구를 표시한다. 취소·Esc는 미적용 편집을 취소한다. 드롭다운이 열려 있으면 첫 Esc/바깥 클릭은 목록만 닫는다.
+- 해상도는 **1280×720 / 1920×1080** 두 값으로 고정한다. `GameSettings.GetSupportedResolutions()`가 공통 목록을 제공하며 `PcSettingsView.BeginEdit()`는 장치·현재 창·이전 저장값의 다른 해상도를 추가하지 않는다. 기존 저장 해상도가 목록 밖이면 `GameSettings.Sanitize()`가 기본값으로 보정한다. 현재 화면이 두 값 중 하나면 그 크기를 기본값으로 쓰고, 그 외에는 1920×1080을 사용한다. 보정한 값은 다음 설정 적용 때 저장된다.
+- 실제 해상도 검증: macOS·Apple M3·Unity 6000.3.28f1의 독립 실행 개발 빌드에서 **창 모드 1280×720 / 1920×1080**을 시작 화면·상담실 PC 양쪽에서 적용했다. `Screen.width/height`, `Display.main.renderingWidth/Height`, 캡처 PNG 크기가 모두 선택값과 일치했고 설정 조작부의 화면 경계·목록 재열기·설정 저장을 확인했다(17.23절). Windows, 전체 화면·테두리 없는 창, 물리적 마우스 클릭은 이번 검사에 포함하지 않았다.
 
 | 비활성·미연결 기능 | 현재 상태와 이유 | 후속 연결 지점·주의점 |
 | --- | --- | --- |
@@ -1295,3 +1297,24 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 제한: Editor에서 직접 실행했으며 별도 Windows/macOS 빌드의 실제 종료·해상도 전환과 목표 화면 비율별 수동 확인은 미실시. 실제 자동 저장·진행 복원·음원·서버 연결은 검사할 구현이 없다. 기존 상점·치장 전체 검사는 재실행하지 않았다.
 - 다음 추천 작업: (1) 실제 자동 저장/진행 서비스 연결 및 불러오기 가용성·오류 처리, (2) 기존 이력 보존을 포함한 새 진행 생성과 확인 창, (3) 음원과 실제 실행 빌드의 종료·화면 설정 확인. 환자·대화 전체 우선순위는 15절을 따른다.
 - Git 제출: 구현·에셋·문서를 같은 작업 브랜치에 커밋·게시하고 `base=feature/ui`인 PR 하나로 제출한다. 실제 커밋·PR 결과는 Git 이력과 최종 보고로 확인한다. `main`·`feature/ui` 직접 푸시와 PR 병합은 수행하지 않는다.
+
+### 17.22 해상도 선택을 720p·1080p로 제한
+
+- 구현·검증 완료 시각: **2026-11-06 01:59:35 KST (UTC+09:00)**.
+- 요청·완료: 해상도 목록에 1280×720과 1920×1080만 남겼다. 시작 화면과 상담실 PC 설정이 공통으로 사용하는 `Assets/_Project/Scripts/UI/GameSettings.cs`의 `GetSupportedResolutions()`를 고정 목록으로 바꾸고, `PcSettingsView.BeginEdit()`의 이전 크기 추가 처리를 제거했다. `tools/ui-preview/start-menu/index.html`·`preview.js`도 1600×900 선택지와 허용값을 제거했다. 8.4절과 15절의 현재 규칙을 함께 갱신했다.
+- 호출·규칙: 두 Unity 설정 UI는 설정 창을 열 때 `BeginEdit()` → `GetSupportedResolutions()`로 같은 목록을 구성한다. 장치에서 감지한 해상도나 임의 창 크기를 목록에 추가하지 않는다. 기존 `Sanitize()`가 목록 밖의 저장값을 기본값으로 보정하고, 다음 적용 때 같은 `Gamsamo.GameSettings.v1` 키에 저장한다. 현재 화면이 720p/1080p면 그 값을 기본으로 사용하고 그 외에는 1080p로 보정한다. 브라우저 시안의 이전 1600×900 값은 기존 `sanitizeSettings()`에 의해 1920×1080으로 보정되며 별도 시안 저장 키를 유지한다.
+- 검증: Unity 6000.3.28f1에서 변경 후 C# 런타임·Editor 어셈블리 컴파일과 재로드 성공을 로그로 확인했다. `node --check tools/ui-preview/start-menu/preview.js`, `git diff --check` 통과. 변경 목록과 설정 데이터 흐름을 확인했다. 이번 수정에서는 Play 클릭 검사·실행 빌드의 실제 해상도 전환을 수행하지 않았다.
+- 미완료·비활성: 불러오기·실제 진행 저장·음원 연결 등 15절 시작 화면 표의 상태는 유지한다. 선택 목록 제한이 해당 기능을 활성화하지 않는다. Editor의 실제 화면 변경은 계속 비활성이다.
+- 다음 추천 작업: (1) 실행 빌드에서 두 해상도의 적용·레이아웃 확인, (2) 15절에 기록한 실제 저장·불러오기 연결.
+- Git 제출: 이전 시작 화면 PR #25가 이미 병합된 최신 `feature/ui`(`b9dad7b`)에서 `codex/ui-resolution-options`를 만들었다. 코드·시안·문서를 같은 커밋/PR에 포함하고 `base=feature/ui`로 제출한다. 실제 게시·PR 결과는 Git 이력과 최종 보고로 확인한다.
+
+### 17.23 macOS 실행 빌드의 실제 해상도 전환 검증
+
+- 검증 완료 시각: **2026-11-06 02:08:18 KST (UTC+09:00)**.
+- 요청·완료: Editor에서 생략했던 실제 해상도 변경을 확인했다. PR #26의 `f1eefc0` 소스를 별도 프로젝트로 복사해 macOS Development Player를 빌드하고, 그래픽을 사용하는 실제 앱에서 시작 화면과 상담실 PC 설정의 **창 모드 1920×1080 → 1280×720** 전환을 각각 실행했다. 결과는 **26개 통과·0개 실패**, 앱 정상 종료 코드 0이며 게임 코드 수정은 필요하지 않았다.
+- 검증 경로: 테스트용 `ResolutionPlayerProbe.ApplyAndCheck()`가 실제 `PcSettingsView`의 드롭다운 값과 적용 버튼 이벤트를 통해 `GameSettings.Apply()` → `Screen.SetResolution()`을 실행했다. 네 번의 적용에서 `Screen.width/height`와 `Display.main.renderingWidth/Height`가 요청 크기와 같았다. 두 해상도만 표시, 확정값·PlayerPrefs 일치, 주요 설정 조작부가 화면 안에 위치, 적용 후 드롭다운 재열기를 확인했다. 시작 화면에서 상담실로 이동하는 흐름도 완료했다.
+- 시각 확인: 실제 Player의 `ScreenCapture.CaptureScreenshotAsTexture()` 캡처를 확인했다. 시작 설정과 PC 설정 모두 720p/1080p에서 해상도·화면 모드·음량·적용/닫기 버튼이 표시된다. 이미지 크기도 각각 1280×720 / 1920×1080이다. 결과는 Git 제외 경로 `artifacts/resolution-player/results/checks.txt`, `title-1280x720-options.png`, `title-1920x1080.png`, `pc-1280x720.png`, `pc-1920x1080-options.png` 등에 남겼다. 빌드·실행 로그는 같은 상위 폴더의 `build.log`, `player.log`다.
+- 실행·소유권: `artifacts/resolution-player/project/`에만 임시 `ResolutionPlayerBuild.Build()`와 `ResolutionPlayerProbe`를 두었다. Unity `-batchmode -nographics -buildTarget StandaloneOSX -executeMethod ResolutionPlayerBuild.Build`는 빌드에만 사용하고, 결과 앱의 `Contents/MacOS/GamsamoResolutionCheck`는 그래픽을 켠 채 실행했다. 테스트 앱의 회사·제품·번들 식별자를 분리했으며 테스트 설정 키를 원상복구했다. 원래 앱/Editor의 설정·사용자 씬·프리팹을 변경하지 않았다. 임시 도구·복사 프로젝트·실행 앱·캡처는 커밋하지 않는다.
+- 제한·비활성: 컴퓨터 제어 도구에서 새 테스트 앱 접근이 허용되지 않아 물리적 마우스 클릭 대신 앱 내부 UI 이벤트로 검사했다. macOS 창 모드만 검증했으며 Windows·전체 화면·테두리 없는 창은 미검증이다. 종료 버튼 경로는 이번 범위가 아니며 테스트 종료는 `Application.Quit()`로 수행했다. 불러오기·게임 진행 저장·음원 미연결 상태는 15절 표와 같다.
+- 다음 추천 작업: (1) 실제 배포 대상 Windows와 전체 화면 계열의 화면 적용 확인, (2) 기존 우선순위대로 실제 저장·불러오기 연결.
+- Git 제출: 동일 작업 브랜치 `codex/ui-resolution-options`와 기존 `feature/ui` 대상 PR #26에 검증 문서를 추가한다. 별도 문서 PR이나 병합은 수행하지 않는다.

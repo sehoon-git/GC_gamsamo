@@ -125,6 +125,13 @@ class SaveStore:
             folder = self.root / checked.case_id / snapshot
             atomic_json(folder / "state.json", checked.model_dump(mode="json"))
             atomic_json(folder / "transcript.json", self.transcript(checked))
+            if os.name != "nt":
+                # Persist the new revision directory's entry before committing the index.
+                descriptor = os.open(folder.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+                try:
+                    os.fsync(descriptor)
+                finally:
+                    os.close(descriptor)
             index["cases"][checked.case_id] = {"snapshot": snapshot, "revision": checked.revision}
             index["active_case_id"] = checked.case_id
             # Only this last write makes the new pair visible to readers.

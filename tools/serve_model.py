@@ -10,7 +10,8 @@ def main():
     settings = Settings.from_env()
     config = settings.model
     manifest = settings.model_path / ".seoyun-model.json"
-    if not manifest.exists() or json.loads(manifest.read_text("utf-8"))["revision"] != config["revision"]:
+    metadata = json.loads(manifest.read_text("utf-8")) if manifest.exists() else {}
+    if (metadata.get("revision"), metadata.get("model_id")) != (config["revision"], config["model_id"]):
         raise SystemExit("먼저 python tools/download_model.py를 실행하세요.")
     os.environ["VLLM_NO_USAGE_STATS"] = "1"
     os.environ["DO_NOT_TRACK"] = "1"

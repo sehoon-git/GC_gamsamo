@@ -27,7 +27,7 @@ python tools/download_model.py
 python tools/run_experiment.py --server-only
 ```
 
-`qwen38-27b-fp8.json`과 `exaone45-33b-awq.json`에 공식 배포본의 고정 리비전·16k 문맥·단일 상담·역할별 생성 설정을 명시했다. EXAONE은 행사 이용 조건을 확인한 뒤에만 사용한다. 프로필이 있다는 사실은 기동·품질 채택 완료를 뜻하지 않는다. 환자 대사는 thinking을 끄며 최종 평가만 제한된 thinking을 사용한다. 가중치·실행 로그는 커밋하지 않는다.
+`qwen38-27b-fp8.json`·`exaone45-33b-awq.json`·예비 `gemma4-31b-qat.json`에 공식 배포본의 고정 리비전·16k 문맥·단일 상담·역할별 생성 설정을 명시했다. EXAONE은 행사 이용 조건을 확인한 뒤에만 사용한다. 프로필이 있다는 사실은 기동·품질 채택 완료를 뜻하지 않는다. 환자 대사는 thinking을 끄며 최종 평가만 제한된 thinking을 사용한다. 가중치·실행 로그는 커밋하지 않는다.
 
 ## 질문·저장·이어하기
 
@@ -82,3 +82,12 @@ python ai/evaluation/compare_models.py --label chosen
 첫 두 검사는 모델 없이 규칙·장애·계약을 확인한다. 나머지는 실제 모델을 하나씩 실행하며 사용자 저장을 건드리지 않는다. `terminal_smoke`는 완주·4/5 및 5/5 복원·평가 재시도, `long_context_smoke`는 합성 긴 원문·요약·근거 검사를 수행한다. `compare_models`는 같은 20개 상황×2를 측정한다. 결과는 Git 제외 영역에 보존한다.
 
 [공용 계약과 예제](../contracts/README.md), [현재 진행·한계](progress.md), [통합 기획서](../docs/plan01.md)를 함께 확인한다. 자동 기능 검사는 한국어 자연스러움이나 팀원 데스크톱의 Unity 통합 검증을 대신하지 않는다.
+
+모델별 비교 결과가 준비되면 다음 도구로 모델 이름을 가린 검토 화면과 평가표를 만든다. HTML과 mapping·평가 결과는 로컬 산출물이며 공개 PR에 넣지 않는다. mapping은 평가 완료 후에만 확인한다.
+
+```bash
+python ai/evaluation/blind_review.py ai/outputs/comparison-baseline.json ai/outputs/comparison-candidate.json --output ai/outputs/blind-review.html
+python ai/evaluation/grade_review.py ai/outputs/blind-review.mapping.json <검토자가 저장한 JSON>
+```
+
+두 비교의 대화용 프롬프트(분류·대사·기억)와 상황 해시가 같아야 한다. 평가 프롬프트 보완은 대화 비교와 별도로 기록한다. 사람 점수 평균 4/5·선호 60%·위반 없음과 실제 기동·질문 규칙·지연·완주 기준을 함께 확인한 뒤 모델을 채택한다.

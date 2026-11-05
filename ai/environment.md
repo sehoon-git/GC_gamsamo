@@ -207,6 +207,6 @@ GPU는 `nvidia-smi`로 사용 가능한 장치를 확인해 선택하고 실제 
 
 ## 형식 2 프로필·모의 서버·외부 접속
 
-`SEOYUN_MODEL_CONFIG`의 기본값은 `ai/configs/seoyun.json`이다. 후보 비교에는 `ai/configs/qwen38-27b-fp8.json` 또는 조건 확인 후 `ai/configs/exaone45-33b-awq.json`을 설정하고 다운로드·모델·API를 모두 같은 프로필로 실행한다. 가중치는 순차 준비하며 기존 기준 모델은 보존한다.
+`SEOYUN_MODEL_CONFIG`의 기본값은 `ai/configs/seoyun.json`이다. 후보 비교에는 `ai/configs/qwen38-27b-fp8.json` 또는 조건 확인 후 `ai/configs/exaone45-33b-awq.json`을 설정하고 다운로드·모델·API를 모두 같은 프로필로 실행한다. 예비 후보는 `ai/configs/gemma4-31b-qat.json`이며 앞선 후보가 기준에 미달할 때만 가중치를 준비한다. 가중치는 순차 준비하며 기존 기준 모델은 보존한다.
 
 `SEOYUN_MOCK=1` 또는 실행 도구의 `--mock`은 GPU 없는 모의 API를 선택한다. 실제 비교에서는 `/health`의 모드와 모델 리비전을 확인한다. 서버를 유지하려면 `--server-only`를 사용한다. 외부 PC 연결은 인증된 FastAPI에만 터널을 열고, 실행·접속 검사 명령은 [AI README](README.md#외부-pc-연결)를 따른다. `.env`와 접속 설정 파일은 로컬에서만 관리한다.

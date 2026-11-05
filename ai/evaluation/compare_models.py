@@ -29,7 +29,8 @@ async def main():
     output = settings.root / "ai/outputs" / f"comparison-{args.label}.json"
     catalog = Catalog(settings)
     report = {"label": args.label, "started_at": now(), "model": settings.model,
-              "prompt_version": catalog.prompt_version, "scenarios_sha256": hashlib.sha256(scenarios_path.read_bytes()).hexdigest(),
+              "prompt_version": catalog.prompt_version, "dialogue_prompt_version": catalog.dialogue_prompt_version,
+              "prompts": catalog.prompts, "scenarios_sha256": hashlib.sha256(scenarios_path.read_bytes()).hexdigest(),
               "human_review": "pending", "samples": []}
     with TemporaryDirectory(prefix="seoyun-comparison-") as folder:
         store = SaveStore(Path(folder))

@@ -901,7 +901,7 @@ PC 내부 네 화면, 기본 방 레이어·날씨, 원본 40종의 동적 카�
 - 저장: `SaveStore.save()`가 같은 revision의 원문·상태를 먼저 쓰고 단일 index를 마지막에 교체한다. `SessionClient.accept()/retry()`는 ID·revision·원문 보존과 저장 실패 재시도를 검사한다. 클라이언트가 `disclosure_candidates`를 확정하며 서버 DB는 추가하지 않는다.
 - 계약: `format_version=2`, `questions_used`, `question_delta`, `phase`, `/v1/dialogue/close`. 형식 1은 보존하고 새 실험으로 시작한다. `tools/export_contracts.py`가 OpenAPI·초기 상태·모의 응답·오류 예제를 생성한다.
 - 접속: `tools/run_tunnel.py`는 Bearer가 활성화된 FastAPI만 연결한다. `tools/check_connection.py`는 팀원 PC에서 HTTPS·인증·인사 응답을 확인한다. 주소·키는 로컬 파일로만 전달한다.
-- 현재 검증: 자동 검사 48개와 계약 일치 통과. 실제 모델 비교·긴 기록·터널 검증 진행 중. 한국어 사람 검토와 팀원 데스크톱의 Unity 완주·복원·연결 오류 검증은 아직 완료하지 않았다.
+- 현재 검증: 자동 검사 53개와 계약 일치 통과. 기준 모델 완주·복원과 서버에서의 HTTPS 인증·응답 검사 통과. 긴 원문·요약·원문 보존·근거 평가 통과. 후보 비교 진행 중. 한국어 사람 검토와 팀원 데스크톱의 Unity 완주·복원·연결 오류 검증은 아직 완료하지 않았다.
 - 모델: `SEOYUN_MODEL_CONFIG`로 다운로드·서빙·API의 같은 고정 프로필을 선택한다. 기존 모델은 복구용으로 유지하고 후보 품질을 검증하기 전 기본값을 바꾸지 않는다. 공개 문서에는 개인 장비·경로·측정값·원문을 추가하지 않는다.
 
 [AI 실행 안내](../ai/README.md), [환경 안내](../ai/environment.md), [진행 상황](../ai/progress.md), [공용 API](../contracts/README.md)를 따른다. Unity 화면·보상·다른 환자는 이번 AI 범위에 포함하지 않는다.
@@ -1195,5 +1195,7 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 변경·함수: `DialogueService.turn()/close_session()`, `EvaluationService.evaluate()`, `CaseState/Session/Turn`, `SaveStore.save()/load()`, `SessionClient.accept()/retry()`를 질문 5개·단계별 복원·원문/상태 동시 저장에 맞췄다. 수동 저장과 무료 후속질문을 제거했다.
 - 연결: `/turn`·`/evaluate`를 유지하고 `/close`를 추가했다. `tools/export_contracts.py`의 OpenAPI·합성 예제, `MockLLM`, `--mock`·`--server-only`, 터널·외부 접속 검사 도구를 제공한다. 기준과 후보 모델은 `SEOYUN_MODEL_CONFIG`로 같은 프로필을 사용한다.
 - 규칙: 복합 질문은 답변·상태 변경 없이 거절한다. 다섯 번째 답변 저장 → 마무리 저장 → 평가 순서를 지킨다. 같은 ID 재시도·오래된 응답 거절·저장 실패 시 저장만 재시도한다. 클라이언트가 공개 확정·저장·게임 진행을 소유한다. 형식 1 기록은 보존한다.
-- 검증: 자동 검사 48개, OpenAPI·모의 예제 재생성 일치, Python 구문 검사를 통과했다. 실제 모델 비교와 긴 기록·접속 검증은 진행 중이며 한국어 사람 검토와 팀원 PC 검증은 미완료다. 측정 로그·원문·개인 환경·키는 공개 PR에서 제외한다.
+- 검증: 자동 검사 53개, OpenAPI·모의 예제 재생성 일치, Python 구문 검사를 통과했다. 기준 모델 완주·복원과 공용 HTTPS 접속 검사는 통과했고 긴 기록 검증도 통과했고 후보 모델 비교는 진행 중이며 한국어 사람 검토와 팀원 PC 검증은 미완료다. 측정 로그·원문·개인 환경·키는 공개 PR에서 제외한다.
 - 다음 작업: (1) 고정 프롬프트로 후보 비교와 블라인드 한국어 검토, (2) 선정 모델의 완주·복원·HTTPS 검사, (3) 팀장 main 병합 후 팀원 데스크톱 검증. 코드·계약·기획서는 후속 구현 PR 하나에 함께 제출하고 같은 PR을 갱신한다. main 직접 푸시·병합은 하지 않는다.
+
+- 후속 검증 기록 시각: **2026-11-05 22:46:58 KST (UTC+09:00)**. [초안 PR #17](https://github.com/sehoon-git/GC_gamsamo/pull/17)에 계약을 먼저 게시했다. 실제 평가에서 반대 근거만으로 양수 점수를 제시한 응답이 거절되어 양수 항목의 지지 근거를 출력 스키마에서 필수로 하고 반대 근거는 별도 필드로 함께 선택하도록 수정했다. 근거를 임의로 지지 근거로 바꾸거나 점수를 자동 보정하지 않는다. 이후 기준 모델의 5회 질문·마무리·평가·재실행 검사를 통과했다. 모의 API를 실제 CLI 프로세스로 연결한 완주·재상담·새 실험·서버 독립 실행도 통과했다. 서버에서 공용 HTTPS를 경유한 인증 거부와 인증 후 실제 응답을 확인했으며, 팀원 PC나 Unity 통합 검사 완료를 뜻하지 않는다.

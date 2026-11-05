@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from time import perf_counter
 from typing import TypeVar
+from pathlib import Path
 import json
 
 import httpx
@@ -27,7 +28,8 @@ class VllmClient:
     def load_tokenizer(self):
         from transformers import AutoTokenizer
         manifest = self.settings.model_path / ".seoyun-model.json"
-        if not manifest.exists() or json.loads(manifest.read_text("utf-8"))["revision"] != self.config["revision"]:
+        metadata = json.loads(manifest.read_text("utf-8")) if manifest.exists() else {}
+        if (metadata.get("revision"), metadata.get("model_id")) != (self.config["revision"], self.config["model_id"]):
             raise ExperimentError("고정 리비전 모델을 먼저 다운로드하세요: python tools/download_model.py", "model_missing", 503)
         self.tokenizer = AutoTokenizer.from_pretrained(self.settings.model_path, local_files_only=True, trust_remote_code=False)
 
@@ -51,8 +53,10 @@ class VllmClient:
         try:
             response = await self.http.get("/v1/models", timeout=5)
             response.raise_for_status()
-            available = {m["id"] for m in response.json()["data"]}
-            return {"ready": self.config["served_model_name"] in available, "model": self.config["served_model_name"]}
+            selected = next((m for m in response.json()["data"] if m["id"] == self.config["served_model_name"]), {})
+            matches = (Path(selected.get("root", "")).resolve() == self.settings.model_path.resolve()
+                       and selected.get("max_model_len") == self.config["max_model_len"])
+            return {"ready": matches, "profile_matches": matches, "model": self.config["served_model_name"]}
         except (httpx.HTTPError, KeyError, ValueError):
             return {"ready": False, "model": self.config["served_model_name"]}
 

@@ -114,3 +114,26 @@ async def test_cleared_case_cannot_start_another_consultation(catalog):
     result = await EvaluationService(llm, catalog).evaluate(EvaluateRequest(state=case, session_id=case.current.id, request_id="grade"))
     with pytest.raises(ValueError, match="완료된"):
         next_session(result.state)
+
+
+@pytest.mark.asyncio
+async def test_positive_scores_keep_support_and_counter_evidence(catalog):
+    case = closed_case()
+    proposal = judgment(catalog, case, 70, 70)
+    proposal['self_worth']['counter_evidence'] = [{'message_id': 'M0004', 'counter': True}]
+    result = await EvaluationService(FakeLLM([('JudgmentProposal', proposal)]), catalog).evaluate(
+        EvaluateRequest(state=case, session_id=case.current.id, request_id='both-sides'))
+    evidence = next(s for s in result.state.current.evaluation.scores if s.criterion_id == 'self_worth').evidence
+    assert [e.counter for e in evidence] == [False, True]
+    assert all(e.quote in next(r.text for r in records(case) if r.id==e.message_id) for e in evidence)
+
+
+@pytest.mark.asyncio
+async def test_counter_only_positive_score_is_rejected_by_output_schema(catalog):
+    case = closed_case()
+    proposal = judgment(catalog, case)
+    proposal['self_worth']['evidence'][0]['counter'] = True
+    with pytest.raises(ValueError):
+        await EvaluationService(FakeLLM([('JudgmentProposal', proposal)]), catalog).evaluate(
+            EvaluateRequest(state=case, session_id=case.current.id, request_id='counter-only'))
+    assert case.current.evaluation is None

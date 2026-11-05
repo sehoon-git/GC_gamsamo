@@ -175,9 +175,21 @@ class EvaluationService:
                 evidence = (list[EvidenceChoice], Field(max_length=0))
             zero = create_model(f"Zero_{criterion}", __base__=ScoreProposal,
                                 score=(Literal[0], ...), evidence=evidence)
-            if eligible:
+            supporting = [ref for ref in eligible if provided is None or (criterion, ref, False) in provided]
+            opposing = [ref for ref in eligible if provided is None or (criterion, ref, True) in provided]
+            if supporting:
+                support_choice = create_model(f"Support_{criterion}", __base__=EvidenceChoice,
+                    message_id=(Literal[tuple(supporting)], ...), counter=(Literal[False], ...))
+                if opposing:
+                    counter_choice = create_model(f"Counter_{criterion}", __base__=EvidenceChoice,
+                        message_id=(Literal[tuple(opposing)], ...), counter=(Literal[True], ...))
+                    counter_field = (list[counter_choice], Field(default_factory=list, max_length=1))
+                else:
+                    counter_field = (list[EvidenceChoice], Field(default_factory=list, max_length=0))
                 positive = create_model(f"Positive_{criterion}", __base__=ScoreProposal,
-                    score=(int, Field(strict=True, ge=1, le=25)), evidence=(list[choice], Field(min_length=1, max_length=2)))
+                    score=(int, Field(strict=True, ge=1, le=25)),
+                    evidence=(list[support_choice], Field(min_length=1, max_length=2)),
+                    counter_evidence=counter_field)
                 item = Union[zero, positive]
             else:
                 item = zero
@@ -187,7 +199,8 @@ class EvaluationService:
         def resolve(proposal):
             return Judgment(scores=[{
                 "criterion_id": criterion, "score": item["score"], "explanation": item["explanation"],
-                "evidence": [{**e, "quote": sources[e["message_id"]]["text"]} for e in item["evidence"]],
+                "evidence": [{**e, "quote": sources[e["message_id"]]["text"]}
+                             for e in item["evidence"] + item.get("counter_evidence", [])],
             } for criterion, item in proposal.model_dump().items()])
 
         def validate(proposal):

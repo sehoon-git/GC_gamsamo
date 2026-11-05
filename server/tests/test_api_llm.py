@@ -113,3 +113,20 @@ async def test_model_sampling_and_template_settings_are_forwarded():
     llm.http = httpx.AsyncClient(base_url="http://test", transport=httpx.MockTransport(handle))
     await llm.generate("patient", [{"role": "user", "content": "안녕하세요"}], PatientReply, Metrics())
     await llm.close()
+
+
+@pytest.mark.asyncio
+async def test_shared_model_alias_does_not_hide_wrong_weights_or_context(settings):
+    root = str(settings.model_path)
+    responses = iter([
+        {'id':'seoyun','root':'/different/model','max_model_len':16384},
+        {'id':'seoyun','root':root,'max_model_len':8192},
+        {'id':'seoyun','root':root,'max_model_len':16384},
+    ])
+    llm = VllmClient(settings, tokenizer=TinyTokenizer())
+    await llm.http.aclose()
+    llm.http = httpx.AsyncClient(base_url='http://test', transport=httpx.MockTransport(lambda request: httpx.Response(200,json={'data':[next(responses)]})))
+    assert not (await llm.health())['ready']
+    assert not (await llm.health())['ready']
+    assert (await llm.health())['ready']
+    await llm.close()

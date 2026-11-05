@@ -5,6 +5,16 @@ using Newtonsoft.Json;
 
 namespace Gamsamo.Progression
 {
+    [Serializable] public sealed class ProgressProfile
+    {
+        public string Name = "", Introduction = "";
+        public void Validate()
+        {
+            if (Name == null || Introduction == null || Name.Length > 40 || Introduction.Length > 500
+                || Name.Any(char.IsControl) || Introduction.Any(c => char.IsControl(c) && c != '\n' && c != '\r'))
+                throw new ArgumentException("이름은 40자, 소개는 500자 이내로 입력해 주세요. 이름에는 줄바꿈을 사용할 수 없습니다.");
+        }
+    }
     // B owns these contracts. A supplies committed evaluations; C calculates; D displays receipts.
     public enum ProgressPhase { Waiting, Consulting, Evaluating, AwaitingSettlement, Presenting, AwaitingDeparture, Finished }
     [Serializable] public sealed class RoundIdentity
@@ -57,6 +67,7 @@ namespace Gamsamo.Progression
     {
         public int Version = 1, Revision;
         public string ProgressId;
+        public ProgressProfile Profile = new ProgressProfile();
         public List<PatientProgress> Patients = new List<PatientProgress>();
         public int CurrentIndex;
         public ProgressPhase Phase;
@@ -72,6 +83,8 @@ namespace Gamsamo.Progression
         public static T Copy<T>(T value) => JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(value));
         public void Validate()
         {
+            if (Profile == null) throw new InvalidOperationException("프로필 저장 형식이 손상되었습니다.");
+            Profile.Validate();
             if (Version != 1 || string.IsNullOrWhiteSpace(ProgressId) || Revision < 0 || Patients == null || Patients.Count != 5
                 || Patients.Any(p => p == null || string.IsNullOrWhiteSpace(p.PatientId))
                 || Patients.Select(p => p.PatientId).Distinct().Count() != 5 || CurrentIndex < 0 || CurrentIndex > Patients.Count
@@ -85,6 +98,22 @@ namespace Gamsamo.Progression
                 || Patients.Take(CurrentIndex).Any(p => !p.Cleared)
                 || (Phase == ProgressPhase.Presenting && PendingPresentation == null))
                 throw new InvalidOperationException("진행 저장의 형식·상태가 손상되었습니다. 원본과 백업을 보존하고 복구해 주세요.");
+            if (Settlements.Any(pair => pair.Value?.Identity == null || !pair.Value.Identity.IsValid
+                || pair.Key != pair.Value.Identity.Key || pair.Value.Identity.ProgressId != ProgressId || pair.Value.Granted < 0
+                || !Patients.Any(p => p.PatientId == pair.Value.Identity.PatientId)
+                || (pair.Value.FirstClear && !pair.Value.Cleared))
+                || Photos.Distinct().Count() != Photos.Count || PlayedEndings.Distinct().Count() != PlayedEndings.Count
+                || PlayedEndings.Any(id => !Patients.Any(p => p.PatientId == id && p.Cleared))
+                || Patients.Any(p => p.Cleared && p.NeedsRevisit)
+                || (CurrentIndex == Patients.Count && Phase != ProgressPhase.Finished)
+                || (PendingPresentation != null && (PendingPresentation.Identity == null || Current == null
+                    || PendingPresentation.Identity.PatientId != Current.PatientId || PendingPresentation.Identity.CaseId != Current.CaseId
+                    || PendingPresentation.Identity.RoundId != Current.RoundId
+                    || !Settlements.TryGetValue(PendingPresentation.Identity.Key, out var stored)
+                    || JsonConvert.SerializeObject(stored) != JsonConvert.SerializeObject(PendingPresentation)))
+                || (Phase == ProgressPhase.AwaitingDeparture && PendingPresentation == null)
+                || (Phase == ProgressPhase.Presenting && (!PendingPresentation.Cleared || (PresentationStage != "clear" && PresentationStage != "ending"))))
+                throw new InvalidOperationException("정산·재방문·엔딩 상태가 일치하지 않습니다. 원본을 보존해 주세요.");
         }
     }
     public interface IProgressStore

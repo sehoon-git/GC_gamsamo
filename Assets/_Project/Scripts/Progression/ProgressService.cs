@@ -23,6 +23,19 @@ namespace Gamsamo.Progression
             next.Revision = state.Revision + 1; next.Validate();
             store.Save(next, state.Revision); state = next;
         }
+        public void SaveProfile(string name, string introduction)
+        {
+            var profile = new ProgressProfile { Name = (name ?? "").Trim(), Introduction = (introduction ?? "").Trim() };
+            profile.Validate();
+            var next = State; next.Profile = profile; Commit(next);
+        }
+        // UI requests this service; only the store writes files. Callback exceptions are not save failures.
+        public void RequestProfileSave(string name, string introduction, Action<ProgressProfile> success, Action<string> failure)
+        {
+            try { SaveProfile(name, introduction); }
+            catch (Exception e) { failure?.Invoke(e.Message); return; }
+            success?.Invoke(State.Profile);
+        }
         public void BeginVisit()
         {
             if (state.Phase != ProgressPhase.Waiting || state.Current == null) throw new InvalidOperationException("방문 대기 상태가 아닙니다.");
@@ -120,7 +133,7 @@ namespace Gamsamo.Progression
         {
             if (state.PendingPresentation?.Identity.Key != settlementKey) throw new InvalidOperationException("표시 회차가 다릅니다.");
             if (state.Phase != ProgressPhase.Presenting) return;
-            var next = State; next.Phase = ProgressPhase.AwaitingDeparture;
+            var next = State; next.Phase = ProgressPhase.AwaitingDeparture; next.PresentationStage = "completed";
             if (!next.PlayedEndings.Contains(next.Current.PatientId)) next.PlayedEndings.Add(next.Current.PatientId);
             Commit(next);
         }
@@ -142,7 +155,7 @@ namespace Gamsamo.Progression
         {
             if (!state.FinalEndingUnlocked) throw new InvalidOperationException("최종 엔딩이 잠겨 있습니다.");
             if (state.FinalEndingPlayed) return;
-            var next = State; next.FinalEndingPlayed = true; Commit(next);
+            var next = State; next.FinalEndingPlayed = true; next.FinalPresentationStage = "completed"; Commit(next);
         }
         // No proposed 2/4 thresholds are installed by default.
         public string Certificate(IReadOnlyDictionary<int, string> approvedThresholds) => approvedThresholds == null ? ""

@@ -18,6 +18,7 @@ namespace Gamsamo.Progression
         private DialogueProcessingBinding processing;
         private IDisposable modalLease;
         private int displayedRevision = -1;
+        private bool replayOpening;
 
         public void Bind(GameProgressRuntime source, PatientVisitController controller, PatientAiAdapter ai)
         {
@@ -33,7 +34,8 @@ namespace Gamsamo.Progression
                 var current = modal;
                 modal.BindModalGate(() =>
                 {
-                    if (modalLease != null || visits.room == null || (current != photo && visits.room.IsOverlayBlocking)) return false;
+                    if (modalLease != null || visits.room == null || (current != photo && visits.room.IsOverlayBlocking
+                        && !(current == ending && replayOpening && visits.room.IsPcOpen))) return false;
                     modalLease = visits.room.AcquireInputBlock(); return true;
                 }, () => { modalLease?.Dispose(); modalLease = null; });
             }
@@ -47,7 +49,59 @@ namespace Gamsamo.Progression
             var audio = Spawn<PresentationAudio>(audioPrefab);
             if (audio != null) { audio.content = content; audio.PlayRoomMusic(); }
             // Stable entitlement exists even while the approved image has not yet been delivered.
-            runtime.PhotoForPatient = id => content?.FindApproved(id)?.photoId ?? id + "_smile";
+            runtime.PhotoForPatient = id => id + "_smile";
+        }
+        public EndingAvailability[] GetEndingAvailability()
+        {
+            var state = runtime?.Progress?.State;
+            if (state == null) return Array.Empty<EndingAvailability>();
+            return state.Patients.Select(p => {
+                var entry = content?.patients?.FirstOrDefault(e => e != null && e.patientId == p.PatientId);
+                bool ready = entry != null && entry.approved && !string.IsNullOrWhiteSpace(entry.description);
+                return new EndingAvailability { PatientId = p.PatientId, PhotoId = p.PatientId + "_smile",
+                    Title = entry?.title, Unlocked = p.Cleared, Approved = entry?.approved == true,
+                    PhotoPresent = entry?.photo != null, StoryPresent = !string.IsNullOrWhiteSpace(entry?.description),
+                    Status = !p.Cleared ? "잠김" : ready ? "다시 보기" : "후일담 준비 중" };
+            }).ToArray();
+        }
+        public bool TryReplayEnding(string patientId, out string error)
+        {
+            error = "현재 다시 보기를 시작할 수 없습니다.";
+            var state = runtime?.Progress?.State;
+            if (state == null || ending == null || ending.IsOpen || ending.AwaitingSave || state.Phase == ProgressPhase.Presenting
+                || (state.FinalEndingUnlocked && !state.FinalEndingPlayed)) return false;
+            var available = GetEndingAvailability().FirstOrDefault(e => e.PatientId == patientId);
+            if (available == null || !available.Unlocked) return false;
+            if (!available.Ready) { error = "후일담 준비 중"; return false; }
+            var receipt = state.Settlements.Values.FirstOrDefault(r => r.Cleared && r.Identity.PatientId == patientId);
+            if (receipt == null) return false;
+            var id = receipt.Identity;
+            if (!ending.RestoreCommittedClear(state.ProgressId, patientId, id.CaseId, id.RoundId, true, true,
+                visits.patients.First(p => p.patientId == patientId).displayName, 0, state.Photos.Contains(patientId + "_smile"), "completed")) return false;
+            replayOpening = true;
+            try { ending.Replay(); }
+            finally { replayOpening = false; }
+            if (!ending.IsOpen || !ending.IsReplay) return false;
+            error = null; return true;
+        }
+        public bool TryReplayFinalEnding(out string error)
+        {
+            error = "최종 엔딩을 다시 볼 수 없습니다.";
+            var state = runtime?.Progress?.State;
+            if (state == null || !state.FinalEndingPlayed || ending == null || ending.IsOpen || ending.AwaitingSave) return false;
+            if (content == null || !content.creditsApproved || string.IsNullOrWhiteSpace(content.credits)) { error = "크레딧 준비 중"; return false; }
+            if (!ending.RestoreFinalEnding(state.ProgressId, true, true, "completed")) return false;
+            SetCreditsPhotos(state);
+            replayOpening = true;
+            try { ending.Replay(); } finally { replayOpening = false; }
+            if (!ending.IsOpen || !ending.IsReplay) return false;
+            error = null; return true;
+        }
+        private void SetCreditsPhotos(GameProgress state)
+        {
+            var photos = content?.patients?.Where(p => p != null && p.approved && p.photo != null && state.Photos.Contains(p.photoId))
+                .Select(p => new PhotoGalleryEntry { photoId = p.photoId, title = p.title, description = p.description, thumbnail = p.photo, fullSize = p.photo }).ToArray();
+            ending?.SetCreditsPhotos(state.ProgressId, photos ?? Array.Empty<PhotoGalleryEntry>());
         }
         private T Spawn<T>(GameObject prefab) where T : Component => prefab == null ? null : Instantiate(prefab).GetComponent<T>();
         public void BeginResultSave() => processing?.BeginGameResultSave();
@@ -82,7 +136,10 @@ namespace Gamsamo.Progression
                     entry?.photo != null && state.Photos.Contains(entry.photoId), state.PresentationStage);
             }
             else if (state.Phase == ProgressPhase.Finished && state.FinalEndingUnlocked && !state.FinalEndingPlayed)
+            {
                 ending.RestoreFinalEnding(state.ProgressId, true, true, state.FinalPresentationStage);
+                SetCreditsPhotos(state);
+            }
         }
         private static string StatusText(GameProgress state) => state.Phase == ProgressPhase.Finished ? "모든 내담자의 상담을 마쳤습니다"
             : state.Current?.NeedsRevisit == true ? "재상담 대기" : state.Phase == ProgressPhase.Waiting ? "방문 대기" : "상담 진행 중";

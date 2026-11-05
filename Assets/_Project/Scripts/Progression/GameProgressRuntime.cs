@@ -40,12 +40,12 @@ namespace Gamsamo.Progression
             return service;
         }
         public static bool NewGameRequested;
+        public static IReadOnlyList<SaveInspection> ArchiveDiagnostics { get; private set; } = new SaveInspection[0];
         public static IReadOnlyList<GameProgress> SavedRuns()
         {
-            if (!Directory.Exists(Root)) return new GameProgress[0];
-            return Directory.GetFiles(Root, "*.json")
-                .Where(file => Guid.TryParseExact(Path.GetFileNameWithoutExtension(file), "N", out _))
-                .Select(file => new GameProgressStore(file).Load()).ToArray();
+            var inspected = ProgressSaveInspection.Scan(Root);
+            ArchiveDiagnostics = inspected.Where(s => s.Kind != SaveKind.Current).ToArray();
+            return inspected.Where(s => s.Kind == SaveKind.Current).Select(s => s.State).ToArray();
         }
     }
 
@@ -191,6 +191,8 @@ namespace Gamsamo.Progression
             foreach (var patient in run.Patients)
             {
                 if (string.IsNullOrEmpty(patient.AiSnapshot)) continue;
+                try
+                {
                 var state = AiProtocol.Object(AiProtocol.Parse(patient.AiSnapshot), "state");
                 var definition = visits.patients.FirstOrDefault(p => p.patientId == patient.PatientId);
                 if (definition == null) continue;
@@ -205,6 +207,9 @@ namespace Gamsamo.Progression
                         recordedDate = PatientAiAdapter.RecordedLocalDate((string)session["started_at"]), consultationNotes = "저장된 상담 회차: " + (string)session["id"],
                         consultationTranscript = AiRecordFormatter.Transcript(single), consultationResult = AiRecordFormatter.Results(single, labels) });
                 }
+                }
+                catch (Exception e) when (e is JsonException || e is InvalidOperationException || e is ArgumentException)
+                { Debug.LogWarning("이전 상담 기록 일부를 읽지 못했습니다. 원본 보존: " + run.ProgressId + "/" + patient.PatientId); }
             }
         }
         public bool ReturnToStartMenu()

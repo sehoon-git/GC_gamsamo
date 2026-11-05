@@ -5,7 +5,14 @@ using Gamsamo.Progression;
 using Gamsamo.Save;
 class FixedReward : IRewardCalculator {
  public int Calls;
- public RewardCalculation Calculate(SavedEvaluation e, EconomyState old, bool first) { Calls++; old.Balance += 17; return new RewardCalculation { SettlementKey=e.Identity.Key, Granted=17, Economy=old }; }
+ public RewardCalculation Calculate(SavedEvaluation e, EconomyState old, bool first) {
+  Calls++; old.Balance += 17;
+  old.Ledger ??= Gamsamo.Economy.EconomyState.NewRun(e.Identity.ProgressId);
+  old.Ledger.settlements.Add(new Gamsamo.Economy.SessionSettlement {patientId=e.Identity.PatientId,caseId=e.Identity.CaseId,sessionId=e.Identity.RoundId,
+   patientScore=e.PatientScore,counselorScore=e.CounselorScore,cleared=e.PatientScore>=70 && e.CounselorScore>=70,firstClear=first,
+   baseThreshold=old.Ledger.HighestPaidBaseFor(e.Identity.PatientId)+17,baseCoins=17});
+  old.Ledger.balance+=17; old.Ledger.totalEarned+=17;
+  return new RewardCalculation { SettlementKey=e.Identity.Key, Granted=17, Economy=old }; }
 }
 class Program {
  static int checks;
@@ -45,6 +52,11 @@ class Program {
   Reject(()=>new ProgressService(new GameProgressStore(Path.Combine(root,"bad-roster.json"))).Create(new[]{"a","a","b","c","d","e"}),"duplicate roster rejected");
   var detached=next.State; detached.Economy.Balance=999; Check(next.State.Economy.Balance==0,"read state cannot mutate service");
   var eco=next.State.Economy; eco.Balance=42; eco.OwnedItems.Add("test-hat"); eco.EquippedItems["hat"]="test-hat";
+  eco.Ledger=Gamsamo.Economy.EconomyState.NewRun(next.State.ProgressId);
+  eco.Ledger.balance=42; eco.Ledger.totalEarned=43;
+  eco.Ledger.settlements.Add(new Gamsamo.Economy.SessionSettlement{patientId="a",caseId="fixture",sessionId="fixture",baseThreshold=43,baseCoins=43});
+  eco.Ledger.ownedItemIds.Add("test-hat"); eco.Ledger.purchases.Add(new Gamsamo.Economy.PurchaseReceipt{itemId="test-hat",price=1});
+  eco.Ledger.equippedItems.Add(new Gamsamo.Economy.EquippedItem{categoryId="hat",itemId="test-hat"});
   next.CommitEconomy(eco,next.State.Revision); var reloaded=new ProgressService(new GameProgressStore(Path.Combine(root,"second.json")));
   Check(reloaded.State.Economy.Balance==42 && reloaded.State.Economy.EquippedItems["hat"]=="test-hat","economic ownership and equipment persist together");
   Reject(()=>next.CommitEconomy(eco,0),"stale economic transaction rejected");

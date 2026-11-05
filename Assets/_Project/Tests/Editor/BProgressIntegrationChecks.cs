@@ -16,6 +16,11 @@ public static class BProgressIntegrationChecks
         public RewardCalculation Calculate(SavedEvaluation evaluation, EconomyState previous, bool first)
         {
             previous.Balance += 17;
+            previous.Ledger = Gamsamo.Economy.EconomyState.NewRun(evaluation.Identity.ProgressId);
+            previous.Ledger.balance = previous.Ledger.totalEarned = 17;
+            previous.Ledger.settlements.Add(new Gamsamo.Economy.SessionSettlement {
+                patientId = evaluation.Identity.PatientId, caseId = evaluation.Identity.CaseId, sessionId = evaluation.Identity.RoundId,
+                patientScore = 70, counselorScore = 70, cleared = true, firstClear = true, baseThreshold = 17, baseCoins = 17 });
             return new RewardCalculation { SettlementKey = evaluation.Identity.Key, Granted = 17, Economy = previous };
         }
     }

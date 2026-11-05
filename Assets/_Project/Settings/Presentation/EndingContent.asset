@@ -13,7 +13,37 @@ MonoBehaviour:
   m_Name: EndingContent
   m_EditorClassIdentifier: Assembly-CSharp::Gamsamo.UI.Presentation.EndingContentCatalog
   contentVersion: unassigned
-  patients: []
+  patients:
+  - patientId: seoyun
+    photoId: seoyun_smile
+    approved: 0
+    title:
+    description:
+    photo: {fileID: 0}
+  - patientId: dohyeon
+    photoId: dohyeon_smile
+    approved: 0
+    title:
+    description:
+    photo: {fileID: 0}
+  - patientId: taejun
+    photoId: taejun_smile
+    approved: 0
+    title:
+    description:
+    photo: {fileID: 0}
+  - patientId: yeonwoo
+    photoId: yeonwoo_smile
+    approved: 0
+    title:
+    description:
+    photo: {fileID: 0}
+  - patientId: harin
+    photoId: harin_smile
+    approved: 0
+    title:
+    description:
+    photo: {fileID: 0}
   creditsApproved: 0
   credits:
   roomMusic: {fileID: 0}

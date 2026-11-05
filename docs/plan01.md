@@ -1100,6 +1100,19 @@ PC 내부 네 화면, 기본 방 레이어·날씨, 원본 48종의 동적 카�
 
 <a id="asset-edit"></a>
 
+### 병렬 후속 개발 — 저장·콘텐츠·통합
+
+- 사용자 결정: 프로필은 **게임 진행별** 저장이다. 구 6인/구 경제 저장은 원본·이전 기록을 보존하고 **자동 이관하지 않는다**. 승급 기준·정식 사진·후일담·크레딧·음원은 준비 중이다. 5명 순서(서윤→도현→태준→연우→하린), 두 축 각각 70점, 출시 보상 정책은 유지한다.
+- 저장 소유권: `ProgressService`가 진행·프로필·정산·경제·엔딩을 한 transaction으로 저장한다. 게임 저장 `Version=1`을 유지하고 선택 필드 `Profile{Name,Introduction}`을 추가했다. 이전 정상 5인 저장에서 필드가 없으면 빈 프로필을 읽으며 읽기만으로 파일을 쓰지 않는다. 이름 40 UTF-16 코드 단위, 소개 500, 앞뒤 공백 제거, 이름 제어문자 금지/소개 CR·LF 허용. UI는 텍스트를 plain text로 표시한다.
+- UI 연결 요청: `runtime.Progress.State.Profile` 조회 → `RequestProfileSave(name,introduction,success,failure)` 호출 → 성공 DTO로 표시 갱신/실패 메시지 표시. 화면이 파일에 직접 접근하지 않는다. `ApprovedRankPolicy.Evaluate(clearedCount, approvedThresholds, approved)`는 현재/다음 등급과 필요 클리어 수를 반환하며 승인 기준이 없으면 준비 중이다. 예시 승급 수치는 출시 데이터에 넣지 않았다.
+- 저장 진단: `ProgressSaveInspection.Inspect/Scan`은 Missing/Current/LegacySixPatients/LegacyEconomy/UnsupportedVersion/Corrupt/Unreadable을 구분한다. 비어 있지 않은 구 경제 형식의 로드·덮어쓰기는 막는다. `CopyForRecovery(source,newDestination)`는 덮어쓰기 없는 명시적 원본/백업 사본 생성이며 이관·복구 활성화가 아니다. `.bak`도 Inspect로 검증 가능하다. 이관 실행기는 제공하지 않는다. 손상 active 포인터는 자동 교체하지 않는다.
+- 이전 기록: `GameProgressSession.SavedRuns()`는 정상 기록을 개별 반환하고 제외 항목은 `ArchiveDiagnostics`로 제공한다. 한 파일/환자 snapshot 손상으로 정상 파일의 기록까지 막지 않는다. 구 6인/경제 기록의 원본은 남아 있지만 현 5인 진행으로 활성화하거나 정상 기록 목록에 섞지 않는다. UI에는 진단 목록·보존 안내 연결이 필요하다.
+- 엔딩 연결: `GamePresentationIntegration.GetEndingAvailability()`는 진행별 해금·승인·사진 존재·후일담 존재를 분리한다. `TryReplayEnding(patientId,out error)` 및 `TryReplayFinalEnding(out error)`는 기존 재생기를 열며 정산/저장을 호출하지 않는다. 미준비 후일담은 준비 중 오류로 반환한다. 최초 엔딩 표시 중/최종 최초 표시 대기 중에는 과거 재생을 막는다. PC 위 재생 모달도 입력 차단을 취득한다. UI 공개 `UiFeaturePorts.cs`가 아직 없어 임의 대체 타입이나 화면 연결은 만들지 않았다. 서비스 DTO는 UI 계약이 아니라 어댑터의 입력 자료다.
+- 정식 콘텐츠: 카탈로그에 5개의 `<patientId>_smile`을 등록했고 전부 `approved=false`다. **각 환자의 사진 파일·제목·설명/후일담·승인**, 크레딧 팀원 이름·역할·승인 표기, roomMusic/endingMusic/pageSound/clearSound **모두 누락**이다. 생성 사진/후일담을 임의 승인하지 않았다. `EndingContentCatalog.Audit()`로 상세 누락을 조회한다. 미디어 누락은 클리어·사진 권리·보상·다음 환자를 막지 않는다.
+- 음원 담당 연결 요청: manifest `tracks` 배열에 `slot`, `path`(Assets/ 상대경로), `guid`(.meta 일치), `license`, `source`, `approved`를 제공한다. 이 스키마는 통합 측 제안이며 음원 담당의 실제 계약이 오면 여기서 매핑한다. `PresentationAudioRegistration.Validate(path)`는 필수 슬롯/중복/경로/GUID/AudioClip/승인/출처·라이선스 기재를 검사하고 `Register(path,catalog)`는 모든 검사가 통과할 때만 명시적으로 등록한다. 문자열 존재 검사는 법적 이용 허락의 확인을 대체하지 않는다. 실제 manifest와 음원이 없어서 등록은 실행하지 않았다.
+- 병렬 소유권: UI 화면·UiFeaturePorts·씬·공용 프리팹은 UI 담당, 오디오 재생/설정·파일·manifest는 음원 담당, 서버·Networking·정식 AI JSON은 AI 담당이다. 통합은 본 API와 UI 공개 계약 사이 연결 및 카탈로그 등록만 한다. 서버 임시 응답을 평가로 확정하는 경로를 추가하지 않았다.
+- 통합 순서: UI 공개 계약/화면 및 AI 계약 PR을 먼저 검토·병합하고, 음원 파일/manifest PR을 반영한 뒤 이 통합 PR에서 어댑터·카탈로그를 완성한다. 마지막으로 격리 빌드에서 새 게임/불러오기 → 실제 상담/평가/정산/퇴장 → 미클리어 재방문 → 다음 환자 → 구매/장착 재실행 → 프로필 재실행 → 준비 중 표시 → 재생 보상 불변 → 5인 최종 엔딩 → 음량/음소거 복원을 확인한다. 합성 점수 자동 검사는 실제 AI 5인 클리어와 구분한다. 이 PR 자체에서 main 병합/서버 배포는 하지 않는다.
+
 ## 16. 진료기록부 에셋 편집 기록
 
 - 사용 도구: 기본 제공 ImageGen. CLI 대체 경로는 사용하지 않았음.
@@ -1636,3 +1649,14 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 추가 화면 검증: 안내서 페이지 이동/닫기와 배경 입력 차단, 잔액 0 C 구매 거절, 미리보기 취소, 구매 확정 단계, 사진 준비 중 안내, 프로필 0/5와 현재 환자, 서류의 원문/평가/정산 페이지를 확인했다. 기록부에는 현재 사례의 합본과 회차별 보관본이 함께 있으므로 같은 환자의 서류가 여러 장 보인다. 사용자에게 두 종류를 구분하는 제목을 개선할 여지가 있다.
 - 검증 한계: 실제 모델로 5명 전원을 70/70 이상 달성해 최종 크레딧까지 수동 완주한 결과는 아니다. 다음 환자/5명 완료/엔딩 영속성은 자동 통합 검사, 실제 AI 경로는 위 서윤 종료/재방문 E2E로 구분한다. 정식 미디어가 비어 있어 실제 이미지/후일담/음원 재생 품질은 확인할 수 없다. 서버 pytest는 이 PC의 Python에 pytest가 없어 이번 환경에서는 실행하지 못했다. 과거 A 서버 테스트 결과를 이번 실행 결과로 합산하지 않는다. 실제 평가 응답에는 긴 대기가 있었고 최종 성공했지만 지연 목표 충족을 주장하지 않는다. 대규모 모델 품질/실제 전체 환자 클리어/네트워크 장애 전수 검증은 남아 있다.
 - 다음 작업 우선순위: (1) 5명 실제 모델 클리어 시나리오와 지연 계측, (2) 정식 사진·후일담·크레딧·음원 납품/검수, (3) 승급 기준과 구 6인/구 경제 저장 이관 정책 확정, (4) 프로필 편집·엔딩 다시 보기 진입 UI, (5) 기록부 합본/회차 구분과 정보 상태 표시의 일관성 개선. 비호환 과거 저장은 삭제/임의 변환하지 않는다. 정식 사진 ID 변경 시 이미 저장된 권리도 함께 이관해야 한다.
+
+### 17.32 병렬 후속 개발 — 저장·콘텐츠·통합
+
+- 완료 기록 시각: 2026-11-06 06:02:40 KST (UTC+09:00). 최신 origin/main bc81589에서 별도 codex/progression-content-integration worktree를 만들었고 원래 체크아웃의 작업을 보존했다. 제출 전 fetch 기준 main 추가 커밋 0개. main 직접 push/PR 병합/서버 배포는 하지 않는다.
+- 사용자 확정: 프로필은 진행별, 구 6인·구 경제 저장은 자동 이관 없이 보존, 승급·정식 콘텐츠는 준비 중. 데이터 소유권·버전 1의 선택 Profile 필드·입력 제한·공개 서비스 함수·음원 manifest 제안은 15절의 같은 제목에 기록했다.
+- 구현: 프로필 조회/원자적 저장/실패 콜백, 승인된 승급 기준을 받는 순수 함수, 구 저장 종류별 읽기 전용 진단/명시적 사본 생성, 정상 archive 분리 읽기, 정산 식별자·재방문·엔딩 상태 검증, 5인 미승인 콘텐츠 카탈로그/누락 audit, 공개 엔딩 재생 API/재생 시 무정산, 음원 등록 전 경로·GUID·승인·출처 검사. 기존 B 검사 계산 fixture도 현재 ledger 형식으로 맞췄으며 출시 보상 정책은 변경하지 않았다.
+- 자동 검사 통과: dotnet b-progression-checks 32; unity-client-checks 249; economy Reward 55 / Wallet 33 / fresh-process restore 4. Unity ProgressionContentChecks 23(프로필 실패/복원·진행 분리·구 저장/백업·손상 archive 분리·manifest·공개 재생 어댑터), B 9, D presentation 77, AI input 56, 기존 ABCD 통합 14와 가격 검사. Windows Development build 성공. 실행: Unity batchmode -executeMethod ProgressionContentChecks.Build. 로그 artifacts/progression-content/final-build.log, 실행파일 artifacts/progression-content/player/GC_gamsamo_E2E.exe. 생성된 font/ProjectSettings 변경은 제출에서 제외했다.
+- 실제 화면 검증(Computer Use): 제품명 GC_gamsamo_ProgressionContent_E2E로 새 게임 → 상담실 → PC → 사진 준비 중 안내 → 종료/재실행 → 불러오기 활성화 → 상담실 복원까지 확인했다. 사용자 저장과 별도 LocalLow/DefaultCompany/GC_gamsamo_ProgressionContent_E2E를 사용했고 실제 사용자 저장을 수정/이관하지 않았다. 확인한 실행 로그에 Exception/Game progress 오류 없음.
+- 관찰된 UI 후속 항목: 사진첩이 아직 6개의 빈 칸을 표시한다. 환자 데이터는 5명이므로 UI 담당이 5인 슬롯/미준비 상태별 표현을 정리해야 한다. UI·씬·프리팹 소유권 때문에 이 브랜치에서 수정하지 않았다.
+- 미완료/미검증: UiFeaturePorts 및 프로필 편집/후일담 목록 화면 계약, 정식 사진·후일담·크레딧 승인, 음원 manifest/파일이 미제공이다. 실제 UI 프로필 저장·재실행/후일담 버튼/음원 청취·음소거 복원은 아직 검증할 수 없다. 이번 실제 화면 검증에서는 실제 서버 상담·평가·재방문·구매·5명 클리어를 수행하지 않았다. 합성 70/70으로 5인 최종 엔딩/중복 보상 방지를 검사한 결과를 실제 모델 평가 성공으로 보지 않는다. 이전 17.31 E2E를 이번 실행 결과로 재사용하지 않는다.
+- PR은 의존 미해결 초안으로 제출한다. UI/AI 계약과 음원 PR → 본 통합 어댑터/카탈로그 완성 → 15절 최종 E2E 목록 전체 재검증 후 준비 완료로 전환한다. 의존 PR 번호는 아직 전달되지 않았으며 임의 브랜치를 병합하지 않았다.

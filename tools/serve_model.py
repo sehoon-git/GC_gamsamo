@@ -22,8 +22,8 @@ def main():
         "--max-model-len", str(config["max_model_len"]),
         "--max-num-seqs", str(config["max_num_seqs"]),
         "--gpu-memory-utilization", str(config["gpu_memory_utilization"]),
-        "--language-model-only", "--reasoning-parser", "qwen3",
-        "--default-chat-template-kwargs", '{"enable_thinking":false}',
+        "--language-model-only", "--reasoning-parser", config.get("reasoning_parser", "qwen3"),
+        "--default-chat-template-kwargs", json.dumps({**config.get("chat_template_kwargs", {}), "enable_thinking": False}),
     ]
     if settings.vllm_api_key:
         # vLLM reads its own key from the environment, keeping it out of process arguments.

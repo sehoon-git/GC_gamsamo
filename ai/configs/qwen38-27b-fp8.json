@@ -1,0 +1,63 @@
+{
+  "model_id": "Qwen/Qwen3.8-27B-FP8",
+  "revision": "017b9c7af6b5689d5dd426a76e0bc077eb5ca20a",
+  "served_model_name": "seoyun",
+  "local_directory": "ai/models/qwen38-27b-fp8",
+  "max_model_len": 16384,
+  "summary_threshold": 12000,
+  "recent_turns": 6,
+  "gpu_memory_utilization": 0.9,
+  "max_num_seqs": 1,
+  "roles": {
+    "patient": {
+      "temperature": 0.7,
+      "max_tokens": 512,
+      "thinking": false,
+      "top_p": 0.8,
+      "top_k": 20,
+      "presence_penalty": 1.5,
+      "repetition_penalty": 1.0
+    },
+    "controller": {
+      "temperature": 0.1,
+      "max_tokens": 1024,
+      "thinking": false,
+      "top_p": 1.0,
+      "top_k": -1,
+      "presence_penalty": 0.0,
+      "repetition_penalty": 1.0
+    },
+    "summary": {
+      "temperature": 0.1,
+      "max_tokens": 2048,
+      "thinking": false,
+      "top_p": 1.0,
+      "top_k": -1,
+      "presence_penalty": 0.0,
+      "repetition_penalty": 1.0
+    },
+    "evidence": {
+      "temperature": 0.1,
+      "max_tokens": 2048,
+      "thinking": false,
+      "top_p": 1.0,
+      "top_k": -1,
+      "presence_penalty": 0.0,
+      "repetition_penalty": 1.0
+    },
+    "evaluation": {
+      "temperature": 0.2,
+      "max_tokens": 4096,
+      "thinking": true,
+      "thinking_token_budget": 1024,
+      "top_p": 1.0,
+      "top_k": -1,
+      "presence_penalty": 0.0,
+      "repetition_penalty": 1.0
+    }
+  },
+  "reasoning_parser": "qwen3",
+  "chat_template_kwargs": {
+    "preserve_thinking": false
+  }
+}

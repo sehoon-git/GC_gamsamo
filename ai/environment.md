@@ -152,7 +152,7 @@ vLLM에는 `--language-model-only`, `--reasoning-parser qwen3`, 기본 `enable_t
    python ai/evaluation/long_context_smoke.py
    ```
 
-   이 스크립트는 기존 주질문 규칙용이다. 새로운 총 질문 5개 규칙이나 한국어 자연스러움의 자동 합격 검사로 사용하지 않는다.
+   이 스크립트는 형식 2의 총 질문 5개·자동 저장·마무리·평가를 검사한다. 한국어 자연스러움은 별도 블라인드 검토로 판단한다.
 
 ## 홈 아래에만 설치하는 Conda 구성
 
@@ -204,3 +204,9 @@ GPU는 `nvidia-smi`로 사용 가능한 장치를 확인해 선택하고 실제 
 | POST API 401 | CLI와 API의 `SEOYUN_API_KEY` 일치 여부 |
 | 환경 파일을 바꿔도 값이 그대로임 | 실행 셸에 다시 export하고 관련 프로세스를 재시작했는지 |
 | CUDA 오류·메모리 부족 | 실제 GPU 선택·다른 작업 점유·드라이버와 PyTorch 빌드. 설정을 바꿨다면 기존 기준과 구분해 기록 |
+
+## 형식 2 프로필·모의 서버·외부 접속
+
+`SEOYUN_MODEL_CONFIG`의 기본값은 `ai/configs/seoyun.json`이다. 후보 비교에는 `ai/configs/qwen38-27b-fp8.json` 또는 조건 확인 후 `ai/configs/exaone45-33b-awq.json`을 설정하고 다운로드·모델·API를 모두 같은 프로필로 실행한다. 가중치는 순차 준비하며 기존 기준 모델은 보존한다.
+
+`SEOYUN_MOCK=1` 또는 실행 도구의 `--mock`은 GPU 없는 모의 API를 선택한다. 실제 비교에서는 `/health`의 모드와 모델 리비전을 확인한다. 서버를 유지하려면 `--server-only`를 사용한다. 외부 PC 연결은 인증된 FastAPI에만 터널을 열고, 실행·접속 검사 명령은 [AI README](README.md#외부-pc-연결)를 따른다. `.env`와 접속 설정 파일은 로컬에서만 관리한다.

@@ -3,6 +3,7 @@
 Run after terminal_smoke.py. This is a context/storage check, not a quality score:
 the transcript is synthetically extended and never enters the user's save slots.
 """
+import argparse
 import asyncio
 import hashlib
 import json
@@ -20,9 +21,12 @@ from app.services.memory import remaining_turns
 
 
 async def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--label", default="real-model")
+    args = parser.parse_args()
     settings = Settings.from_env()
-    output = settings.root / "ai/outputs/long-context-smoke.json"
-    source = json.loads((output.parent / "real-model-smoke.json").read_text("utf-8"))
+    output = settings.root / f"ai/outputs/{args.label}-long-context.json"
+    source = json.loads((output.parent / f"{args.label}-smoke.json").read_text("utf-8"))
     case = CaseState.model_validate(source["state"])
     if not case.current.turns:
         raise RuntimeError("Run terminal_smoke.py first.")
@@ -30,6 +34,10 @@ async def main():
     originals = [t.model_copy(deep=True) for t in case.current.turns]
     case.current.evaluation = None
     case.current.closed_at = None
+    case.current.closing_request_id = None
+    case.current.phase = "closing"
+    for turn in case.current.turns:
+        turn.closing_text = ""
     case.memory.items = []
     case.memory.through_turn_id = None
     engine = VllmClient(settings)
@@ -38,7 +46,7 @@ async def main():
     metrics = Metrics()
     request = TurnRequest(state=case, session_id=case.current.id, turn_id="memory_probe", text="오늘 나눈 마음을 다시 돌아보고 싶어요.")
     work = {"case": case, "request": request, "metrics": metrics}
-    render = lambda: service.management_messages(work, "controller")
+    render = lambda: service.management_messages(work)
     report = {"started_at": now(), "synthetic_extension": True, "prompt_version": catalog.prompt_version}
     try:
         index = 0
@@ -51,10 +59,9 @@ async def main():
             if index >= 250:
                 raise RuntimeError("Token count did not grow as expected; stop rather than creating an unbounded fixture.")
             turn = originals[index % len(originals)].model_copy(deep=True)
-            turn.id, turn.kind, turn.closing_text = new_id("long"), "followup", ""
-            case.current.turns.append(turn)
-            if len(case.current.topics) == 5:
-                case.current.post_budget_turns += 1
+            turn.id, turn.question_delta, turn.closing_text = new_id("long"), 0, ""
+            # Insert synthetic neutral context before the final question, preserving the five-question ceiling.
+            case.current.turns.insert(-1, turn)
             index += 1
         before = compact([r.model_dump() for r in records(case)])
         report["input_tokens_before"] = engine.count(render(), "controller")
@@ -70,11 +77,12 @@ async def main():
         print("After summary:", report["input_tokens_after"], "tokens; recent turns:", report["recent_turns"], flush=True)
         with TemporaryDirectory(prefix="seoyun-memory-check-") as directory:
             store = SaveStore(Path(directory))
-            store.save(case, "auto")
-            store.save(case, "manual")
-            assert store.load("auto").model_dump() == case.model_dump()
-            assert store.load("manual").model_dump() == case.model_dump()
+            store.save(case)
+            assert store.load().model_dump() == case.model_dump()
         case.current.closed_at = now()
+        case.current.closing_request_id = "synthetic_closing"
+        case.current.turns[-1].closing_text = "오늘 한 이야기를 더 생각해 볼게요."
+        case.current.phase = "pending_evaluation"
         result = await evaluator.evaluate(evaluation_request)
         value = result.state.current.evaluation
         assert value.metrics.role_seconds.get("evidence", 0) > 0, "Expected chunked evidence extraction."

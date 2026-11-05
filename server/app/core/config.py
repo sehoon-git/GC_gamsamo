@@ -13,6 +13,8 @@ class Settings:
     api_url: str = "http://127.0.0.1:8001"
     api_key: str = ""
     vllm_api_key: str = ""
+    model_config: str = "ai/configs/seoyun.json"
+    mock: bool = False
 
     @classmethod
     def from_env(cls):
@@ -21,11 +23,13 @@ class Settings:
             api_url=os.getenv("SEOYUN_API_URL", cls.api_url).rstrip("/"),
             api_key=os.getenv("SEOYUN_API_KEY", ""),
             vllm_api_key=os.getenv("SEOYUN_VLLM_API_KEY", ""),
+            model_config=os.getenv("SEOYUN_MODEL_CONFIG", cls.model_config),
+            mock=os.getenv("SEOYUN_MOCK", "0") == "1",
         )
 
     @property
     def model(self) -> dict:
-        return json.loads((self.root / "ai/configs/seoyun.json").read_text("utf-8"))
+        return json.loads((self.root / self.model_config).read_text("utf-8"))
 
     @property
     def model_path(self) -> Path:

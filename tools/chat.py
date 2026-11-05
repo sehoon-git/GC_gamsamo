@@ -9,11 +9,10 @@ from app.schemas.models import CaseState, next_session
 
 HELP = """명령:
   /help              도움말
-  /status            실험·상담·주질문 상태
-  /save              수동 저장
-  /load auto|manual  현재 실험의 저장 슬롯 불러오기
-  /retry             실패한 발언 다시 전송
-  /evaluate          종료된 상담의 평가만 재시도
+  /status            실험·상담·질문 사용량·상담 단계
+  /retry             저장 또는 요청을 같은 ID로 재시도
+  /finish            저장된 5번째 답변에서 마무리·평가 이어가기
+  /evaluate          마무리 저장 후 평가만 재시도
   /next              기준 미달 후 기억을 이어 재상담
   /new               기록을 보존하고 초기 서윤으로 새 실험
   /cases             보관된 실험 ID 목록
@@ -24,8 +23,7 @@ HELP = """명령:
 
 def status(client):
     state, session = client.state, client.state.current
-    phase = "완료" if state.cleared else "평가 완료" if session.evaluation else "평가 대기" if session.closed_at else "후속 대화" if len(session.topics) == 5 else "상담 중"
-    print(f"[주질문 {len(session.topics)}/5 · {phase} · 상담 {len(state.sessions)}회차]")
+    print(f"[질문 {session.questions_used}/5 · {session.phase} · 상담 {len(state.sessions)}회차]")
 
 
 def show_evaluation(value, catalog):
@@ -41,9 +39,10 @@ def show_evaluation(value, catalog):
 async def main():
     parser = argparse.ArgumentParser(description="서윤 1인 상담 실험")
     parser.add_argument("--case", help="보관된 실험 ID")
+    parser.add_argument("--new", action="store_true", help="이전 기록을 보존하고 새 형식으로 시작")
     args = parser.parse_args()
     settings, store = Settings.from_env(), SaveStore()
-    state = store.load(case_id=args.case) or CaseState()
+    state = CaseState() if args.new else store.load(case_id=args.case) or CaseState()
     client = SessionClient(settings, store, state)
     store.save(state)
     print("서윤 · 대학 졸업 후 3년째 취업 준비 중. 카페에서 생활비를 벌고 있습니다.")
@@ -62,12 +61,18 @@ async def main():
         value = await client.evaluate()
         show_evaluation(value, client.catalog)
 
+    async def advance():
+        if client.state.current.phase == "closing":
+            print("다섯 번째 답변을 저장했습니다. 마무리를 기다립니다…")
+            print("\n서윤 >", await client.finish())
+        if client.state.current.phase == "pending_evaluation":
+            await assess()
+
     try:
-        if client.state.current.closed_at and client.state.current.evaluation is None:
-            try:
-                await assess()
-            except Exception as exc:
-                print(f"평가 오류: {exc}\n/evaluate로 평가만 재시도할 수 있습니다.")
+        try:
+            await advance()
+        except (ExperimentError, ValueError, OSError) as exc:
+            print(f"오류: {exc}\n/retry 또는 /finish로 이어갈 수 있습니다.")
         while True:
             try:
                 text = input("\n상담자 > ").strip()
@@ -81,54 +86,49 @@ async def main():
                 elif text == "/status":
                     print(f"실험 {client.state.case_id}\n상담 {client.state.current.id}")
                     status(client)
-                elif text == "/save":
-                    print("수동 저장:", store.save(client.state, "manual"))
-                elif text.startswith("/load "):
-                    client.replace(store.load(text.split(maxsplit=1)[1], client.state.case_id))
-                    status(client)
                 elif text == "/cases":
                     print("\n".join(store.cases()))
                 elif text.startswith("/open "):
                     client.replace(store.load(case_id=text.split(maxsplit=1)[1]))
-                    store.save(client.state)
                     status(client)
                 elif text == "/new":
                     client.replace(CaseState())
-                    store.save(client.state)
                     print("이전 실험 기록을 보존했습니다. 새 실험:", client.state.case_id)
                     status(client)
                 elif text == "/next":
                     client.replace(next_session(client.state))
-                    store.save(client.state)
                     print("이전 기억을 이어 새 상담을 시작합니다.")
                     status(client)
+                elif text == "/finish":
+                    await advance()
                 elif text == "/evaluate":
                     if not client.state.current.closed_at:
                         raise ValueError("아직 상담이 끝나지 않았습니다.")
                     await assess()
-                elif text.startswith("/") and text != "/retry":
+                elif text == "/retry":
+                    await client.retry()
+                    if client.state.current.turns:
+                        print("\n서윤 >", client.state.current.turns[-1].complete_reply)
+                    await advance()
+                    status(client)
+                elif text.startswith("/"):
                     print("알 수 없는 명령입니다. /help를 입력하세요.")
                 else:
-                    if client.state.current.closed_at or client.state.cleared:
+                    if client.state.current.phase != "active" or client.state.cleared:
                         raise ValueError("상담이 종료되었습니다. /evaluate, /next 또는 /new를 사용하세요.")
-                    if text == "/retry":
-                        text = client.pending_text
-                        if not text:
-                            raise ValueError("재시도할 발언이 없습니다.")
                     print("서윤의 답변을 기다립니다…")
                     turn = await client.turn(text)
                     print("\n서윤 >", turn.complete_reply)
                     status(client)
                     print(f"[{turn.metrics.seconds:.1f}초 · 모델 요청 {turn.metrics.calls}회]")
-                    if client.state.current.closed_at:
-                        await assess()
+                    await advance()
             except (EOFError, KeyboardInterrupt):
                 print("\n확정된 대화는 자동 저장되어 있습니다.")
                 break
             except (ExperimentError, ValueError, OSError) as exc:
                 print(f"오류: {exc}")
-                if client.pending_text:
-                    print("입력을 보관했습니다. /retry로 다시 보내거나 새 발언을 입력하세요.")
+                if client.pending_request or client.pending_response:
+                    print("/retry로 같은 요청을 이어갑니다. 받은 응답이 있으면 저장만 재시도합니다.")
                 elif client.state.current.closed_at and not client.state.current.evaluation:
                     print("상담 기록은 저장되어 있습니다. /evaluate로 평가만 재시도하세요.")
     finally:

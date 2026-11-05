@@ -3,12 +3,13 @@ import json
 from pathlib import Path
 
 from huggingface_hub import snapshot_download
+from app.core.config import Settings
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
-    config = json.loads((ROOT / "ai/configs/seoyun.json").read_text("utf-8"))
+    config = Settings.from_env().model
     target = ROOT / config["local_directory"]
     snapshot_download(
         repo_id=config["model_id"],

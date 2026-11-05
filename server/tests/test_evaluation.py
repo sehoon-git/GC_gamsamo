@@ -3,7 +3,7 @@ import pytest
 from app.core.config import InvalidModelOutput
 from app.schemas.models import EvaluateRequest, Evaluation, Metrics, Session, now, records
 from app.services.evaluation import EvaluationService
-from conftest import FakeLLM, case_with_topics
+from conftest import FakeLLM, case_with_questions, closed_case
 
 
 def test_numbered_passages_preserve_every_source_character():
@@ -29,8 +29,7 @@ def judgment(catalog, case, patient=70, counselor=70):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("patient,counselor,passed", [(69, 100, False), (100, 69, False), (70, 70, True), (0, 0, False)])
 async def test_both_thresholds_are_required(catalog, patient, counselor, passed):
-    case = case_with_topics()
-    case.current.closed_at = now()
+    case = closed_case()
     llm = FakeLLM([("JudgmentProposal", judgment(catalog, case, patient, counselor))])
     response = await EvaluationService(llm, catalog).evaluate(EvaluateRequest(state=case, session_id=case.current.id, request_id="grade"))
     evaluation = response.state.current.evaluation
@@ -44,8 +43,7 @@ async def test_both_thresholds_are_required(catalog, patient, counselor, passed)
 
 @pytest.mark.asyncio
 async def test_unknown_passage_cannot_award_points(catalog):
-    case = case_with_topics()
-    case.current.closed_at = now()
+    case = closed_case()
     value = judgment(catalog, case)
     value["self_worth"]["evidence"][0]["message_id"] = "M9999"
     with pytest.raises(ValueError):
@@ -81,7 +79,7 @@ async def test_long_evaluation_visits_all_records(catalog):
             self.visited.update(r["id"] for r in json.loads(messages[-1]["content"]).get("records", []))
             assert schema is EvidenceProposal
             return EvidenceProposal(criteria=[])
-    case = case_with_topics()
+    case = case_with_questions()
     llm = ExtractingLLM()
     work = {"request": EvaluateRequest(state=case, session_id=case.current.id, request_id="long"),
             "metrics": Metrics(), "source": [r.model_dump() for r in records(case)]}
@@ -93,27 +91,25 @@ async def test_long_evaluation_visits_all_records(catalog):
 @pytest.mark.asyncio
 async def test_retry_consultation_carries_memory_but_resets_question_budget(catalog):
     from app.schemas.models import Memory, MemoryItem, next_session
-    case = case_with_topics()
+    case = closed_case()
+    case.current.turns[0].candidate_fact_ids = ["cafe_strength"]
     case.revealed_fact_ids = ["cafe_strength"]
-    case.deferred_topics = ["다음 상담에서 다룰 주제"]
     case.memory = Memory(through_turn_id="turn_4", items=[MemoryItem(category="emotion", speaker="patient", text="마음을 돌아봄", source_ids=["turn_4:patient"])])
     case.current.closed_at = now()
     llm = FakeLLM([("JudgmentProposal", judgment(catalog, case, 60, 70))])
     response = await EvaluationService(llm, catalog).evaluate(EvaluateRequest(state=case, session_id=case.current.id, request_id="grade"))
     continued = next_session(response.state)
     assert len(continued.sessions) == 2
-    assert not continued.current.topics and not continued.current.turns
+    assert continued.current.questions_used == 0 and not continued.current.turns
     assert continued.memory == case.memory
     assert continued.revealed_fact_ids == ["cafe_strength"]
-    assert continued.deferred_topics == case.deferred_topics
     catalog.validate_state(continued)
 
 
 @pytest.mark.asyncio
 async def test_cleared_case_cannot_start_another_consultation(catalog):
     from app.schemas.models import next_session
-    case = case_with_topics()
-    case.current.closed_at = now()
+    case = closed_case()
     llm = FakeLLM([("JudgmentProposal", judgment(catalog, case, 70, 70))])
     result = await EvaluationService(llm, catalog).evaluate(EvaluateRequest(state=case, session_id=case.current.id, request_id="grade"))
     with pytest.raises(ValueError, match="완료된"):

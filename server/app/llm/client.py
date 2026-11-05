@@ -36,9 +36,13 @@ class VllmClient:
             self.load_tokenizer()
         tokens = self.tokenizer.apply_chat_template(
             messages, tokenize=True, add_generation_prompt=True, return_dict=False,
-            enable_thinking=self.config["roles"][role]["thinking"],
+            **self.template_kwargs(role),
         )
         return len(tokens)
+
+    def template_kwargs(self, role: str) -> dict:
+        return {**self.config.get("chat_template_kwargs", {}),
+                "enable_thinking": self.config["roles"][role]["thinking"]}
 
     def fits(self, messages: list[dict], role: str) -> bool:
         return self.count(messages, role) + self.config["roles"][role]["max_tokens"] + 128 <= self.config["max_model_len"]
@@ -64,9 +68,12 @@ class VllmClient:
                 "model": self.config["served_model_name"], "messages": request_messages,
                 "stream": False, "temperature": role_config["temperature"],
                 "max_tokens": role_config["max_tokens"],
-                "chat_template_kwargs": {"enable_thinking": role_config["thinking"]},
+                "chat_template_kwargs": self.template_kwargs(role),
                 "response_format": {"type": "json_schema", "json_schema": {"name": schema.__name__, "schema": schema.model_json_schema(), "strict": True}},
             }
+            for key in ("top_p", "top_k", "presence_penalty", "repetition_penalty", "seed"):
+                if key in role_config:
+                    payload[key] = role_config[key]
             if role_config.get("thinking_token_budget"):
                 payload["thinking_token_budget"] = role_config["thinking_token_budget"]
             started = perf_counter()

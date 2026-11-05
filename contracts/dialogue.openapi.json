@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "서윤 상담 실험",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "paths": {
     "/health": {
@@ -120,6 +120,56 @@
           }
         }
       }
+    },
+    "/v1/dialogue/close": {
+      "post": {
+        "summary": "Close Session",
+        "operationId": "close_session_v1_dialogue_close_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -128,15 +178,15 @@
         "properties": {
           "format_version": {
             "type": "integer",
-            "const": 1,
+            "const": 2,
             "title": "Format Version",
-            "default": 1
+            "default": 2
           },
           "content_version": {
             "type": "string",
-            "const": "seoyun-1.0",
+            "const": "seoyun-2.0",
             "title": "Content Version",
-            "default": "seoyun-1.0"
+            "default": "seoyun-2.0"
           },
           "case_id": {
             "type": "string",
@@ -155,23 +205,13 @@
             "title": "Revision",
             "default": 0
           },
-          "created_at": {
-            "type": "string",
-            "title": "Created At"
-          },
+          "created_at": "2026-11-06T00:00:00+00:00",
           "revealed_fact_ids": {
             "items": {
               "type": "string"
             },
             "type": "array",
             "title": "Revealed Fact Ids"
-          },
-          "deferred_topics": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Deferred Topics"
           },
           "memory": {
             "$ref": "#/components/schemas/Memory"
@@ -188,6 +228,31 @@
         "additionalProperties": false,
         "type": "object",
         "title": "CaseState"
+      },
+      "CloseRequest": {
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/CaseState"
+          },
+          "session_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Session Id"
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Request Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "state",
+          "session_id",
+          "request_id"
+        ],
+        "title": "CloseRequest"
       },
       "CriterionScore": {
         "properties": {
@@ -278,10 +343,7 @@
             "type": "boolean",
             "title": "Cleared"
           },
-          "evaluated_at": {
-            "type": "string",
-            "title": "Evaluated At"
-          },
+          "evaluated_at": "2026-11-06T00:00:00+00:00",
           "model_revision": {
             "type": "string",
             "title": "Model Revision"
@@ -428,11 +490,7 @@
       },
       "Metrics": {
         "properties": {
-          "seconds": {
-            "type": "number",
-            "title": "Seconds",
-            "default": 0
-          },
+          "seconds": 0.0,
           "calls": {
             "type": "integer",
             "title": "Calls",
@@ -467,41 +525,40 @@
             "pattern": "^[A-Za-z0-9_-]{1,80}$",
             "title": "Id"
           },
-          "started_at": {
-            "type": "string",
-            "title": "Started At"
+          "started_at": "2026-11-06T00:00:00+00:00",
+          "closed_at": "2026-11-06T00:00:00+00:00",
+          "questions_used": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Questions Used",
+            "default": 0
           },
-          "closed_at": {
+          "phase": {
+            "type": "string",
+            "enum": [
+              "active",
+              "closing",
+              "pending_evaluation",
+              "evaluated"
+            ],
+            "title": "Phase",
+            "default": "active"
+          },
+          "closing_request_id": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,80}$"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Closed At"
+            "title": "Closing Request Id"
           },
-          "topics": {
-            "items": {
-              "$ref": "#/components/schemas/Topic"
-            },
-            "type": "array",
-            "maxItems": 5,
-            "title": "Topics"
-          },
-          "post_budget_turns": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Post Budget Turns",
-            "default": 0
-          },
-          "unresolved_questions": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Unresolved Questions"
+          "closing_metrics": {
+            "$ref": "#/components/schemas/Metrics"
           },
           "turns": {
             "items": {
@@ -553,6 +610,14 @@
             "type": "boolean",
             "title": "Replayed",
             "default": false
+          },
+          "disclosure_candidates": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Disclosure Candidates"
           }
         },
         "additionalProperties": false,
@@ -565,27 +630,6 @@
           "state"
         ],
         "title": "StateResponse"
-      },
-      "Topic": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9_-]{1,80}$",
-            "title": "Id"
-          },
-          "label": {
-            "type": "string",
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Label"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "label"
-        ],
-        "title": "Topic"
       },
       "Turn": {
         "properties": {
@@ -609,20 +653,29 @@
             "title": "Closing Text",
             "default": ""
           },
-          "kind": {
-            "type": "string",
+          "question_delta": {
+            "type": "integer",
             "enum": [
-              "neutral",
-              "followup",
-              "new_topic",
-              "deferred"
+              0,
+              1
             ],
-            "title": "Kind"
+            "title": "Question Delta"
           },
-          "created_at": {
+          "topic_label": {
             "type": "string",
-            "title": "Created At"
+            "maxLength": 200,
+            "title": "Topic Label",
+            "default": ""
           },
+          "candidate_fact_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Candidate Fact Ids"
+          },
+          "created_at": "2026-11-06T00:00:00+00:00",
           "metrics": {
             "$ref": "#/components/schemas/Metrics"
           }
@@ -633,7 +686,7 @@
           "id",
           "user_text",
           "patient_text",
-          "kind"
+          "question_delta"
         ],
         "title": "Turn"
       },

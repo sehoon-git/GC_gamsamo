@@ -11,7 +11,7 @@ from conftest import FakeLLM, classification, reply
 @pytest.mark.asyncio
 async def test_api_auth_and_response_contract():
     settings = Settings(api_key="test-key")
-    llm = FakeLLM([("Classification", classification("neutral", None)), ("PatientReply", reply())])
+    llm = FakeLLM([("Classification", classification("none")), ("PatientReply", reply())])
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(settings, llm)), base_url="http://test") as client:
         assert (await client.get("/health")).status_code == 200
         state = CaseState()
@@ -20,7 +20,7 @@ async def test_api_auth_and_response_contract():
         response = await client.post("/v1/dialogue/turn", json=body, headers={"Authorization": "Bearer test-key"})
         assert response.status_code == 200, response.text
         assert response.json()["request_id"] == "hello"
-        assert len(response.json()["state"]["sessions"][0]["topics"]) == 0
+        assert response.json()["state"]["sessions"][0]["questions_used"] == 0
 
 
 class TinyTokenizer:
@@ -72,4 +72,44 @@ async def test_two_invalid_outputs_fail_without_silent_fallback(settings):
     with pytest.raises(ExperimentError, match="두 번"):
         await llm.generate("patient", [{"role": "user", "content": "인사"}], PatientReply, metrics)
     assert metrics.calls == 2
+    await llm.close()
+
+
+@pytest.mark.asyncio
+async def test_legacy_version_and_compound_have_stable_error_envelopes():
+    settings = Settings(mock=True, api_key="test-key")
+    async with httpx.AsyncClient(base_url="http://test", transport=httpx.ASGITransport(app=create_app(settings)), headers={"Authorization": "Bearer test-key"}) as client:
+        assert (await client.get("/health")).json()["mode"] == "mock"
+        state = CaseState()
+        request = TurnRequest(state=state, session_id=state.current.id, turn_id="multi", text="면접은요? 친구는요?").model_dump()
+        result = await client.post("/v1/dialogue/turn", json=request)
+        assert result.status_code == 422 and result.json()["detail"]["code"] == "needs_split"
+        request["state"]["format_version"] = 1
+        result = await client.post("/v1/dialogue/turn", json=request)
+        assert result.status_code == 422 and result.json()["detail"]["code"] == "unsupported_save_version"
+        for endpoint in ["close", "evaluate"]:
+            body = {"state": state.model_dump(), "session_id": state.current.id, "request_id": endpoint}
+            response = await client.post(f"/v1/dialogue/{endpoint}", json=body)
+            assert response.status_code == 409 and response.json()["detail"]["code"] == "session_open"
+            assert (await client.post(f"/v1/dialogue/{endpoint}", json=body, headers={"Authorization": "Bearer wrong"})).status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_model_sampling_and_template_settings_are_forwarded():
+    import json
+    settings = Settings(model_config="ai/configs/qwen38-27b-fp8.json")
+    class TemplateTokenizer(TinyTokenizer):
+        def apply_chat_template(self, *args, **kwargs):
+            assert kwargs["enable_thinking"] is False
+            assert kwargs["preserve_thinking"] is False
+            return super().apply_chat_template(*args, **kwargs)
+    def handle(request):
+        body = json.loads(request.content)
+        assert body["chat_template_kwargs"] == {"enable_thinking": False, "preserve_thinking": False}
+        assert (body["top_p"], body["top_k"], body["presence_penalty"]) == (0.8, 20, 1.5)
+        return httpx.Response(200, json={"choices": [{"finish_reason": "stop", "message": {"content": '{"text":"안녕하세요.","disclosed_fact_ids":[]}'}}]})
+    llm = VllmClient(settings, tokenizer=TemplateTokenizer())
+    await llm.http.aclose()
+    llm.http = httpx.AsyncClient(base_url="http://test", transport=httpx.MockTransport(handle))
+    await llm.generate("patient", [{"role": "user", "content": "안녕하세요"}], PatientReply, Metrics())
     await llm.close()

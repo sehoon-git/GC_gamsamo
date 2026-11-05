@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>상담 커피톡</title>
+  <link rel="stylesheet" href="preview.css">
+  <script src="preview.js" defer></script>
+</head>
+<body>
+  <div class="room-backdrop" aria-hidden="true">
+    <img src="../../../Assets/_Project/Art/Backgrounds/ConsultationRoom.png" alt="" draggable="false">
+  </div>
+
+  <main class="title-screen" id="titleScreen">
+    <div class="title-content">
+      <h1 class="game-title"><span class="game-title-first">상담</span><span class="game-title-last">커피톡</span></h1>
+      <nav class="main-menu" aria-label="시작 메뉴">
+        <button class="menu-button is-selected" id="newGameButton" type="button"><span>새 게임</span></button>
+        <div class="load-menu-item">
+          <button class="menu-button" id="loadButton" type="button" disabled aria-describedby="saveStatus"><span>불러오기</span></button>
+          <p class="save-status" id="saveStatus">저장된 진행이 없습니다</p>
+        </div>
+        <button class="menu-button" id="settingsButton" type="button"><span>설정</span></button>
+        <button class="menu-button" id="quitButton" type="button"><span>게임 종료</span></button>
+      </nav>
+    </div>
+  </main>
+
+  <section class="exit-screen" id="exitScreen" aria-labelledby="exitTitle" hidden>
+    <h2 id="exitTitle">다음에 또 만나요.</h2>
+    <button class="return-button" id="returnToTitleButton" type="button">메뉴로 돌아가기</button>
+  </section>
+
+  <dialog class="modal settings-modal" id="settingsDialog" aria-labelledby="settingsTitle">
+    <form class="paper-panel settings-panel" id="settingsForm">
+      <header class="panel-header"><h2 id="settingsTitle">설정</h2></header>
+      <section class="settings-section" aria-labelledby="graphicsTitle">
+        <h3 id="graphicsTitle">그래픽</h3>
+        <div class="setting-row">
+          <label for="displayMode">화면 모드</label>
+          <select id="displayMode" name="displayMode"><option value="windowed">창 모드</option><option value="fullscreen">전체 화면</option></select>
+        </div>
+        <div class="setting-row">
+          <label for="resolution">해상도</label>
+          <select id="resolution" name="resolution"><option value="1280x720">1280 × 720</option><option value="1600x900">1600 × 900</option><option value="1920x1080">1920 × 1080</option></select>
+        </div>
+        <div class="setting-row">
+          <label for="quality">그래픽 품질</label>
+          <select id="quality" name="quality"><option value="low">낮음</option><option value="medium">보통</option><option value="high">높음</option></select>
+        </div>
+      </section>
+      <section class="settings-section audio-section" aria-labelledby="audioTitle">
+        <h3 id="audioTitle">오디오</h3>
+        <div class="setting-row audio-row">
+          <label for="masterVolume">전체</label>
+          <input id="masterVolume" name="masterVolume" type="range" min="0" max="100" step="1" value="80">
+          <output for="masterVolume" id="masterVolumeValue">80%</output>
+        </div>
+        <div class="setting-row audio-row">
+          <label for="bgmVolume">BGM</label>
+          <input id="bgmVolume" name="bgmVolume" type="range" min="0" max="100" step="1" value="65">
+          <output for="bgmVolume" id="bgmVolumeValue">65%</output>
+        </div>
+        <div class="setting-row audio-row">
+          <label for="sfxVolume">효과음</label>
+          <input id="sfxVolume" name="sfxVolume" type="range" min="0" max="100" step="1" value="70">
+          <output for="sfxVolume" id="sfxVolumeValue">70%</output>
+        </div>
+      </section>
+      <p class="settings-error" id="settingsError" role="alert" hidden>설정을 저장하지 못했습니다. 다시 시도해 주세요.</p>
+      <footer class="panel-actions settings-actions">
+        <button class="text-button" id="defaultsButton" type="button">기본값</button>
+        <button class="action-button secondary" id="cancelSettingsButton" type="button">취소</button>
+        <button class="action-button primary" id="applySettingsButton" type="submit">적용</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="modal message-modal" id="newGameDialog" aria-labelledby="newGameTitle" aria-describedby="newGameDescription">
+    <div class="paper-panel message-panel">
+      <header class="panel-header"><h2 id="newGameTitle">새 게임</h2></header>
+      <p class="message-copy" id="newGameDescription">새 게임은 상담실에서 시작됩니다.</p>
+      <footer class="panel-actions message-actions">
+        <button class="action-button secondary" id="cancelNewGameButton" type="button">돌아가기</button>
+        <button class="action-button primary" id="confirmNewGameButton" type="button">확인</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="modal message-modal" id="quitDialog" aria-labelledby="quitTitle" aria-describedby="quitDescription">
+    <div class="paper-panel message-panel">
+      <header class="panel-header"><h2 id="quitTitle">게임 종료</h2></header>
+      <p class="message-copy" id="quitDescription">게임을 종료하시겠습니까?</p>
+      <footer class="panel-actions message-actions">
+        <button class="action-button secondary" id="cancelQuitButton" type="button" autofocus>취소</button>
+        <button class="action-button primary" id="confirmQuitButton" type="button">게임 종료</button>
+      </footer>
+    </div>
+  </dialog>
+  <p class="toast" id="statusToast" role="status" aria-live="polite"></p>
+</body>
+</html>

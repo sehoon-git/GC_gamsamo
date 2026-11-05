@@ -11,7 +11,7 @@ HELP = """명령:
   /help              도움말
   /status            실험·상담·질문 사용량·상담 단계
   /retry             저장 또는 요청을 같은 ID로 재시도
-  /finish            저장된 5번째 답변에서 마무리·평가 이어가기
+  /finish            지금 상담 종료: 고정 안내 저장 후 평가
   /evaluate          마무리 저장 후 평가만 재시도
   /next              기준 미달 후 기억을 이어 재상담
   /new               기록을 보존하고 초기 서윤으로 새 실험
@@ -23,7 +23,7 @@ HELP = """명령:
 
 def status(client):
     state, session = client.state, client.state.current
-    print(f"[질문 {session.questions_used}/5 · {session.phase} · 상담 {len(state.sessions)}회차]")
+    print(f"[질문 {session.questions_used}개 · {session.phase} · 상담 {len(state.sessions)}회차]")
 
 
 def show_evaluation(value, catalog):
@@ -63,9 +63,9 @@ async def main():
 
     async def advance():
         if client.state.current.phase == "closing":
-            print("다섯 번째 답변을 저장했습니다. 마무리를 기다립니다…")
-            print("\n서윤 >", await client.finish())
+            await client.finish()
         if client.state.current.phase == "pending_evaluation":
+            print("\n상담자 >", client.state.current.closing_text)
             await assess()
 
     try:
@@ -100,6 +100,7 @@ async def main():
                     print("이전 기억을 이어 새 상담을 시작합니다.")
                     status(client)
                 elif text == "/finish":
+                    await client.finish()
                     await advance()
                 elif text == "/evaluate":
                     if not client.state.current.closed_at:
@@ -127,7 +128,7 @@ async def main():
                 break
             except (ExperimentError, ValueError, OSError) as exc:
                 print(f"오류: {exc}")
-                if client.pending_request or client.pending_response:
+                if client.pending_request or client.pending_response or client.pending_transition:
                     print("/retry로 같은 요청을 이어갑니다. 받은 응답이 있으면 저장만 재시도합니다.")
                 elif client.state.current.closed_at and not client.state.current.evaluation:
                     print("상담 기록은 저장되어 있습니다. /evaluate로 평가만 재시도하세요.")

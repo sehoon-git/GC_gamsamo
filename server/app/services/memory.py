@@ -21,7 +21,7 @@ def remaining_turns(case: CaseState):
 
 def recent_records(case: CaseState):
     ids = {t.id for t in remaining_turns(case)}
-    return [r.model_dump() for r in records(case) if r.id.rsplit(":", 1)[0] in ids]
+    return [r.model_dump(exclude={"kind"}) for r in records(case) if r.kind == "dialogue" and r.id.rsplit(":", 1)[0] in ids]
 
 
 class MemoryManager:
@@ -36,7 +36,7 @@ class MemoryManager:
             if not remaining:
                 raise ExperimentError("현재 입력과 고정 설정이 문맥 한도를 초과합니다. 입력을 줄여주세요.", "context_overflow")
             count = max(1, len(remaining) - self.llm.config["recent_turns"])
-            available = {r.id: r for r in records(case)}
+            available = {r.id: r for r in records(case) if r.kind == "dialogue"}
             aliases = {original: f"{'P' if record.speaker == 'patient' else 'C'}{i + 1:04d}"
                        for i, (original, record) in enumerate(available.items())}
             originals = {alias: original for original, alias in aliases.items()}
@@ -46,7 +46,7 @@ class MemoryManager:
             while count:
                 subset = remaining[:count]
                 turn_ids = {t.id for t in subset}
-                chunk = [r.model_dump() for r in available.values() if r.id.rsplit(":", 1)[0] in turn_ids]
+                chunk = [r.model_dump(exclude={"kind"}) for r in available.values() if r.id.rsplit(":", 1)[0] in turn_ids]
                 messages = [
                     {"role": "system", "content": self.catalog.prompts["summary"]},
                     {"role": "user", "content": compact({"previous_memory": previous,

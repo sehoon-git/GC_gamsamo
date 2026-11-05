@@ -20,8 +20,8 @@ def main():
         raise SystemExit("HTTPS 주소와 접근 키가 필요합니다.")
     with urllib.request.urlopen(url+"/health", timeout=20) as response:
         health = json.load(response)
-    assert health["inference"]["ready"] and health["format_version"] == 2
-    state = {"format_version": 2, "content_version": "seoyun-2.0", "case_id": "probe_"+uuid4().hex,
+    assert health["inference"]["ready"] and health["format_version"] == 3
+    state = {"format_version": 3, "content_version": "seoyun-3.0", "case_id": "probe_"+uuid4().hex,
              "sessions": [{"id": "session_"+uuid4().hex}]}
     body = json.dumps({"state": state, "session_id": state["sessions"][0]["id"], "turn_id": "hello_"+uuid4().hex,
                        "text": "안녕하세요. 와주셔서 감사합니다."}, ensure_ascii=False).encode()

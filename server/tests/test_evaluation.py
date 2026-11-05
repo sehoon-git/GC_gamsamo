@@ -18,7 +18,7 @@ def test_numbered_passages_preserve_every_source_character():
 def judgment(catalog, case, patient=70, counselor=70):
     scores = {}
     for axis, total in [("patient", patient), ("counselor", counselor)]:
-        index, source = next((i, r) for i, r in enumerate(records(case)) if r.speaker == axis and r.session_id == case.current.id)
+        index, source = next((i, r) for i, r in enumerate(r for r in records(case) if r.kind == "dialogue") if r.speaker == axis and r.session_id == case.current.id)
         for criterion in [r for r in catalog.rubric.values() if r["axis"] == axis]:
             value, total = min(25, total), max(0, total - 25)
             scores[criterion["id"]] = {"score": value, "explanation": "실제 발언을 근거로 평가했습니다.",
@@ -39,6 +39,36 @@ async def test_both_thresholds_are_required(catalog, patient, counselor, passed)
     again = await EvaluationService(llm, catalog).evaluate(EvaluateRequest(state=response.state, session_id=case.current.id, request_id="retry"))
     assert again.replayed
     assert len(llm.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_empty_dialogue_evaluates_to_zero_without_model_or_notice_evidence(catalog):
+    case, llm = closed_case(0), FakeLLM()
+    response = await EvaluationService(llm, catalog).evaluate(EvaluateRequest(state=case, session_id=case.current.id, request_id="empty"))
+    value = response.state.current.evaluation
+    assert (value.patient_score, value.counselor_score, value.cleared) == (0, 0, False)
+    assert value.source_messages == value.metrics.calls == 0
+    assert value.model_revision == "not_used_empty_dialogue" and not llm.calls
+    assert all(not score.evidence for score in value.scores)
+    catalog.validate_state(response.state)
+
+
+@pytest.mark.asyncio
+async def test_closing_notice_cannot_be_scored_or_remembered(catalog):
+    from app.core.config import ExperimentError
+    from app.schemas.models import CLOSING_TEXT, Evidence, Memory, MemoryItem
+    case = closed_case(1)
+    llm = FakeLLM([("JudgmentProposal", judgment(catalog, case))])
+    response = await EvaluationService(llm, catalog).evaluate(EvaluateRequest(state=case, session_id=case.current.id, request_id="grade_notice"))
+    assert response.state.current.evaluation.source_messages == 2
+    assert CLOSING_TEXT not in str(llm.calls)
+    score = next(s for s in response.state.current.evaluation.scores if s.criterion_id == "empathy")
+    score.evidence = [Evidence(message_id="closing:closing", quote=CLOSING_TEXT)]
+    with pytest.raises(ExperimentError, match="원문"):
+        catalog.validate_state(response.state)
+    case.memory = Memory(through_turn_id="turn_0", items=[MemoryItem(category="fact", speaker="counselor", text=CLOSING_TEXT, source_ids=["closing:closing"])])
+    with pytest.raises(ExperimentError, match="출처"):
+        catalog.validate_state(case)
 
 
 @pytest.mark.asyncio
@@ -89,7 +119,7 @@ async def test_long_evaluation_visits_all_records(catalog):
 
 
 @pytest.mark.asyncio
-async def test_retry_consultation_carries_memory_but_resets_question_budget(catalog):
+async def test_retry_consultation_carries_memory_but_resets_question_count(catalog):
     from app.schemas.models import Memory, MemoryItem, next_session
     case = closed_case()
     case.current.turns[0].candidate_fact_ids = ["cafe_strength"]
@@ -137,3 +167,22 @@ async def test_counter_only_positive_score_is_rejected_by_output_schema(catalog)
         await EvaluationService(FakeLLM([('JudgmentProposal', proposal)]), catalog).evaluate(
             EvaluateRequest(state=case, session_id=case.current.id, request_id='counter-only'))
     assert case.current.evaluation is None
+
+
+@pytest.mark.asyncio
+async def test_empty_reconsultation_keeps_patient_history_but_has_no_counselor_evidence(catalog):
+    from app.schemas.models import CloseRequest, next_session
+    from app.services.dialogue import DialogueService
+    first = closed_case(1)
+    llm = FakeLLM([("JudgmentProposal", judgment(catalog, first, 60, 70)),
+                   ("JudgmentProposal", judgment(catalog, first, 70, 0))])
+    evaluator = EvaluationService(llm, catalog)
+    evaluated = await evaluator.evaluate(EvaluateRequest(state=first, session_id=first.current.id, request_id="first_grade"))
+    second = next_session(evaluated.state)
+    closed = await DialogueService(llm, catalog).close_session(CloseRequest(state=second, session_id=second.current.id, request_id="second_close"))
+    result = await evaluator.evaluate(EvaluateRequest(state=closed.state, session_id=second.current.id, request_id="second_grade"))
+    value = result.state.current.evaluation
+    assert (value.patient_score, value.counselor_score) == (70, 0)
+    assert value.source_messages == 2 and not value.cleared
+    assert all(not score.evidence for score in value.scores if catalog.rubric[score.criterion_id]["axis"] == "counselor")
+    catalog.validate_state(result.state)

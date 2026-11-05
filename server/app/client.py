@@ -11,7 +11,7 @@ import httpx
 from pydantic import TypeAdapter
 
 from app.core.config import ExperimentError, ROOT, Settings
-from app.schemas.models import CaseState, CloseRequest, EvaluateRequest, Id, StateResponse, TurnRequest, new_id, records
+from app.schemas.models import FORMAT_VERSION, CaseState, CloseRequest, EvaluateRequest, Id, StateResponse, TurnRequest, new_id, records, request_closing
 from app.services.catalog import Catalog
 
 
@@ -45,14 +45,14 @@ class SaveStore:
         self.directory = Path(directory or os.getenv("SEOYUN_DATA_DIR", str(base / "gc-gamsamo/seoyun"))).expanduser().resolve()
         if self.directory.is_relative_to(ROOT):
             raise ValueError("상담 기록은 프로젝트 밖에 저장해야 합니다. SEOYUN_DATA_DIR을 확인하세요.")
-        self.root = self.directory / "v2"
+        self.root = self.directory / f"v{FORMAT_VERSION}"
 
     def _index(self):
         path = self.root / "index.json"
         if not path.exists():
-            return {"format_version": 2, "active_case_id": None, "cases": {}}
+            return {"format_version": FORMAT_VERSION, "active_case_id": None, "cases": {}}
         data = json.loads(path.read_text("utf-8"))
-        if not isinstance(data, dict) or data.get("format_version") != 2 or not isinstance(data.get("cases"), dict):
+        if not isinstance(data, dict) or data.get("format_version") != FORMAT_VERSION or not isinstance(data.get("cases"), dict):
             raise ValueError("자동 저장 인덱스가 손상되었거나 지원하지 않는 형식입니다.")
         active = data.get("active_case_id")
         for case_id, head in data["cases"].items():
@@ -143,14 +143,14 @@ class SaveStore:
         index = self._index()
         case_id = case_id or index["active_case_id"]
         if case_id is None:
-            if (self.directory / "active.json").exists():
-                raise LegacySaveError("이전 형식의 기록은 보존했습니다. --new로 형식 2의 새 실험을 시작하세요.")
+            if (self.directory / "active.json").exists() or (self.directory / "v2/index.json").exists():
+                raise LegacySaveError("이전 형식의 기록은 보존했습니다. --new로 형식 3의 새 실험을 시작하세요.")
             return None
         case_id = TypeAdapter(Id).validate_python(case_id)
         head = index["cases"].get(case_id)
         if head is None:
-            if (self.directory / case_id / "auto.json").exists():
-                raise LegacySaveError("주제 기반 형식 1은 이어하기로 변환하지 않습니다. 이전 기록을 보존하고 새 실험을 시작하세요.")
+            if (self.directory / case_id / "auto.json").exists() or (self.directory / "v2" / case_id).exists():
+                raise LegacySaveError("이전 형식 1·2는 이어하기로 변환하지 않습니다. 이전 기록을 보존하고 새 실험을 시작하세요.")
             raise ValueError("이 실험의 자동 저장 파일이 없습니다.")
         return self._read(case_id, head)
 
@@ -179,6 +179,7 @@ class SessionClient:
         self.pending_request = None
         self.pending_response = None
         self.pending_state = None
+        self.pending_transition = None
         # The terminal demo confirms the validated proposals. Unity owns its policy here.
         self.confirm_disclosures = confirm_disclosures or (lambda candidates, state: candidates)
         headers = {"Authorization": "Bearer " + settings.api_key} if settings.api_key else {}
@@ -191,6 +192,7 @@ class SessionClient:
         self.epoch += 1
         self.active_request = self.pending_request = self.pending_response = None
         self.pending_state = None
+        self.pending_transition = None
         self.pending_text = ""
 
     def token(self, request_id):
@@ -215,8 +217,6 @@ class SessionClient:
             raise ExperimentError("응답이 상담 생성 정보를 변경했습니다.", "invalid_response", 502)
         old_turns = [t.model_dump() for t in before.current.turns]
         kept_turns = [t.model_dump() for t in after.current.turns[:len(old_turns)]]
-        if before.current.phase == "closing" and kept_turns:
-            kept_turns[-1]["closing_text"] = old_turns[-1]["closing_text"]
         if kept_turns != old_turns or (response.replayed and after != before):
             raise ExperimentError("응답이 확정된 대화 원문을 변경했습니다.", "invalid_response", 502)
         if response.state.revealed_fact_ids != self.state.revealed_fact_ids:
@@ -243,7 +243,7 @@ class SessionClient:
     async def send(self, endpoint, request, request_id):
         if self.active_request is not None:
             raise ExperimentError("이전 응답을 기다리고 있습니다.", "request_pending", 409)
-        if self.pending_response is not None:
+        if self.pending_response is not None or self.pending_transition is not None:
             raise ExperimentError("받은 응답의 자동 저장을 먼저 /retry로 완료하세요.", "save_pending", 409)
         token = self.token(request_id)
         if (request.state.case_id, request.state.revision) != (token.case_id, token.revision):
@@ -280,6 +280,10 @@ class SessionClient:
                 self.active_request = None
 
     async def retry(self):
+        if self.pending_transition is not None:
+            self.save_closing_intent()
+            await self.finish()
+            return self.state
         if self.pending_response is not None:
             response, token = self.pending_response
             self.accept(response, token)
@@ -290,8 +294,10 @@ class SessionClient:
         return self.state
 
     async def turn(self, text):
-        if self.active_request is not None or self.pending_response is not None:
+        if self.active_request is not None or self.pending_response is not None or self.pending_transition is not None or self.pending_request is not None:
             raise ExperimentError("이전 응답을 기다리고 있거나 자동 저장을 완료해야 합니다.", "request_pending", 409)
+        if self.state.current.phase != "active":
+            raise ExperimentError("종료 요청 이후에는 새 대화를 보낼 수 없습니다.", "session_closed", 409)
         self.pending_text = text
         request = TurnRequest(state=self.state, session_id=self.state.current.id, turn_id=new_id("turn"), text=text)
         await self.send("/v1/dialogue/turn", request, request.turn_id)
@@ -302,13 +308,38 @@ class SessionClient:
         if saved != self.state:
             raise ExperimentError("확정 상태와 자동 저장이 일치하지 않습니다. 저장부터 완료하세요.", "save_required", 409)
 
+    def save_closing_intent(self):
+        if self.pending_transition is None:
+            self.pending_transition = request_closing(self.state)
+        self.store.save(self.pending_transition, expected_revision=self.state.revision)
+        self.state = self.pending_transition
+        self.pending_transition = None
+
     async def finish(self):
+        if self.active_request is not None or self.pending_response is not None:
+            raise ExperimentError("진행 중인 응답·저장을 먼저 완료하세요.", "request_pending", 409)
+        if self.pending_request is not None:
+            if isinstance(self.pending_request[1], CloseRequest):
+                await self.retry()
+                return self.state.current.closing_text
+            raise ExperimentError("진행 중인 요청을 먼저 /retry로 완료하세요.", "request_pending", 409)
         self.ensure_saved()
+        if self.state.current.phase == "active":
+            self.save_closing_intent()
+        if self.state.current.phase in {"pending_evaluation", "evaluated"}:
+            return self.state.current.closing_text
         request = CloseRequest(state=self.state, session_id=self.state.current.id, request_id=self.phase_request_id("closing"))
         await self.send("/v1/dialogue/close", request, request.request_id)
-        return self.state.current.turns[-1].closing_text
+        return self.state.current.closing_text
 
     async def evaluate(self):
+        if self.state.current.phase not in {"pending_evaluation", "evaluated"}:
+            raise ExperimentError("종료 안내 저장을 먼저 완료하세요.", "session_open", 409)
+        if self.pending_request is not None:
+            if isinstance(self.pending_request[1], EvaluateRequest) and not isinstance(self.pending_request[1], CloseRequest):
+                await self.retry()
+                return self.state.current.evaluation
+            raise ExperimentError("진행 중인 요청을 먼저 /retry로 완료하세요.", "request_pending", 409)
         self.ensure_saved()
         request = EvaluateRequest(state=self.state, session_id=self.state.current.id, request_id=self.phase_request_id("evaluation"))
         await self.send("/v1/dialogue/evaluate", request, request.request_id)

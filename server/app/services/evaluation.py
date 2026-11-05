@@ -8,7 +8,7 @@ from langgraph.graph import END, START, StateGraph
 from app.core.config import ExperimentError, InvalidModelOutput
 from app.llm.client import compact
 from app.schemas.models import (
-    CaseState, EvaluateRequest, Evaluation, EvidenceChoice, EvidenceProposal, Judgment,
+    CaseState, CriterionScore, EvaluateRequest, Evaluation, EvidenceChoice, EvidenceProposal, Judgment,
     Metrics, Model, ScoreProposal, StateResponse, now, records,
 )
 
@@ -225,13 +225,17 @@ class EvaluationService:
                                  base_revision=request.state.revision, state=request.state, replayed=True)
         started = perf_counter()
         metrics = Metrics()
-        original = [r.model_dump() for r in records(request.state)]
+        original = [r.model_dump(exclude={"kind"}) for r in records(request.state) if r.kind == "dialogue"]
         # Number exact passages; choosing a passage never requires the model to copy a quote.
         # Every character of every original utterance is included, in the original order.
         aliases, source = numbered_source(original)
         # Older counselor statements are context only; validation forbids their use for counselor scores.
-        result = await self.graph.ainvoke({"request": request, "metrics": metrics, "source": source})
-        scores = result["judgment"].scores
+        if source:
+            result = await self.graph.ainvoke({"request": request, "metrics": metrics, "source": source})
+            scores = result["judgment"].scores
+        else:
+            scores = [CriterionScore(criterion_id=key, score=0, explanation="평가할 대화가 없어 근거를 확인할 수 없습니다.", evidence=[])
+                      for key in self.catalog.rubric]
         for item in scores:
             for evidence in item.evidence:
                 evidence.message_id = aliases[evidence.message_id]
@@ -242,7 +246,7 @@ class EvaluationService:
         case.current.evaluation = Evaluation(
             scores=scores, patient_score=totals["patient"], counselor_score=totals["counselor"],
             cleared=all(v >= self.catalog.patient["clear_threshold"] for v in totals.values()), evaluated_at=now(),
-            model_revision=self.llm.config["revision"], prompt_version=self.catalog.prompt_version,
+            model_revision=self.llm.config["revision"] if source else "not_used_empty_dialogue", prompt_version=self.catalog.prompt_version,
             source_messages=len(original), metrics=metrics,
         )
         case.current.phase = "evaluated"

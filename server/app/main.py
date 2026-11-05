@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import ExperimentError, Settings
 from app.llm.client import VllmClient
 from app.llm.mock import MockLLM
-from app.schemas.models import CloseRequest, EvaluateRequest, StateResponse, TurnRequest
+from app.schemas.models import CONTENT_VERSION, FORMAT_VERSION, CloseRequest, EvaluateRequest, StateResponse, TurnRequest
 from app.services.catalog import Catalog
 from app.services.dialogue import DialogueService
 from app.services.evaluation import EvaluationService
@@ -33,7 +33,7 @@ def create_app(settings: Settings | None = None, llm=None):
         yield
         await engine.close()
 
-    app = FastAPI(title="서윤 상담 실험", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="서윤 상담 실험", version="0.3.0", lifespan=lifespan)
 
     @app.exception_handler(ExperimentError)
     async def experiment_error(request, exc):
@@ -42,10 +42,10 @@ def create_app(settings: Settings | None = None, llm=None):
     @app.exception_handler(RequestValidationError)
     async def validation_error(request, exc):
         state = exc.body.get("state", {}) if isinstance(exc.body, dict) else {}
-        legacy = isinstance(state, dict) and (state.get("format_version", 2) != 2 or state.get("content_version", "seoyun-2.0") != "seoyun-2.0")
+        legacy = isinstance(state, dict) and (state.get("format_version", FORMAT_VERSION) != FORMAT_VERSION or state.get("content_version", CONTENT_VERSION) != CONTENT_VERSION)
         return JSONResponse(status_code=422, content={"detail": {
             "code": "unsupported_save_version" if legacy else "invalid_request",
-            "message": "이전 기록은 보존하고 형식 2의 새 실험을 시작하세요." if legacy else "요청 형식·질문 사용량·상담 단계의 일관성을 확인하세요.",
+            "message": "이전 기록은 보존하고 형식 3의 새 실험을 시작하세요." if legacy else "요청 형식·질문 사용량·상담 단계의 일관성을 확인하세요.",
         }})
 
     async def authorize(authorization: str = Header(default="")):
@@ -58,7 +58,7 @@ def create_app(settings: Settings | None = None, llm=None):
         return JSONResponse(status_code=200 if status["ready"] else 503, content={
             "api": "ok", "inference": status, "content_version": catalog.patient["content_version"],
             "model_revision": engine.config["revision"], "prompt_version": catalog.prompt_version, "busy": gate.locked(),
-            "format_version": 2, "mode": "mock" if settings.mock else "model",
+            "format_version": FORMAT_VERSION, "mode": "mock" if settings.mock else "model",
         })
 
     @app.post("/v1/dialogue/turn", response_model=StateResponse, dependencies=[Depends(authorize)])

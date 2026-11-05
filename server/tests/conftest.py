@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from app.core.config import Settings
-from app.schemas.models import MemoryContent, Metrics, Record, CaseState, Turn, now
+from app.schemas.models import CLOSING_TEXT, MemoryContent, Metrics, Record, CaseState, Turn, now
 from app.services.catalog import Catalog
 
 
@@ -61,16 +61,15 @@ def case_with_questions(count=5):
     for i in range(count):
         state.current.turns.append(Turn(id=f"turn_{i}", user_text=f"질문 {i}: 어떤 마음인가요?", patient_text=f"답변 {i}: 제 마음을 생각해 봤어요.", question_delta=1))
     state.current.questions_used = count
-    state.current.phase = "closing" if count == 5 else "active"
     state.revision = count
     return state
 
 
-def closed_case():
-    state = case_with_questions()
+def closed_case(count=5):
+    state = case_with_questions(count)
     state.current.closed_at = now()
     state.current.closing_request_id = "closing"
-    state.current.turns[-1].closing_text = "오늘 이야기한 마음을 조금 더 생각해 볼게요."
+    state.current.closing_text = CLOSING_TEXT
     state.current.phase = "pending_evaluation"
     state.revision += 1
     return state

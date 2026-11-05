@@ -2,7 +2,7 @@
 
 2026 게임인재원 AI 해커톤 팀 공용 저장소입니다.
 
-작업 시작 전 [저장소 작업 지침](AGENTS.md)과 [최신 인수인계](docs/README.md)를 확인합니다. 매 작업은 검증 후 `docs/`에 완료 시각·함수·규칙·다음 작업을 기록하고, 커밋과 GitHub 푸시 확인까지 마무리합니다.
+작업 시작 전 [저장소 작업 지침](AGENTS.md)과 [통합 기획서 plan01](docs/plan01.md)을 확인합니다. 기획·구현·에셋 기록·인수인계는 이 파일 하나로 관리합니다. 매 작업은 검증 후 [작업 이력](docs/plan01.md#work-history)에 완료 시각·함수·규칙·다음 작업을 기록하고, 커밋과 GitHub 푸시 확인까지 마무리합니다.
 
 현재 저장소에는 **상담실과 진료기록부 UI 프로토타입**이 구현되어 있습니다. 상담실 왼쪽 아래 기록부를 누르면 배경이 흐려지고 환자 기록이 표시됩니다. 표시 데이터는 가상 환자 예시이며, 대화 서버와 게임 진행 시스템은 아직 이 화면에 연결하지 않았습니다.
 
@@ -20,7 +20,7 @@ Play 모드에서 `Gamsamo > Run UI Smoke Checks`로 클릭 영역, 모달 차�
 
 - 상담실: `Assets/_Project/Art/Backgrounds/ConsultationRoom.png` — 사용자 제공 상담실 원본.
 - 기록부: `Assets/_Project/Art/UI/MedicalRecord.png` — 사용자 제공 단독 기록부에서 외곽 배경을 투명하게 처리하고 사진 칸을 비운 이미지. 합성 참고 화면은 프로젝트에 포함하지 않았습니다.
-- 기록부 편집에는 기본 제공 ImageGen을 사용했습니다. 편집 지시는 원본의 1024 × 1536 구도, 클립보드·종이 질감, 한글 제목·항목명·표 선을 유지하면서 외곽과 클립 구멍만 투명하게 만들고, 사진 속 인물만 제거해 테두리 안을 종이색 공백으로 채우는 내용입니다. [최종 편집 프롬프트](docs/medical-record-image-edit.txt)를 함께 보관합니다.
+- 기록부 편집에는 기본 제공 ImageGen을 사용했습니다. 편집 지시는 원본의 1024 × 1536 구도, 클립보드·종이 질감, 한글 제목·항목명·표 선을 유지하면서 외곽과 클립 구멍만 투명하게 만들고, 사진 속 인물만 제거해 테두리 안을 종이색 공백으로 채우는 내용입니다. [최종 편집 프롬프트](docs/plan01.md#asset-edit)는 통합 기획서에 보관합니다.
 - 한글은 [Noto Sans CJK KR](https://github.com/notofonts/noto-cjk/tree/main/Sans/OTF/Korean)의 프로젝트 포함 폰트를 사용합니다. 라이선스는 `Assets/_Project/Fonts/OFL.txt`에 있습니다. TextMeshPro 필수 리소스는 `Assets/TextMesh Pro/`에 포함되어 있습니다.
 
 ## 개발 방향

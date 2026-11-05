@@ -3,8 +3,11 @@ import argparse
 import asyncio
 import json
 from pathlib import Path
+import sys
 
 import httpx
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
 
 from app.core.config import ROOT, Settings
 from app.main import create_app
@@ -85,8 +88,8 @@ async def documents():
         state = (await send("scoped-close", "/v1/dialogue/close", step("close_scoped")))["state"]
         state = (await send("scoped-evaluate", "/v1/dialogue/evaluate", step("evaluation_scoped")))["state"]
         await send("scoped-revisit", "/v1/dialogue/revisit", {"state": state, "session_id": "session_two", "request_id": "opening_two", "created_at": FIXED_TIME})
-    result["unauthorized.error.example.json"] = {"detail": {"code": "unauthorized", "message": "접근 키를 확인하세요."}}
-    result["legacy.error.example.json"] = {"detail": {"code": "unsupported_save_version", "message": "이전 기록은 보존하고 형식 4의 새 실험을 시작하세요."}}
+    result["unauthorized.error.example.json"] = {"detail": {"code": "unauthorized", "message": "접근 키를 확인하세요.", "retryable": False}}
+    result["legacy.error.example.json"] = {"detail": {"code": "unsupported_save_version", "message": "이전 기록은 보존하고 형식 4의 새 실험을 시작하세요.", "retryable": False}}
     return {name: json.dumps(value if name.endswith(".openapi.json") else normalized(value), ensure_ascii=False, indent=2) + "\n" for name, value in result.items()}
 
 

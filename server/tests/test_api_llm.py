@@ -105,6 +105,39 @@ async def test_two_invalid_outputs_fail_without_silent_fallback(settings):
 
 
 @pytest.mark.asyncio
+async def test_model_timeout_and_validation_errors_do_not_expose_private_feedback(settings):
+    from app.core.config import InvalidModelOutput
+    from app.core.telemetry import Trace, current_trace
+    trace = Trace()
+    token = current_trace.set(trace)
+    llm = VllmClient(settings, tokenizer=TinyTokenizer())
+    await llm.http.aclose()
+    def timeout(request):
+        raise httpx.ReadTimeout("private URL or response", request=request)
+    llm.http = httpx.AsyncClient(base_url="http://model", transport=httpx.MockTransport(timeout))
+    try:
+        with pytest.raises(ExperimentError) as error:
+            await llm.generate("patient", [{"role": "user", "content": "비공개 입력"}], PatientReply, Metrics())
+        assert error.value.code == "model_timeout" and error.value.status == 504
+        assert "private URL" not in str(error.value)
+        assert trace.calls == 1 and trace.max_context_tokens == 50
+        await llm.http.aclose()
+        llm.http = httpx.AsyncClient(base_url="http://model", transport=httpx.MockTransport(lambda request: httpx.Response(200, json={
+            "choices": [{"finish_reason": "stop", "message": {"content": '{"text":"검사 대사입니다.","disclosed_fact_ids":[]}'}}],
+            "usage": {"prompt_tokens": 50, "completion_tokens": 10}})))
+        def reject(value):
+            raise InvalidModelOutput("원문에 있는 비공개 상담 내용")
+        with pytest.raises(ExperimentError) as error:
+            await llm.generate("patient", [{"role": "user", "content": "비공개 입력"}], PatientReply, Metrics(), reject)
+        assert error.value.code == "invalid_model_output" and "비공개" not in str(error.value)
+        assert trace.calls == 3 and trace.prompt_tokens == 100 and trace.completion_tokens == 20
+        assert trace.postprocess_seconds > 0 and trace.model_seconds > 0
+    finally:
+        current_trace.reset(token)
+        await llm.close()
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("legacy_version", [1, 2, 3])
 async def test_legacy_version_errors_and_compound_success(legacy_version):
     settings = Settings(mock=True, api_key="test-key")

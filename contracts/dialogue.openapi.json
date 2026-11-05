@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "상담 게임 AI",
-    "version": "0.4.2"
+    "version": "0.4.3"
   },
   "paths": {
     "/health": {

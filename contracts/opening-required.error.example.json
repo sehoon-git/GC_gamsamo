@@ -1,6 +1,7 @@
 {
   "detail": {
     "code": "opening_required",
-    "message": "환자가 먼저 이야기하도록 첫 발화를 요청하세요."
+    "message": "환자가 먼저 이야기하도록 첫 발화를 요청하세요.",
+    "retryable": false
   }
 }

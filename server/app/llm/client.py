@@ -8,6 +8,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from app.core.config import ExperimentError, InvalidModelOutput, Settings
+from app.core.telemetry import current_trace
 from app.schemas.models import Metrics
 
 T = TypeVar("T", bound=BaseModel)
@@ -40,6 +41,9 @@ class VllmClient:
             messages, tokenize=True, add_generation_prompt=True, return_dict=False,
             **self.template_kwargs(role),
         )
+        trace = current_trace.get()
+        if trace is not None:
+            trace.max_context_tokens = max(trace.max_context_tokens, len(tokens))
         return len(tokens)
 
     def template_kwargs(self, role: str) -> dict:
@@ -85,16 +89,27 @@ class VllmClient:
                 response = await self.http.post("/v1/chat/completions", json=payload)
                 response.raise_for_status()
                 data = response.json()
+            except httpx.TimeoutException as exc:
+                raise ExperimentError("모델 응답 대기 시간이 초과되었습니다. 상태는 확정하지 않았습니다.", "model_timeout", 504) from exc
             except (httpx.HTTPError, ValueError) as exc:
                 raise ExperimentError("모델 서버 연결 또는 응답에 실패했습니다. 상태는 확정하지 않았습니다.", "model_unavailable", 503) from exc
             finally:
                 seconds = perf_counter() - started
                 metrics.calls += 1
                 metrics.role_seconds[role] = metrics.role_seconds.get(role, 0) + seconds
+                trace = current_trace.get()
+                if trace is not None:
+                    trace.calls += 1
+                    trace.model_seconds += seconds
+                    trace.role_seconds[role] = trace.role_seconds.get(role, 0) + seconds
+            processed = perf_counter()
             try:
                 usage = data.get("usage", {})
                 metrics.prompt_tokens += usage.get("prompt_tokens", 0)
                 metrics.completion_tokens += usage.get("completion_tokens", 0)
+                if trace is not None:
+                    trace.prompt_tokens += usage.get("prompt_tokens", 0)
+                    trace.completion_tokens += usage.get("completion_tokens", 0)
                 choice = data["choices"][0]
                 if choice.get("finish_reason") != "stop":
                     raise InvalidModelOutput("출력이 끝나기 전에 잘렸습니다. 더 짧게 작성하세요.")
@@ -107,7 +122,12 @@ class VllmClient:
                 error = str(exc)[:700]
                 if attempt == 0:
                     request_messages = messages + [{"role": "user", "content": "형식/검증 오류입니다. 원래 과제를 다시 수행하고 JSON만 짧게 반환하세요. 잘린 출력은 더 간결하게 만드세요. 오류: " + error}]
-        raise ExperimentError(f"{role} 모델 출력 검증이 두 번 실패했습니다: " + error, "invalid_model_output", 502)
+            finally:
+                if trace is not None:
+                    trace.postprocess_seconds += perf_counter() - processed
+        # Validation feedback can contain source quotes. Keep it inside the model
+        # repair request, never in a default error response or application log.
+        raise ExperimentError(f"{role} 모델 출력 검증이 두 번 실패했습니다. 저장된 상태에서 같은 요청으로 재시도하세요.", "invalid_model_output", 502)
 
     async def close(self):
         await self.http.aclose()

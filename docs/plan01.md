@@ -1683,3 +1683,14 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 
 - 2026-11-06 07:19:26 KST (UTC+09:00) 후속: 사용자가 하단 UI를 승인하고 상단 이름 버튼 제거를 요청했다. BuildPreview의 검증용 선택 버튼 생성만 제거했다. 실제 상담실 씬/프리팹/하단 UI는 직전 승인 상태 그대로 유지한다. 갱신 미리보기 경로는 artifacts/dialogue-style/clean-player/DialogueStyle.exe다.
 - 2026-11-06 07:20:07 KST (UTC+09:00) 제출 검증: 상단 이름 버튼 제거 후 Windows 미리보기 재빌드 성공 및 5인 글자 중앙 검사 통과(clean-preview.log). Computer Use는 사용자 Escape로 중단되어 제거 후 실제 화면 확인은 미수행이다. 하단 UI와 출시 씬/프리팹은 변경하지 않았으며 기존 main 대상 PR #43에 후속 커밋으로 반영한다.
+
+### 17.35 PR #42 한이수 프로필 화면 연결
+
+- 기록·제출 준비 완료 시각: 2026-11-06 07:47:30 KST (UTC+09:00). 최신 origin/main의 58e49e4에서 codex/han-isu-profile-connection을 만들고 작업했다. 앞선 안내서 작업의 17.34 기록은 PR #44에서 관리한다.
+- 원인: PR #42는 han-isu.png와 .meta만 추가했고 상담실 씬·프리팹은 기존 빈 프로필 이미지를 참조했다. 실제 ProfileView와 PcContentBuilder에 기본 카드를 연결하고 이미지에 그려진 값 위에 TMP 글자가 중복되지 않게 했다.
+- 연결: ProfileView.SetDefaultArtwork/UsesDefaultArtwork가 기본 카드 표시를 결정한다. SetProfile에 이름·소속·소개를 전달하거나 남성 아바타를 요청하면 기존 빈 카드와 동적 글자로 전환한다. 그림 속 한이수 정보를 저장 데이터에 쓰지 않는다. 기본 이미지 연결 및 재적용 메뉴는 15절에 기록했다.
+- 범위: 실제 씬과 ConsultationRoomUI 프리팹에서 프로필 관련 5개 컴포넌트만 변경했다. 무관한 Unity 직렬화 재정렬·폰트 캐시·ProjectSettings 변경은 제외했다. 저장 데이터 소유권·저장 버전·이관 정책·진행·보상·AI 계약은 기존 서비스 그대로다.
+- 자동 검증: 새 프로필 검사 7개와 기존 presentation 검사 77개 통과. Unity 6000.3.28f1 Windows Development 미리보기 빌드 성공. 로그는 artifacts/profile/install-checks.log와 build.log이며 Git에서 제외한다. 코드·문서·씬/프리팹 diff 검사도 통과했다.
+- 화면 검증: Computer Use로 별도 제품명 GC_gamsamo_Profile_Preview의 실제 Windows 빌드를 조작했다. PC 열기 → 내 프로필 → 한이수 이름·상담실 소속·소개 문구 표시 → 닫기 → 재열기를 확인했다. 이 빌드에서는 AI·진행 서비스를 제거했으며 실제 사용자 저장이나 서버 상담을 호출하지 않았다. 이후 사용자의 물리 Escape로 Computer Use가 중단되어 추가 조작을 멈췄다.
+- 로컬 적용: 사용자가 실제로 열어 둔 GC_gamsamo_play/GC_gamsamo에도 구현 커밋 02372b5를 fast-forward로 반영했다. 해당 체크아웃의 기존 폰트·프로젝트 설정 수정은 보존했다. 사용자의 원래 저장을 사용하는 에디터 Play에서 전체 상담 E2E를 실행한 결과는 아니다.
+- 다음 작업: 이 연결 PR을 main에 병합하면 팀원들이 최신 main을 받아 같은 기본 프로필을 볼 수 있다. 진행별 프로필 편집·저장은 별도 통합 기능에서 SetProfile을 이용한다. 이 작업에서는 main 직접 push와 PR 병합을 실행하지 않는다.

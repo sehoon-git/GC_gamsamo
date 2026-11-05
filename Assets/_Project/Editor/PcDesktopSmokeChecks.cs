@@ -211,14 +211,14 @@ namespace Gamsamo.Editor
             run.Capture("pc-desktop.png");
             yield return 0.2f;
 
-            bool fiveTabs = desktop.tabButtons != null && desktop.tabButtons.Length == 5
+            bool sixTabs = desktop.tabButtons != null && desktop.tabButtons.Length == 6
                 && desktop.tabButtons.All(button => button != null)
-                && desktop.shopSprites != null && desktop.shopSprites.Length == 5
+                && desktop.shopSprites != null && desktop.shopSprites.Length == 6
                 && desktop.shopSprites.All(sprite => sprite != null);
-            run.Check(fiveTabs, "Five category buttons and five shop sprites are assigned");
-            if (fiveTabs)
+            run.Check(sixTabs, "Six category buttons and six shop sprites are assigned");
+            if (sixTabs)
             {
-                run.Check(desktop.shopSprites.Distinct().Count() == 5, "Each shop category uses a distinct supplied sprite");
+                run.Check(desktop.shopSprites.Distinct().Count() == 6, "Each shop category uses a distinct supplied sprite");
                 desktop.shopButton.onClick.Invoke();
                 yield return 0.15f;
                 run.Check(desktop.IsShopOpen && desktop.shopWindow.activeInHierarchy
@@ -226,7 +226,7 @@ namespace Gamsamo.Editor
                     "Shop shortcut opens the shop window");
                 run.Check(!desktop.shortcuts.interactable, "Open shop blocks desktop shortcut input");
 
-                for (int index = 0; index < 5; index++)
+                for (int index = 0; index < 6; index++)
                 {
                     var button = desktop.tabButtons[index];
                     Vector2 tabPoint = ScreenPoint((RectTransform)button.transform, new Vector2(0.5f, 0.5f));
@@ -408,19 +408,19 @@ namespace Gamsamo.Editor
             CheckText(run, desktop.balanceText, "balance");
 
             desktop.OpenShop();
-            if (fiveTabs) desktop.SelectTab(4);
+            if (sixTabs) desktop.SelectTab(5);
             run.Check(desktop.CloseActiveWindow() && !desktop.IsShopOpen && room.IsPcOpen,
                 "Nested-window close consumes the shop without closing the PC");
             run.Check(!desktop.CloseActiveWindow(), "Nested-window close reports false on the plain desktop");
             desktop.OpenShop();
-            if (fiveTabs) desktop.SelectTab(4);
+            if (sixTabs) desktop.SelectTab(5);
             room.pcBackdropButton.onClick.Invoke();
             yield return 0.15f;
             run.Check(!desktop.IsShopOpen && room.IsPcOpen,
                 "PC backdrop closes the nested shop before the whole desktop");
             CheckBlur(run, "After backdrop closes the nested shop");
             desktop.OpenShop();
-            if (fiveTabs) desktop.SelectTab(4);
+            if (sixTabs) desktop.SelectTab(5);
             room.ClosePc();
             yield return 0.4f;
             CheckRoomClosed(run, "Closing the PC with a shop tab open");

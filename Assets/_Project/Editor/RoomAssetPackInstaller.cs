@@ -27,9 +27,12 @@ namespace Gamsamo.Editor
             if (roomFrame == null || recordImage == null || scaler == null)
                 throw new InvalidOperationException("RoomFrame, record artwork Image, or CanvasScaler is missing.");
 
-            var layout = JsonUtility.FromJson<RoomLayout>(File.ReadAllText(ArtRoot + "layout.json"));
+            // JsonUtility fields cannot contain the source's hyphenated property name.
+            string json = File.ReadAllText(ArtRoot + "layout.json").Replace("\"room-wallpaper\":", "\"roomWallpaper\":");
+            var layout = JsonUtility.FromJson<RoomLayout>(json);
             ValidateLayout(layout);
             Texture2D baseTexture = Texture(ArtRoot + layout.@base);
+            Texture2D wallpaper = Texture(ArtRoot + layout.assets.roomWallpaper.file);
             Texture2D door = Texture(ArtRoot + layout.assets.door.file);
             Texture2D clear = Texture(ArtRoot + layout.assets.window.clear.file);
             Texture2D cloudy = Texture(ArtRoot + layout.assets.window.cloudy.file);
@@ -64,6 +67,7 @@ namespace Gamsamo.Editor
             appearance.compositeShader = shader;
             appearance.canvasSize = new Vector2Int(layout.canvas.width, layout.canvas.height);
             appearance.baseTexture = baseTexture;
+            appearance.defaultRoomWallpaper = wallpaper;
             appearance.defaultDoor = door;
             appearance.clearWindow = clear;
             appearance.cloudyWindow = cloudy;
@@ -80,6 +84,7 @@ namespace Gamsamo.Editor
             previews.SetSiblingIndex(room.background.transform.GetSiblingIndex() + 1);
             appearance.editorPreviewLayers = previews.gameObject;
             previews.gameObject.SetActive(true);
+            LayerPreview(previews, "RoomWallpaper", appearance.TextureForLayer(ConsultationRoomAppearance.CosmeticLayer.RoomWallpaper), layout.assets.roomWallpaper.ToRect(), layout);
             LayerPreview(previews, "Door", appearance.TextureForLayer(ConsultationRoomAppearance.CosmeticLayer.Door), appearance.doorRect, layout);
             LayerPreview(previews, "Window", appearance.TextureForLayer(ConsultationRoomAppearance.CosmeticLayer.Window), appearance.windowRect, layout);
             LayerPreview(previews, "Pc", appearance.TextureForLayer(ConsultationRoomAppearance.CosmeticLayer.Pc), appearance.pcRect, layout);
@@ -164,11 +169,13 @@ namespace Gamsamo.Editor
             if (layout?.canvas == null || layout.canvas.width != 1920 || layout.canvas.height != 1080
                 || layout.origin != "top-left" || layout.units != "px" || layout.assets?.door == null
                 || layout.assets.pc == null || layout.assets.clipboard == null || layout.assets.window?.clear == null
-                || layout.assets.window.cloudy == null || layout.assets.window.rain == null)
+                || layout.assets.window.cloudy == null || layout.assets.window.rain == null || layout.assets.roomWallpaper == null)
                 throw new InvalidOperationException("The supported room pack uses a complete 1920 x 1080 top-left pixel layout.");
             string order = layout.draw_order != null ? string.Join(",", layout.draw_order) : "";
-            if (order != "base,door,window,pc,clipboard")
+            if (order != "base,room-wallpaper,door,window,pc,clipboard")
                 throw new InvalidOperationException("The room pack draw order has changed; update the compositor before applying it.");
+            if (layout.assets.roomWallpaper.ToRect() != new Rect(0, 0, layout.canvas.width, layout.canvas.height))
+                throw new InvalidOperationException("Room wallpaper must cover the full canvas behind the furniture.");
             if (layout.assets.window.clear.ToRect() != layout.assets.window.cloudy.ToRect()
                 || layout.assets.window.clear.ToRect() != layout.assets.window.rain.ToRect())
                 throw new InvalidOperationException("Weather window variants must share the same room rectangle.");
@@ -249,7 +256,7 @@ namespace Gamsamo.Editor
             public Rect ToRect() => new Rect(x, y, width, height);
         }
         [Serializable] private sealed class Windows { public Layer clear; public Layer cloudy; public Layer rain; }
-        [Serializable] private sealed class RoomAssets { public Layer door; public Windows window; public Layer pc; public Layer clipboard; }
+        [Serializable] private sealed class RoomAssets { public Layer door; public Windows window; public Layer pc; public Layer clipboard; public Layer roomWallpaper; }
         [Serializable] private sealed class RoomLayout
         {
             public CanvasSize canvas;

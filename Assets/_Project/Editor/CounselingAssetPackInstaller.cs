@@ -52,7 +52,7 @@ namespace Gamsamo.Editor
                 AssetDatabase.SaveAssetIfDirty(font);
             }
             finally { PrefabUtility.UnloadPrefabContents(prefab); }
-            Debug.Log("Counseling asset pack applied to scene and prefab, including 40 cosmetic previews and window blinds.");
+            Debug.Log("Counseling asset pack applied to scene and prefab, including 48 cosmetic previews, room wallpaper and window blinds.");
         }
 
         private static void Upgrade(ConsultationRoomController room, TMP_FontAsset font, CosmeticCatalog cosmetics)

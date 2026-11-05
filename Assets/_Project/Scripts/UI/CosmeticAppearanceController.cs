@@ -25,7 +25,7 @@ namespace Gamsamo.UI
             && !string.IsNullOrEmpty(SelectedId("window"));
 
         private readonly Dictionary<string, string> selected = new Dictionary<string, string>(StringComparer.Ordinal);
-        private static readonly string[] Targets = { "window", "door", "clipboard", "pc", "wallpaper" };
+        private static readonly string[] Targets = { "window", "door", "clipboard", "pc", "wallpaper", "room-wallpaper" };
 
         private void Awake()
         {
@@ -48,6 +48,9 @@ namespace Gamsamo.UI
             bool applied;
             switch (item.target)
             {
+                case "room-wallpaper":
+                    applied = PreviewRoomLayer(ConsultationRoomAppearance.CosmeticLayer.RoomWallpaper, item.artwork);
+                    break;
                 case "window":
                     applied = PreviewWindow(item);
                     break;
@@ -96,7 +99,7 @@ namespace Gamsamo.UI
             Changed?.Invoke();
         }
 
-        /// <summary>Restores all five cosmetic categories without changing the game's current weather.</summary>
+        /// <summary>Restores all cosmetic categories without changing the game's current weather.</summary>
         public void RestoreAll()
         {
             EnsureReferences();
@@ -142,6 +145,10 @@ namespace Gamsamo.UI
         {
             switch (target)
             {
+                case "room-wallpaper":
+                    if (roomAppearance == null) return false;
+                    roomAppearance.RestoreDefault(ConsultationRoomAppearance.CosmeticLayer.RoomWallpaper);
+                    return true;
                 case "window":
                     if (roomAppearance == null) return false;
                     roomAppearance.RestoreDefault(ConsultationRoomAppearance.CosmeticLayer.Window);

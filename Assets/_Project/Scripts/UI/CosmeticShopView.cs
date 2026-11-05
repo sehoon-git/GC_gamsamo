@@ -11,7 +11,7 @@ namespace Gamsamo.UI
     public sealed class CosmeticShopView : MonoBehaviour
     {
         public const int SlotCount = 8;
-        private static readonly string[] Targets = { "window", "door", "clipboard", "pc", "wallpaper" };
+        private static readonly string[] Targets = { "window", "door", "clipboard", "pc", "wallpaper", "room-wallpaper" };
 
         public CosmeticCatalog catalog;
         public CosmeticAppearanceController appearance;

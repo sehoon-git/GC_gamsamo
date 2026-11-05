@@ -12,13 +12,14 @@ namespace Gamsamo.UI
     public sealed class ConsultationRoomAppearance : MonoBehaviour
     {
         public enum Weather { Clear, Cloudy, Rain }
-        public enum CosmeticLayer { Window, Door, Clipboard, Pc }
+        public enum CosmeticLayer { Window, Door, Clipboard, Pc, RoomWallpaper }
 
         public ConsultationRoomController room;
         public Shader compositeShader;
         public GameObject editorPreviewLayers;
         public Vector2Int canvasSize = new Vector2Int(1920, 1080);
         public Texture2D baseTexture;
+        public Texture2D defaultRoomWallpaper;
         public Texture2D defaultDoor;
         public Texture2D clearWindow;
         public Texture2D cloudyWindow;
@@ -36,6 +37,7 @@ namespace Gamsamo.UI
         [SerializeField] private Texture2D windowCosmetic;
         [SerializeField] private Texture2D pcCosmetic;
         [SerializeField] private Texture2D clipboardCosmetic;
+        [SerializeField] private Texture2D roomWallpaperCosmetic;
         [SerializeField] private Texture2D[] windowVariantTextures = Array.Empty<Texture2D>();
         [SerializeField, Range(0, 2)] private int windowBlindState;
 
@@ -87,6 +89,7 @@ namespace Gamsamo.UI
                 case CosmeticLayer.Door: doorCosmetic = texture; break;
                 case CosmeticLayer.Clipboard: clipboardCosmetic = texture; break;
                 case CosmeticLayer.Pc: pcCosmetic = texture; break;
+                case CosmeticLayer.RoomWallpaper: roomWallpaperCosmetic = texture; break;
                 default: throw new ArgumentOutOfRangeException(nameof(layer));
             }
             RebuildIfPlaying();
@@ -129,7 +132,7 @@ namespace Gamsamo.UI
         public void RestoreDefaults()
         {
             weather = Weather.Clear;
-            doorCosmetic = windowCosmetic = pcCosmetic = clipboardCosmetic = null;
+            doorCosmetic = windowCosmetic = pcCosmetic = clipboardCosmetic = roomWallpaperCosmetic = null;
             windowVariantTextures = Array.Empty<Texture2D>();
             windowBlindState = 0;
             RebuildIfPlaying();
@@ -139,6 +142,7 @@ namespace Gamsamo.UI
         {
             switch (layer)
             {
+                case CosmeticLayer.RoomWallpaper: return roomWallpaperCosmetic != null ? roomWallpaperCosmetic : defaultRoomWallpaper;
                 case CosmeticLayer.Door: return doorCosmetic != null ? doorCosmetic : defaultDoor;
                 case CosmeticLayer.Pc: return pcCosmetic != null ? pcCosmetic : defaultPc;
                 case CosmeticLayer.Clipboard: return clipboardCosmetic != null ? clipboardCosmetic : defaultClipboard;
@@ -207,6 +211,7 @@ namespace Gamsamo.UI
                 Matrix4x4 projection = GL.GetGPUProjectionMatrix(
                     Matrix4x4.Ortho(0, canvasSize.x, canvasSize.y, 0, -1, 1), true);
                 Draw(commands, baseTexture, new Rect(0, 0, canvasSize.x, canvasSize.y), projection);
+                Draw(commands, TextureForLayer(CosmeticLayer.RoomWallpaper), new Rect(0, 0, canvasSize.x, canvasSize.y), projection);
                 Draw(commands, TextureForLayer(CosmeticLayer.Door), doorRect, projection);
                 Draw(commands, TextureForLayer(CosmeticLayer.Window), windowRect, projection);
                 Draw(commands, TextureForLayer(CosmeticLayer.Pc), pcRect, projection);
@@ -293,6 +298,8 @@ namespace Gamsamo.UI
 
         private void Draw(CommandBuffer commands, Texture texture, Rect rect, Matrix4x4 projection)
         {
+            // The wallpaper layer is optional; null leaves the original wall visible.
+            if (texture == null) return;
             var properties = new MaterialPropertyBlock();
             properties.SetTexture(LayerTextureId, texture);
             properties.SetVector(LayerRectId, new Vector4(rect.x, rect.y, rect.width, rect.height));

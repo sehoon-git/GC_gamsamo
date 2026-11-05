@@ -18,7 +18,7 @@ namespace Gamsamo.Editor
     public static class CosmeticSmokeChecks
     {
         private const string Menu = "Gamsamo/Run Cosmetic Checks";
-        private static readonly string[] Targets = { "window", "door", "clipboard", "pc", "wallpaper" };
+        private static readonly string[] Targets = { "window", "door", "clipboard", "pc", "wallpaper", "room-wallpaper" };
         private static RunState run;
         private static IEnumerator steps;
         private static double resumeAt, deadline;
@@ -94,14 +94,14 @@ namespace Gamsamo.Editor
             var desktop = appearance.desktop;
             var shop = desktop.shopView;
             var catalog = appearance.catalog;
-            bool ready = catalog != null && catalog.items != null && catalog.items.Length == 40 && shop != null;
-            r.Check(ready, "Catalog has 40 entries and shop is connected");
+            bool ready = catalog != null && catalog.items != null && catalog.items.Length == 48 && shop != null;
+            r.Check(ready, "Catalog has 48 entries and shop is connected");
             if (!ready) yield break;
-            r.Check(catalog.items.Select(item => item.id).Distinct().Count() == 40,
+            r.Check(catalog.items.Select(item => item.id).Distinct().Count() == 48,
                 "All product IDs are unique");
             r.Check(catalog.items.All(item => !item.hasPrice && item.thumbnail != null),
                 "Every item has a thumbnail and an explicitly unset price");
-            r.Check(Targets.All(target => catalog.GetItems(target).Length == 8), "Five categories contain eight items each");
+            r.Check(Targets.All(target => catalog.GetItems(target).Length == 8), "Six categories contain eight items each");
             appearance.RestoreAll();
             room.CloseRecord();
             room.OpenPc();
@@ -144,7 +144,9 @@ namespace Gamsamo.Editor
                             "Desk and enlarged record change together: " + item.id);
                     else if (item.target != "window")
                     {
-                        var layer = item.target == "door" ? ConsultationRoomAppearance.CosmeticLayer.Door : ConsultationRoomAppearance.CosmeticLayer.Pc;
+                        var layer = item.target == "door" ? ConsultationRoomAppearance.CosmeticLayer.Door
+                            : item.target == "room-wallpaper" ? ConsultationRoomAppearance.CosmeticLayer.RoomWallpaper
+                            : ConsultationRoomAppearance.CosmeticLayer.Pc;
                         r.Check(appearance.roomAppearance.TextureForLayer(layer) == item.artwork.texture, "Room layer changes: " + item.id);
                     }
                     r.Check(Mathf.Approximately(Blur(room), 1), "Preview preserves open-PC blur: " + item.id);
@@ -162,6 +164,7 @@ namespace Gamsamo.Editor
                 r.Check(string.IsNullOrEmpty(appearance.SelectedId(Targets[category])), "Category default restores: " + category);
             }
 
+            CheckRoomWallpaper(r, appearance);
             var windowChecks = CheckWindowInteraction(r, room, appearance);
             while (windowChecks.MoveNext()) yield return windowChecks.Current;
             room.OpenPc();
@@ -224,7 +227,7 @@ namespace Gamsamo.Editor
             room.OpenPc();
             yield return 0.4f;
             desktop.OpenShop();
-            r.Check(Targets.All(target => appearance.SelectedId(target) == target + ".sage"), "All five previews survive closing and reopening PC");
+            r.Check(Targets.All(target => appearance.SelectedId(target) == target + ".sage"), "All six previews survive closing and reopening PC");
             string selected = appearance.SelectedId("window");
             r.Check(!appearance.Preview("missing.product") && appearance.SelectedId("window") == selected,
                 "Unknown IDs cannot change appearance");
@@ -232,6 +235,55 @@ namespace Gamsamo.Editor
                 && PlayerPrefs.GetString(GameSettings.PlayerPrefsKey, "") == r.Settings,
                 "Cosmetic previews do not change saved game settings");
             r.Check(desktop.balanceText.text == "—", "No invented currency or free purchase is granted");
+        }
+
+        private static void CheckRoomWallpaper(RunState r, CosmeticAppearanceController appearance)
+        {
+            var room = appearance.roomAppearance;
+            appearance.Preview("wallpaper.midnight");
+            Sprite desktopWallpaper = appearance.desktop.wallpaper.sprite;
+            Color32[] baseline = RoomSamples(room.CompositeTexture);
+            var wallColors = new HashSet<Color32>();
+            foreach (CosmeticItem item in appearance.catalog.GetItems("room-wallpaper"))
+            {
+                appearance.Preview(item.id);
+                Color32[] changed = RoomSamples(room.CompositeTexture);
+                r.Check(!changed[0].Equals(baseline[0]) && wallColors.Add(changed[0]), "Distinct rendered wall color: " + item.id);
+                r.Check(changed.Skip(1).SequenceEqual(baseline.Skip(1)), "Wallpaper preserves door, window, PC, record and desk pixels: " + item.id);
+                r.Check(appearance.desktop.wallpaper.sprite == desktopWallpaper, "Room wallpaper preserves PC wallpaper: " + item.id);
+                appearance.RestoreCategory("room-wallpaper");
+                r.Check(RoomSamples(room.CompositeTexture).SequenceEqual(baseline)
+                    && appearance.SelectedId("wallpaper") == "wallpaper.midnight", "Wallpaper restore recovers room pixels independently: " + item.id);
+            }
+            appearance.Preview("room-wallpaper.sage");
+            appearance.RestoreCategory("wallpaper");
+            r.Check(appearance.SelectedId("room-wallpaper") == "room-wallpaper.sage"
+                && room.TextureForLayer(ConsultationRoomAppearance.CosmeticLayer.RoomWallpaper)
+                    == appearance.catalog.Find("room-wallpaper.sage").artwork.texture,
+                "PC wallpaper restore preserves selected room wallpaper");
+            appearance.RestoreAll();
+            r.Check(Targets.All(target => string.IsNullOrEmpty(appearance.SelectedId(target)))
+                && RoomSamples(room.CompositeTexture).SequenceEqual(baseline), "RestoreAll includes room wallpaper");
+        }
+
+        private static Color32[] RoomSamples(RenderTexture source)
+        {
+            // Top-left source coordinates: exposed wall, door, window, PC, clipboard, desk.
+            var points = new[] { new Vector2Int(650, 300), new Vector2Int(300, 350),
+                new Vector2Int(1000, 250), new Vector2Int(1600, 500), new Vector2Int(150, 850), new Vector2Int(1000, 980) };
+            var readback = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
+            RenderTexture previous = RenderTexture.active;
+            try
+            {
+                RenderTexture.active = source;
+                readback.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0, false);
+                return points.Select(point => (Color32)readback.GetPixel(point.x, source.height - 1 - point.y)).ToArray();
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                UnityEngine.Object.DestroyImmediate(readback);
+            }
         }
 
         private static IEnumerator CheckWindowInteraction(RunState r, ConsultationRoomController room,
@@ -468,10 +520,11 @@ namespace Gamsamo.Editor
             private static readonly ConsultationRoomAppearance.CosmeticLayer[] Layers =
             {
                 ConsultationRoomAppearance.CosmeticLayer.Window, ConsultationRoomAppearance.CosmeticLayer.Door,
-                ConsultationRoomAppearance.CosmeticLayer.Clipboard, ConsultationRoomAppearance.CosmeticLayer.Pc
+                ConsultationRoomAppearance.CosmeticLayer.Clipboard, ConsultationRoomAppearance.CosmeticLayer.Pc,
+                ConsultationRoomAppearance.CosmeticLayer.RoomWallpaper
             };
             private static readonly string[] CosmeticProperties =
-                { "windowCosmetic", "doorCosmetic", "clipboardCosmetic", "pcCosmetic" };
+                { "windowCosmetic", "doorCosmetic", "clipboardCosmetic", "pcCosmetic", "roomWallpaperCosmetic" };
 
             public RunState(CosmeticAppearanceController appearance)
             {

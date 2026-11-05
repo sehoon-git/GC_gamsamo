@@ -33,7 +33,7 @@ namespace Gamsamo.Editor
             var pc = JsonUtility.FromJson<PcLayout>(File.ReadAllText(PcArt + "layout.json"));
             var shop = JsonUtility.FromJson<ShopLayout>(File.ReadAllText(ShopArt + "layout.json"));
             var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
-            if (font == null || pc?.shortcuts?.Length != 4 || shop?.tabs?.Length != 5)
+            if (font == null || pc?.shortcuts?.Length != 4 || shop?.tabs?.Length != 6)
                 throw new InvalidOperationException("PC layout, shop layout, or Korean font is missing.");
 
             // Validate all images before creating anything in the scene or prefab.

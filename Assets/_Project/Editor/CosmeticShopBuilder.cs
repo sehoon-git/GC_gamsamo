@@ -14,7 +14,7 @@ namespace Gamsamo.Editor
     {
         private const string ArtPath = "Assets/_Project/Art/UI/CosmeticShop/";
         private const string ContentName = "DynamicCosmeticShop";
-        private static readonly string[] Targets = { "window", "door", "clipboard", "pc", "wallpaper" };
+        private static readonly string[] Targets = { "window", "door", "clipboard", "pc", "wallpaper", "room-wallpaper" };
         private static readonly Color Ink = new Color32(72, 63, 52, 255);
         private static readonly Color Accent = new Color32(69, 110, 91, 255);
         // Keep the original 500 px of tabs/cards and the 12 px bottom frame unscaled.
@@ -34,6 +34,9 @@ namespace Gamsamo.Editor
                 throw new ArgumentException("The existing PC shop, cosmetic catalog, appearance controller and font are required.");
 
             ShopLayout layout = JsonUtility.FromJson<ShopLayout>(File.ReadAllText(ArtPath + "layout.json"));
+            if (layout?.tabs == null || !layout.tabs.Select(tab => tab?.id).SequenceEqual(Targets)
+                || layout.tabs.Any(tab => tab.hit_rect == null || tab.hit_rect.width <= 0 || tab.hit_rect.height <= 0))
+                throw new InvalidOperationException("Shop layout must contain the six supported tab rectangles in order.");
             if (layout?.slots == null || layout.slots.Length != CosmeticShopView.SlotCount
                 || layout.slots.Select(slot => slot.index).Distinct().Count() != CosmeticShopView.SlotCount
                 || layout.slots.Any(slot => slot.index < 0 || slot.index >= CosmeticShopView.SlotCount
@@ -46,6 +49,16 @@ namespace Gamsamo.Editor
             desktop.shopImage.type = Image.Type.Sliced;
             desktop.shopImage.preserveAspect = false;
             desktop.shopImage.pixelsPerUnitMultiplier = 1;
+            // Reuse the installed tabs by name and append the wallpaper tab without replacing old IDs.
+            desktop.tabButtons = new Button[layout.tabs.Length];
+            for (int index = 0; index < layout.tabs.Length; index++)
+            {
+                ShopTab tab = layout.tabs[index];
+                RectTransform rect = Rect(tab.id + "Tab", desktop.shopWindow.transform);
+                Slot bounds = tab.hit_rect;
+                Place(rect, bounds.x, bounds.y, bounds.width, bounds.height);
+                desktop.tabButtons[index] = HitButton(rect);
+            }
 
             var view = desktop.shopWindow.GetComponent<CosmeticShopView>();
             if (view == null) view = desktop.shopWindow.AddComponent<CosmeticShopView>();
@@ -278,7 +291,8 @@ namespace Gamsamo.Editor
         }
 
 #pragma warning disable CS0649
-        [Serializable] private sealed class ShopLayout { public Slot[] slots; }
+        [Serializable] private sealed class ShopLayout { public Slot[] slots; public ShopTab[] tabs; }
+        [Serializable] private sealed class ShopTab { public string id; public Slot hit_rect; }
         [Serializable] private sealed class Slot { public int index; public float x, y, width, height; }
 #pragma warning restore CS0649
     }

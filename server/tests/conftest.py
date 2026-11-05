@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from app.core.config import Settings
-from app.schemas.models import MemoryContent, Metrics, Record, CaseState, Topic, Turn
+from app.schemas.models import MemoryContent, Metrics, Record, CaseState, Turn, now
 from app.services.catalog import Catalog
 
 
@@ -56,16 +56,28 @@ class FakeLLM:
         pass
 
 
-def case_with_topics(count=5):
+def case_with_questions(count=5):
     state = CaseState()
     for i in range(count):
-        state.current.topics.append(Topic(id=f"topic_{i}", label=f"주제 {i}"))
-        state.current.turns.append(Turn(id=f"turn_{i}", user_text=f"질문 {i}: 어떤 마음인가요?", patient_text=f"답변 {i}: 제 마음을 생각해 봤어요.", kind="new_topic"))
+        state.current.turns.append(Turn(id=f"turn_{i}", user_text=f"질문 {i}: 어떤 마음인가요?", patient_text=f"답변 {i}: 제 마음을 생각해 봤어요.", question_delta=1))
+    state.current.questions_used = count
+    state.current.phase = "closing" if count == 5 else "active"
+    state.revision = count
     return state
 
 
-def classification(kind="followup", topic_id="topic_4", **extra):
-    return {"kind": kind, "topic_id": topic_id, "topic_label": "현재 주제", "queued_topics": [], "disclose_fact_ids": [], "reason": "같은 주제의 심화 질문", **extra}
+def closed_case():
+    state = case_with_questions()
+    state.current.closed_at = now()
+    state.current.closing_request_id = "closing"
+    state.current.turns[-1].closing_text = "오늘 이야기한 마음을 조금 더 생각해 볼게요."
+    state.current.phase = "pending_evaluation"
+    state.revision += 1
+    return state
+
+
+def classification(question_count="one", **extra):
+    return {"topic_label": "현재 마음", "disclose_fact_ids": [], "reason": "현재 발언의 질문 분류", "question_count": question_count, **extra}
 
 
 def reply(text="아직 어렵지만 조금 생각해 볼 수 있을 것 같아요."):

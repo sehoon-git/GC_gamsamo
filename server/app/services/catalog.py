@@ -14,10 +14,16 @@ class Catalog:
         self.rubric = {r["id"]: r for r in self.patient["rubric"]}
         self.prompts = {p.stem: p.read_text("utf-8") for p in sorted(settings.prompts.glob("*.txt"))}
         self.prompt_version = hashlib.sha256(json.dumps(self.prompts, ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:16]
+        dialogue_prompts = {key: self.prompts[key] for key in ("controller", "patient", "summary")}
+        self.dialogue_prompt_version = hashlib.sha256(json.dumps(dialogue_prompts, ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:16]
 
     def validate_state(self, state: CaseState):
+        CaseState.model_validate(state.model_dump())
         if not set(state.revealed_fact_ids) <= self.facts.keys():
             raise ExperimentError("알 수 없는 공개 정보 ID가 있습니다.")
+        candidates = {f for session in state.sessions for turn in session.turns for f in turn.candidate_fact_ids}
+        if not candidates <= self.facts.keys() or not set(state.revealed_fact_ids) <= candidates:
+            raise ExperimentError("공개 확정 정보는 대화에 기록된 후보에서 선택해야 합니다.")
         record_map = {r.id: r for r in records(state)}
         covered_ids = set()
         if state.memory.through_turn_id:

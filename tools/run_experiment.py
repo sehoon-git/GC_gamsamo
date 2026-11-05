@@ -1,5 +1,6 @@
 """Start owned foreground services and the CLI; stop both on exit."""
 from pathlib import Path
+import argparse
 import os
 import signal
 import socket
@@ -45,7 +46,14 @@ def stop(process):
 
 
 def main():
-    for port in [8000, 8001]:
+    parser = argparse.ArgumentParser(description="모델·API·상담 실행")
+    parser.add_argument("--server-only", action="store_true", help="CLI 없이 서버를 계속 실행")
+    parser.add_argument("--mock", action="store_true", help="가중치 없이 모의 API 실행")
+    args = parser.parse_args()
+    if args.mock:
+        os.environ["SEOYUN_MOCK"] = "1"
+    mock = os.getenv("SEOYUN_MOCK") == "1"
+    for port in ([8001] if mock else [8000, 8001]):
         with socket.socket() as connection:
             if connection.connect_ex(("127.0.0.1", port)) == 0:
                 raise SystemExit(f"{port} 포트가 사용 중입니다. 기존 두 서버가 준비되어 있다면 python tools/chat.py로 접속하세요.")
@@ -53,7 +61,8 @@ def main():
     output.mkdir(exist_ok=True)
     processes, handles = [], []
     try:
-        for script, port, name in [("serve_model.py", 8000, "vllm"), ("serve_api.py", 8001, "api")]:
+        services = [("serve_api.py", 8001, "api")] if mock else [("serve_model.py", 8000, "vllm"), ("serve_api.py", 8001, "api")]
+        for script, port, name in services:
             log = output / f"{name}.log"
             handle = log.open("w", encoding="utf-8")
             handles.append(handle)
@@ -61,6 +70,12 @@ def main():
                                        stdout=handle, stderr=subprocess.STDOUT, start_new_session=True)
             processes.append(process)
             wait_ready(process, f"http://127.0.0.1:{port}/health", log)
+        if args.server_only:
+            print("모의 API 준비 완료" if mock else "AI API 준비 완료", flush=True)
+            print("서버 전용 모드입니다. Ctrl+C로 종료합니다.", flush=True)
+            while all(p.poll() is None for p in processes):
+                time.sleep(1)
+            raise RuntimeError("서버가 종료되었습니다. ai/outputs 로그를 확인하세요.")
         return subprocess.call([sys.executable, str(ROOT / "tools/chat.py")], cwd=ROOT)
     except (RuntimeError, KeyboardInterrupt) as exc:
         print(str(exc))

@@ -9,10 +9,52 @@
   "gpu_memory_utilization": 0.9,
   "max_num_seqs": 1,
   "roles": {
-    "patient": {"temperature": 0.7, "max_tokens": 512, "thinking": false},
-    "controller": {"temperature": 0.1, "max_tokens": 1024, "thinking": false},
-    "summary": {"temperature": 0.1, "max_tokens": 2048, "thinking": false},
-    "evidence": {"temperature": 0.1, "max_tokens": 2048, "thinking": false},
-    "evaluation": {"temperature": 0.2, "max_tokens": 4096, "thinking": true, "thinking_token_budget": 1024}
-  }
+    "patient": {
+      "temperature": 0.7,
+      "max_tokens": 512,
+      "thinking": false,
+      "top_p": 1.0,
+      "top_k": -1,
+      "presence_penalty": 0.0,
+      "repetition_penalty": 1.0
+    },
+    "controller": {
+      "temperature": 0.1,
+      "max_tokens": 1024,
+      "thinking": false,
+      "top_p": 1.0,
+      "top_k": -1,
+      "presence_penalty": 0.0,
+      "repetition_penalty": 1.0
+    },
+    "summary": {
+      "temperature": 0.1,
+      "max_tokens": 2048,
+      "thinking": false,
+      "top_p": 1.0,
+      "top_k": -1,
+      "presence_penalty": 0.0,
+      "repetition_penalty": 1.0
+    },
+    "evidence": {
+      "temperature": 0.1,
+      "max_tokens": 2048,
+      "thinking": false,
+      "top_p": 1.0,
+      "top_k": -1,
+      "presence_penalty": 0.0,
+      "repetition_penalty": 1.0
+    },
+    "evaluation": {
+      "temperature": 0.2,
+      "max_tokens": 4096,
+      "thinking": true,
+      "thinking_token_budget": 1024,
+      "top_p": 1.0,
+      "top_k": -1,
+      "presence_penalty": 0.0,
+      "repetition_penalty": 1.0
+    }
+  },
+  "reasoning_parser": "qwen3"
 }

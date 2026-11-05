@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from time import perf_counter
 from typing import TypeVar
+from pathlib import Path
 import json
 
 import httpx
@@ -27,7 +28,8 @@ class VllmClient:
     def load_tokenizer(self):
         from transformers import AutoTokenizer
         manifest = self.settings.model_path / ".seoyun-model.json"
-        if not manifest.exists() or json.loads(manifest.read_text("utf-8"))["revision"] != self.config["revision"]:
+        metadata = json.loads(manifest.read_text("utf-8")) if manifest.exists() else {}
+        if (metadata.get("revision"), metadata.get("model_id")) != (self.config["revision"], self.config["model_id"]):
             raise ExperimentError("고정 리비전 모델을 먼저 다운로드하세요: python tools/download_model.py", "model_missing", 503)
         self.tokenizer = AutoTokenizer.from_pretrained(self.settings.model_path, local_files_only=True, trust_remote_code=False)
 
@@ -36,9 +38,13 @@ class VllmClient:
             self.load_tokenizer()
         tokens = self.tokenizer.apply_chat_template(
             messages, tokenize=True, add_generation_prompt=True, return_dict=False,
-            enable_thinking=self.config["roles"][role]["thinking"],
+            **self.template_kwargs(role),
         )
         return len(tokens)
+
+    def template_kwargs(self, role: str) -> dict:
+        return {**self.config.get("chat_template_kwargs", {}),
+                "enable_thinking": self.config["roles"][role]["thinking"]}
 
     def fits(self, messages: list[dict], role: str) -> bool:
         return self.count(messages, role) + self.config["roles"][role]["max_tokens"] + 128 <= self.config["max_model_len"]
@@ -47,8 +53,10 @@ class VllmClient:
         try:
             response = await self.http.get("/v1/models", timeout=5)
             response.raise_for_status()
-            available = {m["id"] for m in response.json()["data"]}
-            return {"ready": self.config["served_model_name"] in available, "model": self.config["served_model_name"]}
+            selected = next((m for m in response.json()["data"] if m["id"] == self.config["served_model_name"]), {})
+            matches = (Path(selected.get("root", "")).resolve() == self.settings.model_path.resolve()
+                       and selected.get("max_model_len") == self.config["max_model_len"])
+            return {"ready": matches, "profile_matches": matches, "model": self.config["served_model_name"]}
         except (httpx.HTTPError, KeyError, ValueError):
             return {"ready": False, "model": self.config["served_model_name"]}
 
@@ -64,9 +72,12 @@ class VllmClient:
                 "model": self.config["served_model_name"], "messages": request_messages,
                 "stream": False, "temperature": role_config["temperature"],
                 "max_tokens": role_config["max_tokens"],
-                "chat_template_kwargs": {"enable_thinking": role_config["thinking"]},
+                "chat_template_kwargs": self.template_kwargs(role),
                 "response_format": {"type": "json_schema", "json_schema": {"name": schema.__name__, "schema": schema.model_json_schema(), "strict": True}},
             }
+            for key in ("top_p", "top_k", "presence_penalty", "repetition_penalty", "seed"):
+                if key in role_config:
+                    payload[key] = role_config[key]
             if role_config.get("thinking_token_budget"):
                 payload["thinking_token_budget"] = role_config["thinking_token_budget"]
             started = perf_counter()

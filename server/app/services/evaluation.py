@@ -1,5 +1,5 @@
 from time import perf_counter
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, Union
 
 from pydantic import Field, create_model
 
@@ -80,7 +80,7 @@ class EvaluationService:
         for item in value.scores:
             self.validate_evidence(item.criterion_id, item.evidence, record_map, work["request"].session_id)
             if item.score > 0 and not any(not e.counter for e in item.evidence):
-                raise InvalidModelOutput("0점보다 큰 항목에는 해당 점수를 지지하는 실제 발언이 필요합니다.")
+                raise InvalidModelOutput(f"{item.criterion_id}: 양수 점수에는 counter=false인 실제 발언 번호가 필요합니다. 지지 근거가 없으면 score=0으로 반환하세요.")
 
     async def extract(self, work, payload):
         source_map = {r["id"]: r for r in work["source"]}
@@ -173,14 +173,34 @@ class EvaluationService:
                 evidence = (list[choice], Field(max_length=2))
             else:
                 evidence = (list[EvidenceChoice], Field(max_length=0))
-            item = create_model(f"Score_{criterion}", __base__=ScoreProposal, evidence=evidence)
+            zero = create_model(f"Zero_{criterion}", __base__=ScoreProposal,
+                                score=(Literal[0], ...), evidence=evidence)
+            supporting = [ref for ref in eligible if provided is None or (criterion, ref, False) in provided]
+            opposing = [ref for ref in eligible if provided is None or (criterion, ref, True) in provided]
+            if supporting:
+                support_choice = create_model(f"Support_{criterion}", __base__=EvidenceChoice,
+                    message_id=(Literal[tuple(supporting)], ...), counter=(Literal[False], ...))
+                if opposing:
+                    counter_choice = create_model(f"Counter_{criterion}", __base__=EvidenceChoice,
+                        message_id=(Literal[tuple(opposing)], ...), counter=(Literal[True], ...))
+                    counter_field = (list[counter_choice], Field(default_factory=list, max_length=1))
+                else:
+                    counter_field = (list[EvidenceChoice], Field(default_factory=list, max_length=0))
+                positive = create_model(f"Positive_{criterion}", __base__=ScoreProposal,
+                    score=(int, Field(strict=True, ge=1, le=25)),
+                    evidence=(list[support_choice], Field(min_length=1, max_length=2)),
+                    counter_evidence=counter_field)
+                item = Union[zero, positive]
+            else:
+                item = zero
             fields[criterion] = (item, ...)
         schema = create_model("JudgmentProposal", __base__=Model, **fields)
 
         def resolve(proposal):
             return Judgment(scores=[{
                 "criterion_id": criterion, "score": item["score"], "explanation": item["explanation"],
-                "evidence": [{**e, "quote": sources[e["message_id"]]["text"]} for e in item["evidence"]],
+                "evidence": [{**e, "quote": sources[e["message_id"]]["text"]}
+                             for e in item["evidence"] + item.get("counter_evidence", [])],
             } for criterion, item in proposal.model_dump().items()])
 
         def validate(proposal):
@@ -198,8 +218,8 @@ class EvaluationService:
         self.catalog.validate_state(request.state)
         if request.session_id != request.state.current.id:
             raise ExperimentError("현재 상담 ID가 일치하지 않습니다.", "stale_session", 409)
-        if not request.state.current.closed_at:
-            raise ExperimentError("자연스럽게 종료된 상담만 최종 평가할 수 있습니다.", "session_open", 409)
+        if request.state.current.phase not in {"pending_evaluation", "evaluated"}:
+            raise ExperimentError("마무리 원문을 저장한 상담만 최종 평가할 수 있습니다.", "session_open", 409)
         if request.state.current.evaluation:
             return StateResponse(case_id=request.state.case_id, session_id=request.session_id, request_id=request.request_id,
                                  base_revision=request.state.revision, state=request.state, replayed=True)
@@ -225,6 +245,8 @@ class EvaluationService:
             model_revision=self.llm.config["revision"], prompt_version=self.catalog.prompt_version,
             source_messages=len(original), metrics=metrics,
         )
+        case.current.phase = "evaluated"
         case.revision += 1
+        case = CaseState.model_validate(case.model_dump())
         return StateResponse(case_id=case.case_id, session_id=case.current.id, request_id=request.request_id,
                              base_revision=request.state.revision, state=case)

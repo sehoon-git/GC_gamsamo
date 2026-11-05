@@ -10,7 +10,8 @@ def main():
     settings = Settings.from_env()
     config = settings.model
     manifest = settings.model_path / ".seoyun-model.json"
-    if not manifest.exists() or json.loads(manifest.read_text("utf-8"))["revision"] != config["revision"]:
+    metadata = json.loads(manifest.read_text("utf-8")) if manifest.exists() else {}
+    if (metadata.get("revision"), metadata.get("model_id")) != (config["revision"], config["model_id"]):
         raise SystemExit("먼저 python tools/download_model.py를 실행하세요.")
     os.environ["VLLM_NO_USAGE_STATS"] = "1"
     os.environ["DO_NOT_TRACK"] = "1"
@@ -22,8 +23,8 @@ def main():
         "--max-model-len", str(config["max_model_len"]),
         "--max-num-seqs", str(config["max_num_seqs"]),
         "--gpu-memory-utilization", str(config["gpu_memory_utilization"]),
-        "--language-model-only", "--reasoning-parser", "qwen3",
-        "--default-chat-template-kwargs", '{"enable_thinking":false}',
+        "--language-model-only", "--reasoning-parser", config.get("reasoning_parser", "qwen3"),
+        "--default-chat-template-kwargs", json.dumps({**config.get("chat_template_kwargs", {}), "enable_thinking": False}),
     ]
     if settings.vllm_api_key:
         # vLLM reads its own key from the environment, keeping it out of process arguments.

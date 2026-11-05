@@ -1,0 +1,6 @@
+{
+  "detail": {
+    "code": "unauthorized",
+    "message": "접근 키를 확인하세요."
+  }
+}

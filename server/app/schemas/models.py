@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-CONTENT_VERSION = "seoyun-1.0"
+CONTENT_VERSION = "seoyun-2.0"
 Id = Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")]
 Score = Annotated[int, Field(strict=True, ge=0, le=25)]
 
@@ -19,11 +19,6 @@ def now() -> str:
 
 class Model(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
-
-class Topic(Model):
-    id: Id = Field(default_factory=lambda: new_id("topic"))
-    label: str = Field(min_length=1, max_length=200)
 
 
 class MemoryItem(Model):
@@ -44,9 +39,7 @@ class Memory(MemoryContent):
 class Classification(Model):
     reason: str = Field(max_length=240)
     topic_label: str = Field(max_length=200)
-    kind: Literal["neutral", "followup", "new_topic"]
-    topic_id: str | None
-    queued_topics: list[str] = Field(max_length=10)
+    question_count: Literal["none", "one", "multiple"]
     disclose_fact_ids: list[str] = Field(max_length=3)
 
 
@@ -54,18 +47,6 @@ class PatientReply(Model):
     # xgrammar cannot combine pattern + length keys; the output token cap bounds length.
     text: str = Field(pattern=r"^[^\u4e00-\u9fff\u3040-\u30ff]+$")
     disclosed_fact_ids: list[str] = Field(max_length=3)
-
-
-class Closure(Model):
-    ready: bool
-    unresolved_questions: list[str] = Field(max_length=12)
-    reason: str = Field(max_length=320)
-
-    @model_validator(mode="after")
-    def consistent(self):
-        if self.ready and self.unresolved_questions:
-            raise ValueError("미해결 후속질문이 있으면 종료할 수 없습니다.")
-        return self
 
 
 class Evidence(Model):
@@ -138,7 +119,9 @@ class Turn(Model):
     user_text: str = Field(min_length=1)
     patient_text: str = Field(min_length=1)
     closing_text: str = ""
-    kind: Literal["neutral", "followup", "new_topic", "deferred"]
+    question_delta: Literal[0, 1]
+    topic_label: str = Field(default="", max_length=200)
+    candidate_fact_ids: list[str] = Field(default_factory=list, max_length=3)
     created_at: str = Field(default_factory=now)
     metrics: Metrics = Field(default_factory=Metrics)
 
@@ -151,22 +134,22 @@ class Session(Model):
     id: Id = Field(default_factory=lambda: new_id("session"))
     started_at: str = Field(default_factory=now)
     closed_at: str | None = None
-    topics: list[Topic] = Field(default_factory=list, max_length=5)
-    post_budget_turns: int = Field(default=0, ge=0)
-    unresolved_questions: list[str] = Field(default_factory=list)
+    questions_used: int = Field(default=0, strict=True, ge=0, le=5)
+    phase: Literal["active", "closing", "pending_evaluation", "evaluated"] = "active"
+    closing_request_id: Id | None = None
+    closing_metrics: Metrics = Field(default_factory=Metrics)
     turns: list[Turn] = Field(default_factory=list)
     evaluation: Evaluation | None = None
 
 
 class CaseState(Model):
-    format_version: Literal[1] = 1
-    content_version: Literal["seoyun-1.0"] = CONTENT_VERSION
+    format_version: Literal[2] = 2
+    content_version: Literal["seoyun-2.0"] = CONTENT_VERSION
     case_id: Id = Field(default_factory=lambda: new_id("case"))
     patient_id: Literal["seoyun"] = "seoyun"
     revision: int = Field(default=0, ge=0)
     created_at: str = Field(default_factory=now)
     revealed_fact_ids: list[str] = Field(default_factory=list)
-    deferred_topics: list[str] = Field(default_factory=list)
     memory: Memory = Field(default_factory=Memory)
     sessions: list[Session] = Field(default_factory=lambda: [Session()], min_length=1)
 
@@ -187,13 +170,24 @@ class CaseState(Model):
         if self.memory.through_turn_id and self.memory.through_turn_id not in turns:
             raise ValueError("기억의 원문 위치가 없습니다.")
         for i, session in enumerate(self.sessions):
-            if len(session.topics) != sum(t.kind == "new_topic" for t in session.turns):
-                raise ValueError("주질문 수와 대화 기록이 일치하지 않습니다.")
-            if len({t.id for t in session.topics}) != len(session.topics):
-                raise ValueError("중복 주제 ID입니다.")
-            if session.evaluation and not session.closed_at:
-                raise ValueError("진행 중인 상담에는 최종 평가가 있을 수 없습니다.")
-            if i < len(self.sessions) - 1 and (not session.closed_at or not session.evaluation):
+            used = 0
+            for turn in session.turns:
+                if used == 5:
+                    raise ValueError("다섯 번째 질문 이후 대화 턴을 추가할 수 없습니다.")
+                used += turn.question_delta
+            if session.questions_used != used:
+                raise ValueError("질문 사용량과 확정 대화 기록이 일치하지 않습니다.")
+            if (session.phase == "active") != (used < 5):
+                raise ValueError("질문 사용량과 상담 단계가 일치하지 않습니다.")
+            closed = session.phase in {"pending_evaluation", "evaluated"}
+            if bool(session.closed_at) != closed or bool(session.closing_request_id) != closed:
+                raise ValueError("마무리 저장 상태와 상담 단계가 일치하지 않습니다.")
+            if bool(session.evaluation) != (session.phase == "evaluated"):
+                raise ValueError("평가 결과와 상담 단계가 일치하지 않습니다.")
+            for j, turn in enumerate(session.turns):
+                if bool(turn.closing_text) != (closed and j == len(session.turns) - 1):
+                    raise ValueError("마지막 질문의 마무리 발화가 상담 단계와 일치하지 않습니다.")
+            if i < len(self.sessions) - 1 and session.phase != "evaluated":
                 raise ValueError("이전 상담의 종료와 평가를 먼저 완료해야 합니다.")
         return self
 
@@ -211,6 +205,10 @@ class EvaluateRequest(Model):
     request_id: Id
 
 
+class CloseRequest(EvaluateRequest):
+    pass
+
+
 class StateResponse(Model):
     case_id: Id
     session_id: Id
@@ -218,6 +216,7 @@ class StateResponse(Model):
     base_revision: int
     state: CaseState
     replayed: bool = False
+    disclosure_candidates: list[str] = Field(default_factory=list, max_length=3)
 
 
 class Record(Model):

@@ -1,7 +1,7 @@
 # 상담 커피톡 — 통합 기획서 plan01
 
 - 가제: 상담 커피톡
-- 문서 버전: 0.7
+- 문서 버전: 0.8
 - 갱신일: 2026-11-05
 - 목적: 사용자 확정 사항과 서윤 상담 실험의 규칙을 게임 기획에 일관되게 반영한다.
 - 문서 상태: 기획·실험 규칙, 현재 구현·검증, 에셋 편집과 인수인계를 통합한 단일 문서. 구현 사실은 15절, 기획상 목표는 1~13절로 구분한다.
@@ -417,38 +417,30 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 **현재 산출물 범위:** `tools/ui-preview/start-menu/index.html`의 독립 실행형 화면 시안이다. 실제 Unity 씬·저장·불러오기·그래픽 장치·음원·프로그램 종료 기능을 구현한 것으로 보지 않는다. 설정 선택의 적용·취소와 미리보기용 로컬 보존만 시연하며, 새 게임과 종료는 확인 흐름으로 표시한다. 실제 연결 지점과 검증은 15절·17절에 기록한다.
 
-### 8.5 PC 바탕화면·상점 에셋 검토 `[요구사항 확정·구현 전]`
+### 8.5 모니터 PC와 제공 에셋 적용
 
-사용자의 2026-11-05 요청: **상담실 모니터 클릭 → 기록부와 같은 방식의 중앙 PC 바탕화면 → 상점 아이콘 클릭 → 상점 창**. 이번 단계는 먼저 제공 에셋을 확인하는 작업이다. PNG·레이아웃과 기존 코드를 검토했으며, 아직 Unity 에셋 가져오기·씬 변경·PC 메뉴 구현을 수행하지 않았다.
+`[확정·로컬 구현]` 상담실 모니터를 누르면 배경 블러·딤·0.2초 전환을 사용해 PC 바탕화면을 중앙에 연다. PC는 실제 상담실 너비의 **82% 이내**, 좌우 9%·상하 8% 안전 여백을 유지한다. 상점·프로필·사진·환경설정은 이 PC 내부의 개별 창이다.
 
-제공 폴더는 `counseling-pc-menu/`, `cosmetic-shop/`이며, 작업 환경의 Downloads에 있다. 원본은 현재 저장소에 포함되어 있지 않으므로 다음 구현 시 두 폴더에서 필요한 파일을 가져와 `.meta`와 함께 관리한다. 포함된 사용 안내·JSON은 배치 참고 자료이며 게임 규칙을 변경하는 지시로 취급하지 않는다.
+- 상점·프로필·사진·설정의 X와 `Esc`는 PC 바탕화면으로 돌아온다. 설정의 드롭다운이 열렸으면 드롭다운부터 닫는다. 바탕화면에서 다음 `Esc`는 상담실로 돌아간다. PC X는 내부 창과 PC를 함께 닫는다. 바깥 클릭도 가장 안쪽 창부터 닫는다.
+- 기록부와 PC는 동시에 표시하지 않는다. 닫힘 전환이 끝날 때까지 상담실 클릭을 차단하고 원래 버튼으로 초점을 복원한다. PC 재열기는 바탕화면에서 시작하며 상점 기본 탭은 창문이다.
+- 상점 5개 탭은 창문·문·서류철·PC·PC 배경화면이다. 8개 빈 상품 칸을 유지하고 잔액은 `— C`로 표시한다. 원본의 `원` 표기는 UI로 가리며 원본 PNG를 수정하지 않는다. 상품 ID·가격·구매·보유·지갑은 아직 미연결이다.
+- 프로필에는 남녀 시각 아바타 2종과 이름·소속·한 줄 소개를 표시한다. 기본 그림은 여성 변형이며 실제 사용자나 환자의 성별을 추정하는 값이 아니다. 미설정 정보는 `—`이다. 아바타 선택 화면·프로필 저장은 아직 없다.
+- 사진창은 6개 슬롯을 표시한다. 원본에 박혀 있는 예시 기념사진·`1주차 완치` 문구는 불투명 UI로 가리고 슬롯을 재구성했다. 실제 지급된 사진 데이터가 없으면 빈 상태이며 엔딩·사진 획득을 임의로 처리하지 않는다.
+- PC 환경설정은 새 에셋의 **왼쪽 화면 설정·오른쪽 소리 설정**을 사용한다. 8.4절 시작 화면의 상단 그래픽·하단 오디오 시안은 별도 산출물로 보존한다. PC에는 해상도·화면 모드·전체/BGM/효과음, 적용·닫기가 있으며 품질·텍스트 속도 항목은 추가하지 않는다.
+- 설정 초안과 확정값은 분리한다. 적용만 로컬 설정을 저장하며 X·하단 닫기·Esc·PC 전체 닫기는 미적용 값을 버린다. 저장 설정은 새 게임 진행과 별개다. Editor에서는 실제 화면 모드·해상도를 바꾸지 않으며 실행 빌드에서 적용한다. 음원은 제공되지 않아 BGM/SFX 청감 검증은 연결 후 수행한다.
 
-| 제공 파일 | 크기·구성 | 구현 시 용도 |
-| --- | --- | --- |
-| `counseling-pc-menu/pc-window.png` | 1520×657, 창 프레임과 바탕화면 포함, 아이콘 없음 | PC 모달의 기본 이미지 |
-| `counseling-pc-menu/items/{profile,shop,photos,settings}.png` | 각 148×122, 내 프로필·상점·사진·환경설정 글자 포함 | 개별 메뉴 버튼 이미지 |
-| `counseling-pc-menu/pc-open.png` | 1520×657, 아이콘까지 합성한 화면 | 배치 비교용. 위 개별 아이콘을 다시 겹치지 않음 |
-| `counseling-pc-menu/pc-wallpaper.png` | 1506×603, 바탕화면 내부 그림 | 배경화면 교체 기능의 참고·재료 |
-| `cosmetic-shop/tabs/{window,door,clipboard,pc,wallpaper}.png` | 각 1112×534, 각 탭이 선택된 상점 전체 창 | 창문·문·서류철·PC·PC 배경화면 탭 선택 시 교체 |
-| `cosmetic-shop/empty-slot.png` | 249×164, 빈 상품 카드 | 상품 카드 템플릿. 상점 전체 창에도 8개 카드가 이미 그려져 있음 |
-| `cosmetic-shop/preview.png` | 1520×657, PC와 상점 합성 예시 | 참고용. 예시 잔액 12,000을 실제 잔액으로 사용하지 않음 |
-| 각 폴더의 `layout.json` | 좌상단 원점의 픽셀 좌표, PC 아이콘·닫기·상점 탭·상품 칸·잔액 영역 | 창 내부 상대 좌표를 Unity 배치·클릭 영역으로 변환 |
+**에셋과 좌표**
 
-**배치·입력 연결 제안**
+| 위치 | 구성·사용 방식 |
+| --- | --- |
+| `Assets/_Project/Art/UI/CounselingPack/room/` | 1920×1080 좌표의 기본 방·문·창문 3종·PC·서류철, 빈 사진 칸 기록부. 순서대로 합성해 기존 블러에 전달 |
+| `Assets/_Project/Art/UI/PcDesktop/` | 1520×657 좌표. 배경화면 → 새 투명 테두리 → 아이콘 순서로 조립 |
+| `Assets/_Project/Art/UI/CosmeticShop/` | 기존 1112×534 탭별 상점 이미지 5개·빈 카드·레이아웃 재사용 |
+| `Assets/_Project/Art/UI/CounselingPack/profile/`, `photos/`, `settings/` | 실제 내부 창 이미지와 배치 JSON, 설정 슬라이더 fill/thumb |
 
-- 기존 상담실은 1672×941, 제공 JSON의 장면 기준은 1920×1080이다. JSON의 `popup.x/y`·`hit_scene`을 그대로 사용하면 사용자 요구인 중앙 배치와 맞지 않는다. PC 창은 중앙 앵커와 1520×657 기준 비율 맞춤을 사용하고, 아이콘·닫기는 `hit_local`을 따른다.
-- 상점은 PC 내부 `(253, 81)` 위치에 1112×534 크기로 배치한다. 탭 5개, 4열×2행 상품 칸, 잔액 숫자와 닫기 영역의 내부 좌표가 제공되어 있다. 기본 선택은 JSON의 `window`이며, 미리보기의 선택 상태는 `wallpaper`다.
-- 모니터 클릭은 기존 `RoomFrame` 안에 다각형 클릭 영역을 추가한다. JSON의 `room_pc_trigger`가 참조하는 `pc-set.png`는 제공되지 않았고 해당 영역은 키보드·마우스까지 포함하므로, 현재 배경의 **모니터 윤곽**에 맞춰 새로 잡는다. 별도 PC 이미지 없이 현재 배경으로 연결할 수 있다.
-- 기록부와 PC는 한 번에 하나만 열고, PC가 상담실 블러·딤·바깥 입력 차단을 소유하도록 한다. 상점은 PC 내부 창으로 두며, 상점 닫기·첫 `Esc`는 바탕화면으로, PC 닫기·다음 `Esc`는 상담실로 돌아가도록 제안한다. 상점만 닫을 때 상담실 블러가 해제되지 않아야 한다.
-- `ConsultationBackgroundBlur.Configure/SetAmount`, `ReferenceRectFitter.referenceSize`, `PolygonRaycastFilter`를 재사용할 수 있다. 기록부 컨트롤러의 모달 전환·초점 처리는 공통 조정 부분으로 분리하고, 여러 컨트롤러가 블러 상태를 각각 덮어쓰지 않게 한다. 현재 씬과 프리팹은 독립 상태이므로 둘 모두 갱신될 경로를 마련한다. `CreateScene()` 재실행만으로 기존 씬은 갱신되지 않는다.
+신규 PNG 15개를 가져왔고 기존 동일 이미지 12개를 재사용한다. `overview`·`preview`·`pc-open`·날씨별 완성 배경은 참고용이며 런타임 에셋으로 중복 추가하지 않는다. 입력 좌표는 JSON의 좌상단 px를 Unity 앵커로 변환한다. 방은 1920×1080, 기록부는 1024×1536, PC는 1520×657 좌표계를 사용한다. 모니터 윤곽만 PC 클릭 대상이며 키보드·마우스는 제외한다. 기록부 클릭에서 펜은 제외한다.
 
-**구현 전 남은 자료·기획 차이**
-
-- 모든 탭의 `products`가 빈 배열이다. 실제 상품 그림·이름·가격·장착 이미지가 없으므로 현재 에셋만으로 가능한 범위는 창 열기·닫기, 아이콘 연결, 탭 전환과 빈 상품 칸 표시다. 내 프로필·사진·환경설정의 내부 화면도 제공되지 않았다.
-- 상점 이미지에는 `원`, JSON에는 `KRW`가 들어 있지만 7.4절은 **코인(C), 초기 0C**다. 에셋만 근거로 통화나 초기 잔액을 바꾸지 않는다. 구현 전에 표시 단위를 맞춰야 하며, 합성 예시의 12,000은 테스트 데이터로도 자동 채택하지 않는다.
-- 제공 탭은 창문·문·서류철·PC·PC 배경화면이며, 7.5절의 초기 상품 설계는 필기구·머그컵·화분·조명·의자·책상이다. 새 상품 목록과 카테고리의 대응을 정한 뒤 구매·장착을 연결한다. 이번 검토에서 기존 가격표·보상식을 변경하지 않았다.
-
-**해당 PC·상점 작업의 연결 순서:** 당시 PC 에셋 검토 후 제안한 순서는 모니터 클릭 영역 → 중앙 PC 바탕화면과 개별 아이콘 → 상점 창·탭 전환 → 열기·닫기·블러·입력 검증이다. 씬·프리팹 반영 경로와 공통 모달 처리를 함께 정리하고, 상품·가격·통화 표기는 구매 기능 연결 전에 확정한다. 이 순서는 PC·상점 요청 범위에 한정하며 이후 확정된 질문 5개·책 안내서·시작 화면·엔딩 규칙이나 다른 작업의 우선순위를 대체하지 않는다.
+날씨는 맑음·흐림·비의 정적 창 그림이며 기본값은 맑음이다. `SetWeather`로 교체할 수 있지만 환자 감정·회차와의 자동 연결이나 비 애니메이션은 없다. 치장은 지정 레이어의 전체 텍스처를 교체하며 창문 치장이 있으면 날씨 기본 창보다 우선한다. 치장 해제 시 현재 날씨 창으로 복원한다. 대화 안전 영역은 배치 자료만 제공되었고 대화 UI는 이번 범위에 없다.
 
 ## 9. 자동 저장, 이어하기, 재상담, 새 실험
 
@@ -680,10 +672,13 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 ## 14. 참고와 변경 이력
 
+- v0.8: 상담실 레이어·날씨 3종, 새 기록부, PC 배경 분리, 실제 프로필·사진·설정 창과 로컬 사용자 설정, 치장 연결 API 적용. 기존 시작 화면·엔딩 기획을 함께 보존.
+
 - 2026-11-05 시작 화면 추가: 네 메뉴·마지막 자동 저장 이어하기·한 페이지 설정 레이아웃, 예외 처리와 로컬 화면 시안 범위를 8.4절에 추가. 기존 상담·재화·기억 규칙은 유지.
 
 - v0.7: 6명 전원 행복한 후일담 엔딩 확정. 중앙 제작진·양쪽 사진과 실제 플레이어 발언 한 줄, 위에서 아래로 내려오는 크레딧, 인용 검증·저장·다시 보기 규칙 추가.
 
+- 2026-11-05 PC 로컬 구현: 모니터 클릭·중앙 PC 바탕화면·상점 5개 탭·내부 창 닫기 구현과 에셋·함수·검증 연결을 기록. 실제 상품·지갑·구매·장착은 후속 작업.
 - v0.6: 총 질문 5개로 통일하고 후속질문 무료 규칙 폐기. 다섯 번째 답변 후 마무리·평가 흐름 제안, 우측 상단 확대 책 안내서와 페이지 구성 추가.
 
 - v0.5: 분산된 docs 문서를 plan01 하나로 통합. 최신 커밋 기준으로 중복을 정리하고 구현·검증·에셋 기록과 작업 이력을 보존.
@@ -702,7 +697,7 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 ## 15. 현재 구현과 연결 지점
 
-이 절은 상담실·기록부 Unity UI, 시작 화면·설정의 브라우저 시안, 별도로 실행하는 서윤 터미널 AI 실험의 구현 상태를 기록한다. **게임 UI와 AI는 아직 연결하지 않았으며**, 앞의 기획 명세 전체가 구현되었다는 뜻은 아니다. 상담 서버·질문 사용량 바·평가·보상·상점·자동 저장은 이 UI에 아직 연결하지 않았다. 우측 상단 책 안내서와 행복한 후일담 엔딩 크레딧도 신규 기획이며 아직 구현하지 않았다. 현재 AI 코드와 최신 질문·저장 규칙의 차이는 아래 AI 실험 항목에 구분한다. 기존 Unity·브라우저·AI 검증 결과는 각 작업 당시 기록이며, 이번 문서 충돌 해결에서 실행 검사를 다시 수행한 것은 아니다.
+이 절은 Unity 상담실·기록부·PC·상점·프로필·사진·환경설정 UI와 사용자 설정 저장, 시작 화면 브라우저 시안, 독립 실행하는 서윤 AI 실험의 구현 상태를 기록한다. **Unity UI와 AI는 아직 연결되지 않았다.** AI의 대화·기억·평가·클라이언트 저장은 구현되어 있으나, 최신 총 질문 5개·공감 별도·자동 저장 전용 규칙과 차이가 있다. Unity의 질문 사용량·평가·보상·실제 상품 구매·게임 진행 자동 저장·책·엔딩 연결은 남아 있다. 각 작업의 검증 환경·시점은 별도로 기록한다.
 
 ### 시작 화면 로컬 시안 — Unity 외부 레이아웃 검토
 
@@ -733,23 +728,31 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 표 위에 12개 TextMeshPro 필드를 배치했다. 현재 내용은 `MedicalRecordData.CreateSample()`의 가상 환자 예시다. LLM 서버, 환자 원본 데이터, 진행도, 저장과는 아직 연결하지 않았다.
 
+모니터의 PC·상점 UI와 나머지 메뉴의 빈 상태 창을 추가했다. 열기·닫기·탭 동작과 제공 에셋 범위는 8.4절을 따른다. 배경 블러는 하나의 `ConsultationRoomController`가 관리하므로 상점만 닫을 때 해제되지 않는다.
+
 ### 실행과 주요 파일
 
 1. Unity `6000.3.28f1`로 저장소 루트 프로젝트를 연다.
 2. `Assets/_Project/Scenes/ConsultationRoom.unity`를 열고 Play를 누른다.
 3. 왼쪽 아래 기록부를 열어 내용·블러를 확인하고 닫기 버튼, 배경 클릭, `Esc`를 확인한다.
+4. 오른쪽 모니터 → 상점 → 탭 5개를 확인한다. 내부 X·`Esc`는 바탕화면으로 돌아오고 PC X는 상담실로 돌아온다.
+5. Play 모드의 `Gamsamo > Run PC UI Smoke Checks`로 PC 검사를 실행한다. 기존 기록부는 `Gamsamo > Run UI Smoke Checks`로 검사한다.
 
 | 위치 | 용도 |
 | --- | --- |
 | `Assets/_Project/Scenes/ConsultationRoom.unity` | 실행 씬, Build Settings에 등록 |
 | `Assets/_Project/Prefabs/ConsultationRoomUI.prefab` | 재사용할 UI 프리팹 |
-| `Assets/_Project/Art/Backgrounds/ConsultationRoom.png` | 상담실 원본 이미지 |
-| `Assets/_Project/Art/UI/MedicalRecord.png` | 투명 처리한 기록부 이미지 |
+| `Assets/_Project/Art/UI/CounselingPack/room/` | 새 상담실 레이어·3종 날씨·기록부 (이전 배경은 초기 생성·시안용 보존) |
+| `Assets/_Project/Art/UI/CounselingPack/room/medical-record-front.png` | 현재 기록부 이미지, 빈 사진 칸 |
 | `Assets/_Project/Scripts/Patients/MedicalRecordData.cs` | 화면 표시용 기록 데이터 |
 | `Assets/_Project/Scripts/UI/` | 모달·텍스트·블러·클릭 영역·크기 조절 |
 | `Assets/_Project/Shaders/ConsultationBackgroundBlur.shader` | 배경 전용 블러 셰이더 |
 | `Assets/_Project/Editor/ConsultationRoomSceneBuilder.cs` | 씬과 프리팹 초기 생성 도구 |
 | `Assets/_Project/Editor/ConsultationRoomSmokeChecks.cs` | Play 모드 검증 도구 |
+| `Assets/_Project/Scripts/UI/PcDesktopView.cs` | PC 아이콘·실제 내부 창·탭·치장 교체 연결 |
+| `Assets/_Project/Editor/PcDesktopSceneInstaller.cs` | 기존 씬·프리팹을 보존하며 PC UI를 추가하는 도구 |
+| `Assets/_Project/Editor/PcDesktopSmokeChecks.cs` | PC·상점·입력·블러·기록부와 상호 배제 검사 |
+| `Assets/_Project/Art/UI/PcDesktop/`, `CosmeticShop/` | PC·상점 PNG와 원본 레이아웃 |
 | `Assets/_Project/Fonts/` | 한글 원본 폰트, TMP 폰트 에셋, OFL 라이선스 |
 | `Assets/TextMesh Pro/` | TMP 필수 리소스와 동봉 라이선스 |
 
@@ -760,13 +763,39 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 | `MedicalRecordData.CreateSample()` | 가상 환자 표시 예시를 반환한다. 실제 환자 로더나 저장소 역할은 하지 않는다. |
 | `ConsultationRoomController.SetRecord(MedicalRecordData)` | 현재 기록 데이터를 바꾸고 즉시 화면에 반영한다. 환자 선택·정보 공개 시스템이 연결할 진입점이다. |
 | `ConsultationRoomController.OpenRecord()` / `CloseRecord()` | 모달 활성화, 입력 차단, 애니메이션, 초점 복원을 관리한다. `IsRecordOpen`으로 논리적 열림 상태를 확인한다. 닫힘 애니메이션 중에는 이 값이 false여도 잠시 입력을 차단한다. |
+| `ConsultationRoomController.OpenPc()` / `ClosePc()` | 중앙 PC 전체를 열고 닫는다. `IsPcOpen`은 논리적 상태이며 닫힘 전환 중에도 뒤쪽 입력은 차단된다. 기록부와 공유하는 블러·전환은 이 컨트롤러만 변경한다. |
+| `PcDesktopView.OpenShop()` / `CloseShop()` | 내부 상점을 열고 기본 탭을 선택하거나 바탕화면으로 돌아간다. 상점이 열리면 바탕화면 아이콘 입력을 막는다. |
+| `PcDesktopView.SelectTab(int)` | 0 창문, 1 문, 2 서류철, 3 PC, 4 PC 배경화면. `shopSprites`와 `tabButtons` 배열은 같은 순서다. |
+| `PcDesktopView.CloseActiveWindow()` | 설정 드롭다운 또는 내부 창을 닫으면 true, 열린 창이 없으면 false를 반환한다. Esc·바깥 클릭의 순차 닫기에 사용한다. |
+| `PcDesktopView.ResetDesktop()` | PC 재열기·비활성화 시 내부 창과 탭 상태, 아이콘 입력, 잔액 미연결 표시를 초기화한다. 실제 게임 데이터를 초기화하는 함수가 아니다. |
 | `MedicalRecordView.ShowRecord(MedicalRecordData)` | 12개 필드를 갱신한다. null 또는 빈 문자열은 `—`로 표시하고 기존 환자 내용이 남지 않도록 지운다. |
 | `ConsultationBackgroundBlur.Configure(RawImage, Texture, Shader)` | 원본 배경과 셰이더를 연결한다. 배경 변경 시 이 함수로 다시 구성한다. |
 | `ConsultationBackgroundBlur.SetAmount(float)` | 0~1 범위로 원본과 캐시된 블러를 혼합한다. 비활성화·파괴 시 RenderTexture와 머티리얼을 정리한다. |
 | `PolygonRaycastFilter.IsRaycastLocationValid(Vector2, Camera)` | 클립보드 모양 안의 포인터만 받는다. 좌하단이 (0,0)인 정규화 좌표를 사용한다. |
-| `ReferenceRectFitter.Fit()` | 기록부의 1024×1536 좌표계를 유지하며 이미지와 텍스트를 함께 축소·확대한다. 레이아웃 변경 시 자동 호출되는 내부 함수다. |
+| `ReferenceRectFitter.Fit()` | 기록부 1024×1536, PC 1520×657 좌표계를 유지하며 이미지·버튼·텍스트를 함께 축소·확대한다. 레이아웃 변경 시 자동 호출되는 내부 함수다. |
 | `ConsultationRoomSceneBuilder.CreateScene()` | `Gamsamo > Create Consultation Room Scene`. 초기 씬·프리팹·폰트 설정을 생성한다. 기존 씬은 덮어쓰지 않는다. |
 | `ConsultationRoomSmokeChecks.Run()` | Play 모드의 `Gamsamo > Run UI Smoke Checks`. 현재 씬을 검사하고 보고서·캡처를 저장한다. |
+| `PcDesktopSceneInstaller.Install()` | `Gamsamo > Install PC Desktop UI`. 기존 기록부 오브젝트를 유지하고 씬과 프리팹 각각에 PC 계층·참조를 추가한다. 설치된 계층과 Sprite 임포트 설정은 재생성하지 않는다. 저장 전 씬 편집·프리팹 편집 모드와 참조 에셋을 검사한다. |
+| `PcDesktopSceneInstaller.FitPcWindowToRoom()` | `Gamsamo > Fit PC Window to Room`. 설치된 PC의 기준 영역을 상담실 배경에 맞추고 너비 82% 제한을 씬·프리팹 양쪽에 적용한다. 재실행해도 여백 노드를 중복 생성하지 않는다. |
+| `PcDesktopSmokeChecks.Run()` | Play 모드의 `Gamsamo > Run PC UI Smoke Checks`. 실제 Canvas·Raycaster·버튼·블러·텍스트를 검사하고 `artifacts/ui/pc-smoke-checks.txt`와 화면 캡처를 남긴다. |
+
+새 에셋 연결 함수:
+
+| 클래스·함수 | 역할·주의점 |
+| --- | --- |
+| `CounselingAssetPackInstaller.Apply()` | Edit 모드 메뉴 `Gamsamo > Apply Counseling Asset Pack`. 원본 PNG를 임포트하고 기존 씬·프리팹 양쪽을 갱신. 저장되지 않은 씬·편집 중 프리팹은 덮어쓰지 않음 |
+| `RoomAssetPackInstaller.Apply(root)` | 레이어 참조·1920×1080·두 클릭 윤곽·새 기록부 연결. 기존 12개 텍스트 참조 유지 |
+| `ConsultationRoomAppearance.SetWeather(Weather)` | Clear / Cloudy / Rain 변경. 합성 캐시와 블러를 갱신하고 열린 모달의 흐림 정도 유지 |
+| `SetCosmetic(CosmeticLayer, Texture2D)` / `RestoreDefault(layer)` | Window / Door / Clipboard / Pc 전체 레이어 교체·해제. `RestoreDefaults()`는 모든 치장과 날씨를 기본값으로 복원 |
+| `ConsultationRoomAppearance.Rebuild()` | 기본 방→문→창문→PC→서류철을 1920×1080 RenderTexture로 합성. 매 프레임 합성하지 않음. `ValidateConfiguration`·`CompositionVersion`으로 구성·갱신 확인 |
+| `PcDesktopView.TryApplyCosmetic(string, Sprite)` | window / door / clipboard / pc / wallpaper 연결. null은 해당 기본값 복원. 보유·결제 검증을 하지 않으므로 구매 서비스가 승인한 뒤 호출. 방 레이어는 아틀라스가 아닌 전체 Single Sprite 사용 |
+| `ProfileView.SetProfile(name, affiliation, intro, avatar)` | 미설정 문자열은 —, Female/Male 그림 변경. 환자 성별과 무관하며 저장하지 않음 |
+| `PhotoGalleryView.SetPhotos(IReadOnlyList<PhotoGalleryEntry>)` | 지급된 썸네일·제목을 최대 6개 표시. null은 초기화, 제목 rich text 비활성 |
+| `PcSettingsView.BeginEdit()` / `CancelEdit()` / `ApplySettings()` | 확정값 복사·초안 폐기·설정 저장 및 런타임 적용 |
+| `PcSettingsView.TryCloseDropdown()` | 드롭다운이 열렸거나 같은 프레임에 닫혔으면 입력을 소비해 Esc가 상위 창까지 닫지 않게 함 |
+| `GameSettings.Current` / `Apply(Values)` | 복사한 확정값 조회·검증 후 저장. 키 `Gamsamo.GameSettings.v1`, 게임 진행·브라우저 시안 저장과 분리 |
+| `GameSettings.RegisterMusicSource` / `RegisterEffectsSource` / `UnregisterSource` | 실제 AudioSource에 개별 음량×원래 믹스 수준 연결. 전체 음량은 AudioListener로 한 번만 적용 |
+| `PcContentBuilder.BuildProfile/BuildPhotos`, `PcSettingsBuilder.Build` | 제공 레이아웃으로 초기 비활성 내부 창 생성. 기존 동명 창은 재사용하며 닫기는 PcDesktopView가 소유 |
 
 데이터 필드는 `registrationNumber`, `patientName`, `gender`, `age`, `occupation`, `recordedDate`, `visitReason`, `medicalHistory`, `medication`, `consultationNotes`, `specialNotes`, `counselor`다. 모두 표시용 문자열이며 현재 서버 DTO나 저장 데이터 규격으로 확정한 것이 아니다.
 
@@ -782,11 +811,14 @@ room.SetRecord(null);
 
 ### 유지해야 할 규칙과 설정
 
+- `PcDesktopView`는 내부 상점·앱 창 밖의 PC 루트에 둔다. 상점과 앱 창은 아이콘 전용 `shortcuts` CanvasGroup의 자식으로 두지 않는다. PC 닫기 버튼은 내부 창보다 앞에 표시한다.
+- PC 에셋의 버튼 좌표는 1520×657, 상점 내부는 1112×534 기준이다. 스케일은 공통 상위 오브젝트에 적용해 표시와 클릭 영역을 함께 움직인다. 원본 합성 화면의 아이콘·상품 카드를 중복 배치하지 않는다.
+- 현재 씬과 프리팹은 독립 에셋이다. PC 설치 도구는 양쪽을 각각 보완하며, 이후 수동 편집도 양쪽에 반영해야 한다. 설치 메뉴는 저장되지 않은 상담실 씬이나 해당 프리팹 편집 모드에서 실행하지 않는다.
 - 컨트롤러는 항상 활성인 `ConsultationRoomUI` 루트에 둔다. 열고 닫는 모달의 자식으로 옮기면 안 된다.
 - 투명 클릭 영역의 `CanvasRenderer.cullTransparentMesh = false`를 유지한다. 완전히 투명한 그래픽이 컬링되면 클릭이 들어오지 않을 수 있다.
-- 배경은 1672×941 비율을 유지한다. 다른 화면 비율에서는 여백이 생기며 클릭 영역도 같은 배경 프레임을 기준으로 움직인다.
+- 새 배경은 1920×1080 비율을 유지한다. 다른 화면 비율에서는 여백이 생기며 클릭 영역도 같은 배경 프레임을 기준으로 움직인다.
 - 기록부 이미지와 텍스트는 같은 1024×1536 기준 좌표계를 사용한다. 이미지 크기나 내부 표 위치를 바꾸면 텍스트 배치도 맞춰야 한다.
-- 배경의 정적 텍스처를 축소하여 블러 결과를 캐시한다. 화면 전체를 캡처하는 방식이 아니므로 추후 추가할 캐릭터·대화 UI는 자동으로 흐려지지 않는다.
+- 방 레이어를 합성한 RenderTexture를 축소하여 블러를 캐시한다. 날씨·치장 변경 때 둘 다 갱신하고 모달의 현재 블러 강도를 보존한다. 모달·텍스트를 합성 대상에 넣지 않는다. 향후 캐릭터·대화 UI는 현재 합성 대상이 아니다.
 - 애니메이션은 `Time.unscaledDeltaTime`을 사용한다. 게임 시간을 멈춰도 기록부 전환이 동작한다.
 - 입력은 현재 Legacy Input Manager와 `StandaloneInputModule`을 사용한다. New Input System으로 변경하면 `Esc` 처리와 EventSystem도 함께 수정해야 한다.
 - 환자 텍스트의 `richText`는 false다. 데이터에 포함된 태그를 UI 서식으로 해석하지 않는다.
@@ -797,6 +829,16 @@ room.SetRecord(null);
 
 ### 검증 결과와 제한
 
+- **새 에셋 적용 최종 검사: PC 125개 + 상담실 외형 49개 + 기록부 52개 = 226개 통과, 실패 0개.** Unity 6000.3.28f1의 실제 Play 모드에서 수행했다. 프로필 텍스트 3개가 처음에 넘친 문제와 슬라이더 손잡이 높이를 수정한 뒤 재검증했다.
+- 상담실 외형 검사는 날씨별 실제 GPU 픽셀 해시 차이, 열린 PC·기록부에서의 블러 유지, 5개 치장 대상 적용·해제와 원래 데이터 복원을 확인한다. 보고서 `artifacts/ui/room-appearance-checks.txt`, 캡처 `room-clear.png`, `room-cloudy.png`, `room-rain.png`, `room-pc-weather-blur.png`, `room-record-weather-blur.png`.
+- 설정 검사는 편집 중 확정값·음량·저장 불변, 취소·재진입, 드롭다운 우선 닫기, 적용 후 PlayerPrefs·AudioListener 반영을 확인한다. 검사 전 설정·프로필·사진과 저장 키의 원문/존재 여부를 복원한다. 실제 게임 저장을 만들지 않는다.
+- 원본 신규 PNG 15개의 바이트 일치와 신규 `.meta`를 확인했다. 씬·프리팹은 기존 객체 ID 소실, 중복 ID, 미해결 내부 참조가 모두 0개다. 설치 메뉴 재실행 후에도 프로필·사진·설정 창이 하나씩 유지된다.
+- Editor 스크립트·셰이더 컴파일 통과. Unity 번들 C# 컴파일러로 Windows/macOS 런타임 분기도 확인했으나 실제 실행 빌드 검증은 아니다. 현재 Game View의 실제 Canvas 기준 배치·화면 캡처를 확인했다.
+- 현재도 좌표 클릭 도구가 `noWindowsAvailable` 오류를 반환해 물리적 마우스 조작은 미검증이다. 포인터는 실제 Unity Raycaster·버튼 이벤트로 검증했고, 키보드 방향키·Enter로 최종 PC 진입을 확인했다. 다른 화면 비율·Windows/macOS 실행 창의 해상도 적용·실제 BGM/SFX 청감 검증은 남아 있다.
+
+- 이전 PC 단독 작업(17.13절): **PC 검사 89개 통과·실패 0개**, 공유 컨트롤러 변경 후 **기존 기록부 검사 52개 통과·실패 0개**. 실제 Canvas는 1443×634이며, PC 너비 923.74는 상담실 너비 1126.512의 82%다. 모니터·탭·닫기 Raycast와 버튼 이벤트, 중앙 배치·상담실 경계, 전환·블러·한글·재열기·초점을 검사했다.
+- 실제 키보드 방향키·Enter로 PC와 상점 진입, `Esc`로 상점 → 바탕화면 → 상담실 복귀를 확인했다. 창 제어 도구의 좌표 클릭 오류로 실제 마우스 클릭 검증은 완료하지 못했으며, 포인터 영역은 Unity Raycaster로 확인했다. 목표 해상도별·실행 빌드 검증은 아직 남아 있다.
+- PC 보고서·캡처는 `artifacts/ui/pc-smoke-checks.txt`, `pc-desktop.png`, `pc-shop-tab-0.png`~`4.png`, `pc-profile.png`, `pc-photos.png`, `pc-settings.png`, `pc-room-restored.png`에 생성된다. 검사는 실행 중에만 `Application.runInBackground`를 켜고 원래 값으로 복원한다. Editor 콜백의 `Screen` 값과 렌더 크기가 달라질 수 있어 배치 검사는 실제 Canvas·RoomFrame 좌표를 사용한다.
 - Unity 에디터에서 스크립트 컴파일, 씬·프리팹 생성과 저장을 확인했다.
 - 커밋 전 문서 내부 링크와 신규 에셋의 `.meta` 존재를 검사했다. 직접 작성한 코드·셰이더·문서·패키지 설정의 `git diff --cached --check`는 통과했다. 전체 파일 검사에서는 Unity 직렬화 파일과 TMP 동봉 리소스의 공백 형식 경고가 발생했으며 해당 생성·배포 원본 형식은 유지했다.
 - Play 모드 스모크 검사: **52개 통과, 실패 0개**. Unity `6000.3.28f1`, 검사 화면 `2888×1362`.
@@ -809,6 +851,8 @@ room.SetRecord(null);
 - 기록부는 읽기 전용이며 텍스트 직접 편집, 환자 사진 교체, 실제 데이터·서버·저장 연동은 미구현이다.
 
 ### 구현 우선순위
+
+PC 내부 네 화면과 기본 방 레이어·날씨·치장 연결은 완료했다. 사용자 설정과 게임 진행 자동 저장은 별개이며 게임 진행 저장은 미구현이다. 다음 연결은 실제 프로필·사진 콘텐츠, 음원, 상품·가격·보유 데이터이며 상점 단위는 코인(C)로 맞췄다.
 
 1. **실제 환자 데이터 연결:** 환자 JSON·공개 상태를 `MedicalRecordData`로 변환해 `SetRecord()`에 전달한다. 현재 null·빈 문자열은 `—`로 표시하므로 기획의 미설정·미확인·해당 없음 구분을 추가해야 한다. 샘플 환자를 서윤 확정 설정으로 오인하지 않는다.
 2. **대화·진행 연결:** 서버 요청·응답 규격을 확정하고 입력창·응답 대기·오류 재시도·질문 사용량 바를 연결한다. 총 질문 5개 → 마지막 답변·마무리 → 원문 저장 → 두 축 평가 → 보상 정산 → 자동 저장 순서를 적용한다. 책 안내서 열람 중에는 확정 응답을 보존하고 화면 전환은 닫은 뒤 이어간다.
@@ -864,7 +908,7 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 | 상담실 UI | 기록부 모달·블러·12개 표시 필드·미연동 상태·기존 함수·검증 제한 | UI 구현 `0e9eacc`, 후속 `904ad55`와 `be3e150`에서 보존 |
 | 시작 화면·설정 | 네 메뉴, 마지막 자동 저장 이어하기, 상단 그래픽·하단 오디오 단일 페이지. 브라우저 시안과 Unity 미연결 범위 구분 | 8.4절, 15절 시안 함수·검증, 17.9절 시작 화면 작업 기록 |
 | 에셋 편집 | ImageGen 투명 배경·빈 사진 칸·최종 프롬프트 | 기존 에셋 기록의 내용 변경 없음 |
-| GitHub 반영 상태 | UI·기획 v0.7·시작 화면 시안은 main 반영됨. 서윤 AI 실험은 PR #10에서 검토 중이며 최신 main을 가져와 문서 충돌 해결 | UI `904ad55`, 기획 `3a0b5e2`, 통합 `39e127c`, 루틴 `e81cb1e`, 질문·안내서 `f2fa105`, 엔딩 PR #9 `7fa8fc9`, 시안 PR #11 `0796a9a`, AI `6d8cc18`와 17.11~17.12절 |
+| GitHub 반영 상태 | AI 실험·PC 에셋 검토·시작 화면 시안까지 원격 main `428c5c1`에서 확인. PC·새 에셋 구현은 이번 작업 브랜치로 제출 | 이전 로컬 작업은 17.13~17.14절, 에셋 포함 PR 제출은 17.15절·Git 이력·최종 보고 |
 | 작업 완료 절차 | 풀 → 요청 작업 확인 → 작업하며 docs 갱신 → 코드와 문서를 PR 하나로 제출. 병합은 사용자가 판단 | 최신 사용자 지시, `AGENTS.md`, 이 문서 17.6절 |
 
 이전 기록의 **“인증 실패·푸시 대기”는 당시 이력**이다. 이후 원격 반영이 확인되었으므로 현재 미완료 작업으로 안내하지 않는다. v0.3의 상점 제거는 v0.4의 상점 복원으로 대체되었으며, 수동 저장 제거는 유지된다.
@@ -939,7 +983,7 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 
 ### PC·상점 에셋 검토 이력 (PR #8)
 
-아래 원래 검토 기록은 `76fa52f`의 고유 내용을 보존한 것이다. 당시 8.3절의 PC 명세는 현재 8.5절로 옮겼으며, 기존 질문 안내 17.7절과 엔딩 17.8절의 번호는 유지한다. 원본 에셋 검사 결과는 당시 기록이며 이번 충돌 해결에서 같은 이미지 검사를 다시 실행한 것은 아니다.
+아래 원래 검토 기록은 `76fa52f`의 고유 내용을 보존한 것이다. 검토 당시 8.5절의 에셋 명세는 Git 이력 `428c5c1:docs/plan01.md`에서도 확인할 수 있으며 현재 8.5절은 구현 완료 상태로 갱신했다. 당시 8.3절의 PC 명세는 현재 8.5절로 옮겼으며, 기존 질문 안내 17.7절과 엔딩 17.8절의 번호는 유지한다. 원본 에셋 검사 결과는 당시 기록이며 이번 충돌 해결에서 같은 이미지 검사를 다시 실행한 것은 아니다.
 
 #### 원래 에셋 검토 기록
 
@@ -1016,3 +1060,44 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 함수·규칙: AI 코드·프롬프트·모델 설정·API·테스트·환자 데이터는 기존 `6d8cc18`과 동일하다. `run_experiment.py`, `DialogueService`, `MemoryManager`, `EvaluationService`, `SaveStore`의 동작을 바꾸지 않았다. 최신 총 질문 5개·자동 저장 전용은 여전히 AI 후속 구현 대상이며, 문서 충돌 해결을 해당 기능 구현이나 품질 개선으로 보지 않는다.
 - 검증: main의 1~14절·시작 화면 함수/검증·16절 에셋 원문·17.8~17.10 기록 보존, 기존 AI 설명·작업 기록 보존을 비교 확인했다. AI 파일과 main의 시작 화면 시안 파일이 각 원본과 동일하며, 문서 링크·앵커·충돌 표식·공백·docs 단일 파일 구조 검사 통과. 실행 코드가 바뀌지 않아 서버 테스트·실제 모델·브라우저·Unity 검사를 재실행하지 않았다. 기존 31개 테스트 결과와 미검증 항목은 17.11절 당시 기록이다.
 - Git·다음 작업: 같은 PR #10의 브랜치에 해결 커밋을 게시하고 GitHub 병합 가능 상태를 확인한다. PR #8과의 변경 위치도 분리해 두 PR을 순차 반영할 때의 재충돌을 검사한다. 원격 반영·검사 결과는 Git 이력과 최종 보고로 확인하며 main 직접 푸시·PR 병합은 하지 않는다. 이후 AI 작업은 17.11절의 우선순위를 따른다.
+
+### 17.13 모니터 PC·상점 로컬 구현과 창 크기 조정
+
+- 구현·Unity 검증 완료 시각: **2026-11-05 19:55:51 KST (UTC+09:00)**.
+- 요청: 제공 에셋으로 모니터 클릭 → 중앙 PC 바탕화면 → 상점 아이콘·상점 창을 로컬 구현한다. 추가 요청에 따라 큰 PC 창을 줄여 게임 화면 안에 여백을 두고 표시한다.
+- 변경: PNG 12개·레이아웃 JSON 2개와 Unity 메타데이터를 가져왔다. 기존 씬과 프리팹에 모니터 클릭 영역, PC 아이콘 4개, 상점 탭 5개와 내부 닫기, 나머지 메뉴의 빈 상태 창을 연결했다. 합성 참고 이미지는 사용하지 않았다. PC는 상담실 너비 82%를 기준으로 중앙 정렬하고 버튼·상점도 같은 비율로 조절한다.
+- 폰트: 새 메뉴 안내문을 표시하면서 `Assets/_Project/Fonts/NotoSansKR SDF.asset`의 동적 한글 글리프·아틀라스가 갱신되었다. 기존 원본 폰트와 라이선스는 유지한다.
+- 주요 코드: `ConsultationRoomController.OpenPc/ClosePc`와 공통 모달 전환이 기록부·PC·배경 블러를 관리한다. `PcDesktopView.OpenShop/SelectTab/CloseActiveWindow/ResetDesktop`가 내부 창과 초점을 관리한다. `PcDesktopSceneInstaller.Install/FitPcWindowToRoom`이 기존 씬·프리팹을 각각 보완한다. 자세한 필드·호출·실행 메뉴는 8.5절과 15절을 따른다.
+- 유지 규칙: 모달 하나만 표시하고 닫힘 전환까지 상담실 입력을 차단한다. 상점만 닫을 때 배경 블러를 유지한다. 초기 상점은 창문 탭이며 PC 재열기 시 바탕화면으로 돌아간다. 빈 상품과 잔액 `—`는 미연결 상태다. 통화·상품 분류 차이를 해결한 뒤 실제 지갑·구매·장착을 연결하며 기존 코인 보상식은 유지한다.
+- 검증: Unity 컴파일과 씬·프리팹 저장 완료. PC 89개·기존 기록부 52개 검사 통과. 키보드 진입·Esc 순차 닫기와 실제 화면을 확인했고, 잘리던 빈 상태 창의 X 글자를 조정했다. PNG 12개는 제공 원본과 바이트 단위로 일치한다. 씬·프리팹의 기존 객체 ID 삭제·중복 ID·미해결 내부 참조는 없다. 새 스크립트·에셋 메타데이터와 문서 링크를 검사했다.
+- 검증 환경 주의: 초기 검사에서 Editor의 Screen 크기와 실제 Canvas 차이, 백그라운드에서 게임 프레임 정지가 확인돼 검사 기준과 실행 환경을 보정했다. 최종 결과는 보정 후 재실행한 보고서다. 실제 마우스 조작은 창 제어 도구 오류로 미검증이며, Raycast·버튼 이벤트 검증과 구분한다. Windows·macOS 빌드와 여러 목표 화면 비율의 실기 검증은 수행하지 않았다.
+- 로컬 상태: 최신 main `f2fa105`를 기준으로 `codex/pc-desktop-local`에서 작업했다. 변경사항은 미커밋 상태이며 GitHub 게시·새 PR 생성은 수행하지 않았다. 기존 검토 브랜치의 문서와 다른 작업의 총 질문 5개·책 안내서 기획은 보존했다.
+- 다음 작업: (1) 사용자 화면에서 모니터·아이콘·닫기 실제 마우스 확인과 크기 조정 검토, (2) 상품 자료·통화 표시·카테고리 확정, (3) 실제 프로필·사진·설정 데이터와 구매·장착·자동 저장 연결. 씬과 프리팹은 아직 독립 에셋이므로 후속 UI 수정은 양쪽에 적용한다.
+
+### 17.14 counseling-game-assets 전체 적용 — 로컬 작업
+
+- 구현·검증·문서 정리 완료 시각: **2026-11-05 20:40:24 KST (UTC+09:00)**.
+- 요청: 제공한 상담실·PC 에셋 중 적용 가능한 내용을 모두 반영하되 이번에는 로컬 작업만 수행하고 PR을 만들지 않는다.
+- 동기화: 기존 미커밋 PC 작업을 보존하기 위해 별도 임시 작업 공간에서 원격 main `0796a9a`를 `pull --ff-only`로 확인했다. 기존 문서와 최신 엔딩·시작 화면 시안을 3방향 비교로 함께 보존했다. 겹친 절 번호는 시작 화면 8.4, PC 8.5, 기존 PC 작업 이력을 당시 17.11로 정리했다(현재 17.13절). 현재 작업 브랜치의 HEAD는 `f2fa105`로 유지했으며 Git stash·reset·새 커밋 없이 최신 문서와 시안 파일을 로컬에 통합했다.
+- 에셋: 신규 PNG 15개, room/profile/photos/settings 배치 JSON 4개를 가져오고 desktop 레이아웃을 갱신했다. 기존 동일 PNG 12개는 중복 추가하지 않았다. 원본 PNG는 모두 수정 없이 사용하고 합성 참고·미리보기·날씨 완성 배경은 런타임에 넣지 않았다.
+- 상담실: 1920×1080 기본 방·문·창·PC·서류철을 GPU에서 합성하고 기존 블러에 연결했다. 맑음·흐림·비와 문/창/서류철/PC 치장 교체·복원 API를 만들었다. 모니터만·서류철만 클릭되도록 좌표를 다시 맞췄고 새 기록부의 빈 사진 칸과 기존 12개 내용 필드를 유지했다.
+- PC: 방 너비 82% 제한과 중앙 정렬을 유지했다. 바탕화면과 테두리를 분리하고 실제 프로필·사진·설정 창을 연결했다. 사진의 예시 완치 문구는 UI로 가렸고, 상점은 빈 상품과 미연결 잔액 `— C`를 유지한다.
+- 설정: 지원 해상도·화면 모드와 전체/BGM/SFX 값을 초안으로 편집하고 적용 시만 저장한다. 닫기·Esc는 미적용 값 취소, 드롭다운이 열렸으면 먼저 닫는다. 설정은 게임 진행과 별도 키 `Gamsamo.GameSettings.v1`에 저장하고 런타임 시작 때 복원한다. Editor 해상도는 바꾸지 않으며 실제 화면 변경은 실행 빌드용 코드다.
+- 주요 함수: `CounselingAssetPackInstaller.Apply`, `RoomAssetPackInstaller.Apply`, `ConsultationRoomAppearance.SetWeather/SetCosmetic/RestoreDefault/Rebuild`, `PcDesktopView.OpenProfile/OpenPhotos/OpenSettings/TryApplyCosmetic/CloseActiveWindow`, `ProfileView.SetProfile`, `PhotoGalleryView.SetPhotos`, `PcSettingsView.BeginEdit/CancelEdit/ApplySettings/TryCloseDropdown`, `GameSettings.Apply/RegisterMusicSource/RegisterEffectsSource`. 자세한 계약과 규칙은 8.5·15절에 기록했다.
+- 실행: 저장된 ConsultationRoom 씬에서 Play. 재적용은 Edit 모드의 `Gamsamo > Apply Counseling Asset Pack`, 검사는 Play 모드의 PC UI / Room Appearance / UI Smoke Checks 메뉴. 씬·프리팹은 여전히 독립이므로 설치 도구가 양쪽을 갱신한다.
+- 검증: **PC 125 / 외형 49 / 기록부 52, 총 226개 통과·실패 0개**. 프로필 줄 높이 때문에 값이 보이지 않던 문제를 19px 글자로, 슬라이더 손잡이 늘어남을 원본 21×26 크기로 수정했다. 원본 에셋 일치·메타·문서 링크·충돌 표식·코드 공백·기존 씬 참조 보존도 확인했다. 동적 한글 폰트 아틀라스의 새 글리프는 기존 폰트 에셋에 보존한다.
+- 제한: 실제 상품·보유/구매·잔액·프로필 저장/아바타 선택·사진/엔딩 콘텐츠·게임 자동 저장·날씨 자동 결정·음원은 미연결이다. 실제 마우스 조작은 창 제어 도구 오류로 미검증이며 Raycaster 검증과 구분한다. Windows/macOS 실행 빌드·다른 화면 비율·실제 화면 설정 적용·청감 검증은 후속 작업이다.
+- 다음 작업: (1) 사용자 환경에서 실제 마우스·화면 비율 확인, (2) 실제 프로필·사진 콘텐츠와 음원 연결, (3) 상품 ID·가격·보유 데이터 확정 후 구매 승인→치장 적용→게임 자동 저장 연결, (4) 시작 씬과 설정 서비스 공유 및 실행 빌드에서 화면 변경·재실행 복원 검증. 기존 대화·총 질문 5개·책·엔딩 기획은 유지한다.
+- Git 상태: `codex/pc-desktop-local`의 미커밋 로컬 변경이다. 당시 요청에 따라 **커밋·푸시·PR 생성·병합은 수행하지 않았다.** 이후 에셋 포함 PR 요청은 17.15절을 따른다. Unity는 수정된 PC 바탕화면을 Play 모드로 열어 두었다.
+
+### 17.15 상담실·PC 구현과 에셋을 함께 PR 제출
+
+- 제출용 통합·검토 완료 시각: **2026-11-05 20:55:10 KST (UTC+09:00)**.
+- 요청: 앞서 로컬에서 완료한 PC·상담실 작업을 사용 에셋까지 포함해 PR로 제출한다.
+- 포함 범위: PNG 27개(이전 PC·상점 12개 + 새 팩 15개), 배치 JSON 6개, 관련 `.meta`, 런타임·에디터 도구·셰이더, 씬·프리팹·한글 폰트와 README·plan01. `Library/Temp/Logs/UserSettings/artifacts`·빌드·실제 설정 저장·모델·개인 기록은 포함하지 않는다.
+- 최신 변경: 로컬 변경을 `648aef4`로 먼저 보존한 뒤 `git pull --no-rebase origin main`으로 `428c5c1`을 작업 브랜치에 가져왔다. main의 AI 코드·API·환자 데이터·시작 화면 시안은 변경 없이 보존했다. PC의 구현 전 검토와 현재 구현을 구분하고, AI 17.11~17.12절은 유지한 채 PC 기록을 17.13~17.14절로 옮겼다.
+- 함수·규칙: 실행 코드·에셋은 직전 226개 검사를 통과한 내용 그대로다. 8.5·15절의 모달 닫기 순서, 방 너비 82%, 빈 사진 칸, 설정 초안/확정값 분리, 치장 API 계약과 미연결 범위를 유지한다. 이번 제출 작업은 문서 충돌 정리와 Git 반영이며 기능을 추가하지 않는다.
+- 검증: 이전 Unity Play 결과 PC 125 + 방 외형 49 + 기록부 52 = 226개 통과를 보존한다. 제출 대상의 에셋·메타 누락, 씬·프리팹 내부/외부 참조, 금지 생성물 제외, 문서 번호·링크·충돌 표식·코드 공백을 확인한다. Unity 기능 변경이 없어 같은 실행 검사는 반복하지 않았다. 실제 마우스·다른 화면 비율·실행 빌드·청감 검증 제한도 유지한다.
+- Git: `codex/pc-desktop-local`을 게시하고 main 대상 PR 하나로 제출한다. PR URL·최종 커밋·원격 일치는 Git 이력과 최종 보고에서 확인한다. 원격 main 직접 푸시·PR 병합·자동 병합은 수행하지 않는다.
+- PR 생성·문서 마무리 확인 시각: **2026-11-05 21:18:16 KST (UTC+09:00)**. [PR #13](https://github.com/sehoon-git/GC_gamsamo/pull/13)을 열었으며, 에셋을 포함한 109개 파일과 작업 브랜치 → main 방향을 확인했다. 최종 비교에서 발견한 README 시작 화면 안내의 동일 중복 문단 하나를 제거했다. README·이 기록의 후속 커밋도 같은 PR에 반영하며, Unity 구현·검증 결과는 변경하지 않는다.
+- 다음 작업: PR 변경 검토 → 실제 사용자 환경의 클릭·화면 비율·실행 빌드 확인 → 프로필·사진·음원과 실제 상품·지갑·게임 진행 데이터 연결. 병합 판단은 사용자가 수행한다.

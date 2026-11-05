@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace Gamsamo.UI
 {
-    /// <summary>Owns the record modal presentation, without changing consultation or server state.</summary>
+    /// <summary>Owns the room's record/PC overlays and their shared background blur.</summary>
     [DisallowMultipleComponent]
     public sealed class ConsultationRoomController : MonoBehaviour
     {
@@ -22,14 +22,31 @@ namespace Gamsamo.UI
         public MedicalRecordView recordView;
         public MedicalRecordData record = MedicalRecordData.CreateSample();
 
+        public CanvasGroup pcModal;
+        public RectTransform pcPanel;
+        public Button openPcButton;
+        public Button closePcButton;
+        public Button pcBackdropButton;
+        public PcDesktopView pcDesktopView;
+
         [SerializeField, Min(0f)] private float transitionDuration = 0.2f;
 
         public bool IsRecordOpen { get; private set; }
+        public bool IsPcOpen { get; private set; }
+
+        private enum ModalKind { None, Record, Pc }
 
         private Coroutine transition;
         private float visibleAmount;
         private bool initialized;
         private GameObject previousSelection;
+        private Button returnButton;
+        private ModalKind activeModal;
+
+        private CanvasGroup ActiveGroup => activeModal == ModalKind.Record ? modal
+            : activeModal == ModalKind.Pc ? pcModal : null;
+        private RectTransform ActivePanel => activeModal == ModalKind.Record ? recordPanel
+            : activeModal == ModalKind.Pc ? pcPanel : null;
 
         private void Awake()
         {
@@ -49,6 +66,16 @@ namespace Gamsamo.UI
                 closeRecordButton.onClick.AddListener(CloseRecord);
             if (backdropButton != null)
                 backdropButton.onClick.AddListener(CloseRecord);
+            if (openPcButton != null)
+            {
+                if (openPcButton.targetGraphic != null)
+                    openPcButton.targetGraphic.canvasRenderer.cullTransparentMesh = false;
+                openPcButton.onClick.AddListener(OpenPc);
+            }
+            if (closePcButton != null)
+                closePcButton.onClick.AddListener(ClosePc);
+            if (pcBackdropButton != null)
+                pcBackdropButton.onClick.AddListener(ClosePcTopmost);
 
             if (recordView != null)
                 recordView.ShowRecord(record);
@@ -65,7 +92,11 @@ namespace Gamsamo.UI
 
         private void Update()
         {
-            if (IsRecordOpen && Input.GetKeyDown(KeyCode.Escape))
+            if (!Input.GetKeyDown(KeyCode.Escape))
+                return;
+            if (IsPcOpen)
+                ClosePcTopmost();
+            else if (IsRecordOpen)
                 CloseRecord();
         }
 
@@ -80,25 +111,9 @@ namespace Gamsamo.UI
         {
             if (!isActiveAndEnabled || modal == null || IsRecordOpen)
                 return;
-
-            // Keep the original focus when reversing an in-progress close animation.
-            if (visibleAmount <= 0f)
-                previousSelection = EventSystem.current != null
-                    ? EventSystem.current.currentSelectedGameObject
-                    : null;
-
-            IsRecordOpen = true;
-            modal.gameObject.SetActive(true);
-            modal.blocksRaycasts = true;
-            modal.interactable = true;
-            if (openRecordButton != null)
-                openRecordButton.interactable = false;
             if (recordView != null)
                 recordView.ShowRecord(record);
-            if (closeRecordButton != null && EventSystem.current != null)
-                EventSystem.current.SetSelectedGameObject(closeRecordButton.gameObject);
-
-            StartTransition(1f);
+            OpenModal(ModalKind.Record, openRecordButton, closeRecordButton);
         }
 
         public void CloseRecord()
@@ -106,20 +121,83 @@ namespace Gamsamo.UI
             if (!isActiveAndEnabled || modal == null || !IsRecordOpen)
                 return;
 
+            CloseModal();
+        }
+
+        public void OpenPc()
+        {
+            if (!isActiveAndEnabled || pcModal == null || IsPcOpen)
+                return;
+            if (pcDesktopView != null)
+                pcDesktopView.ResetDesktop();
+            OpenModal(ModalKind.Pc, openPcButton, closePcButton);
+        }
+
+        /// <summary>Closes the whole PC, including its shop/app window.</summary>
+        public void ClosePc()
+        {
+            if (!isActiveAndEnabled || pcModal == null || !IsPcOpen)
+                return;
+            CloseModal();
+        }
+
+        private void ClosePcTopmost()
+        {
+            if (!IsPcOpen)
+                return;
+            if (pcDesktopView != null && pcDesktopView.CloseActiveWindow())
+                return;
+            ClosePc();
+        }
+
+        private void OpenModal(ModalKind kind, Button opener, Button closeButton)
+        {
+            StopTransition();
+            // Capture room focus once, not the close button of an already visible overlay.
+            if (activeModal == ModalKind.None)
+            {
+                previousSelection = EventSystem.current != null
+                    ? EventSystem.current.currentSelectedGameObject : null;
+                returnButton = opener;
+            }
+            if (activeModal != ModalKind.None && activeModal != kind)
+            {
+                HideGroup(ActiveGroup);
+                if (activeModal == ModalKind.Pc && pcDesktopView != null)
+                    pcDesktopView.ResetDesktop();
+            }
+
+            activeModal = kind;
+            IsRecordOpen = kind == ModalKind.Record;
+            IsPcOpen = kind == ModalKind.Pc;
+            CanvasGroup group = ActiveGroup;
+            group.gameObject.SetActive(true);
+            group.blocksRaycasts = true;
+            group.interactable = true;
+            SetRoomHotspots(false);
+            ApplyVisibility(visibleAmount);
+            if (closeButton != null && EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(closeButton.gameObject);
+            StartTransition(1f);
+        }
+
+        private void CloseModal()
+        {
             IsRecordOpen = false;
-            // Continue swallowing background clicks until the fade-out has completed.
-            modal.blocksRaycasts = true;
-            modal.interactable = false;
+            IsPcOpen = false;
+            // Both room hotspots stay disabled until the fade-out is completely finished.
+            CanvasGroup group = ActiveGroup;
+            if (group != null)
+            {
+                group.blocksRaycasts = true;
+                group.interactable = false;
+            }
             StartTransition(0f);
         }
 
         private void StartTransition(float target)
         {
-            if (transition != null)
-            {
-                StopCoroutine(transition);
-                transition = null;
-            }
+            StopTransition();
 
             if (transitionDuration <= 0f)
             {
@@ -151,10 +229,12 @@ namespace Gamsamo.UI
         private void ApplyVisibility(float amount)
         {
             visibleAmount = amount;
-            if (modal != null)
-                modal.alpha = amount;
-            if (recordPanel != null)
-                recordPanel.localScale = Vector3.one * Mathf.Lerp(0.98f, 1f, amount);
+            CanvasGroup group = ActiveGroup;
+            if (group != null)
+                group.alpha = amount;
+            RectTransform panel = ActivePanel;
+            if (panel != null)
+                panel.localScale = Vector3.one * Mathf.Lerp(0.98f, 1f, amount);
             if (backgroundBlur != null)
                 backgroundBlur.SetAmount(amount);
         }
@@ -164,45 +244,71 @@ namespace Gamsamo.UI
             if (target > 0f)
                 return;
 
-            if (modal != null)
-            {
-                modal.blocksRaycasts = false;
-                modal.interactable = false;
-                modal.gameObject.SetActive(false);
-            }
-            if (openRecordButton != null)
-                openRecordButton.interactable = true;
+            HideGroup(modal);
+            HideGroup(pcModal);
+            if (pcDesktopView != null)
+                pcDesktopView.ResetDesktop();
+            activeModal = ModalKind.None;
+            SetRoomHotspots(true);
 
             if (EventSystem.current == null)
                 return;
 
             GameObject next = previousSelection;
-            if (next == null || !next.activeInHierarchy)
-                next = openRecordButton != null ? openRecordButton.gameObject : null;
+            Selectable selectable = next != null ? next.GetComponent<Selectable>() : null;
+            if (next == null || !next.activeInHierarchy || (selectable != null && !selectable.IsInteractable()))
+                next = returnButton != null ? returnButton.gameObject : null;
             EventSystem.current.SetSelectedGameObject(next);
+            previousSelection = null;
+            returnButton = null;
         }
 
         private void ResetClosed()
         {
             IsRecordOpen = false;
+            IsPcOpen = false;
             ApplyVisibility(0f);
-            if (modal != null)
-            {
-                modal.blocksRaycasts = false;
-                modal.interactable = false;
-                modal.gameObject.SetActive(false);
-            }
-            if (openRecordButton != null)
-                openRecordButton.interactable = true;
+            HideGroup(modal);
+            HideGroup(pcModal);
+            if (pcDesktopView != null)
+                pcDesktopView.ResetDesktop();
+            activeModal = ModalKind.None;
+            previousSelection = null;
+            returnButton = null;
+            SetRoomHotspots(true);
         }
 
-        private void OnDisable()
+        private static void HideGroup(CanvasGroup group)
+        {
+            if (group != null)
+            {
+                group.alpha = 0f;
+                group.blocksRaycasts = false;
+                group.interactable = false;
+                group.gameObject.SetActive(false);
+            }
+        }
+
+        private void SetRoomHotspots(bool interactable)
+        {
+            if (openRecordButton != null)
+                openRecordButton.interactable = interactable;
+            if (openPcButton != null)
+                openPcButton.interactable = interactable;
+        }
+
+        private void StopTransition()
         {
             if (transition != null)
             {
                 StopCoroutine(transition);
                 transition = null;
             }
+        }
+
+        private void OnDisable()
+        {
+            StopTransition();
             if (initialized)
                 ResetClosed();
         }
@@ -215,6 +321,12 @@ namespace Gamsamo.UI
                 closeRecordButton.onClick.RemoveListener(CloseRecord);
             if (backdropButton != null)
                 backdropButton.onClick.RemoveListener(CloseRecord);
+            if (openPcButton != null)
+                openPcButton.onClick.RemoveListener(OpenPc);
+            if (closePcButton != null)
+                closePcButton.onClick.RemoveListener(ClosePc);
+            if (pcBackdropButton != null)
+                pcBackdropButton.onClick.RemoveListener(ClosePcTopmost);
         }
     }
 }

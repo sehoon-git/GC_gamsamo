@@ -129,7 +129,7 @@ namespace Gamsamo.Editor
             visits.portraitGroup.alpha = 1;
             view.bodyText.text = "카페에서 일하면서 자기소개서를 쓰고 있어요. 오늘은 제 이야기를 조금 더 나누고 싶어요.";
             view.bodyText.maxVisibleCharacters = int.MaxValue;
-            view.statusText.text = "답변을 작성해 주세요";
+            view.statusText.text = string.Empty;
             view.connectionText.text = "UI 배치 검증 · 서버 연결 없음";
             speaker.text = patients[0].displayName; portrait.sprite = patients[0].portrait;
             view.replyRoot.SetActive(true); view.replyInput.interactable = true;

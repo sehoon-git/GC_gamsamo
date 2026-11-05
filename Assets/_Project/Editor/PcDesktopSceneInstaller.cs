@@ -317,7 +317,7 @@ namespace Gamsamo.Editor
             label.text = value;
             label.richText = false;
             label.raycastTarget = false;
-            label.overflowMode = TextOverflowModes.Ellipsis;
+            label.overflowMode = TextOverflowModes.Truncate;
             return label;
         }
 

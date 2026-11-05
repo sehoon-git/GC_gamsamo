@@ -223,7 +223,7 @@ namespace Gamsamo.Editor
             label.color = Ink;
             label.alignment = alignment;
             label.textWrappingMode = TextWrappingModes.NoWrap;
-            label.overflowMode = TextOverflowModes.Ellipsis;
+            label.overflowMode = TextOverflowModes.Truncate;
             label.richText = false;
             label.raycastTarget = false;
             label.text = value;

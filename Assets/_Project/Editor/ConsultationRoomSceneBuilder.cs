@@ -258,7 +258,7 @@ namespace Gamsamo.Editor
             text.enableAutoSizing = false;
             text.color = new Color(0.22f, 0.18f, 0.16f);
             text.alignment = top ? TextAlignmentOptions.TopLeft : TextAlignmentOptions.MidlineLeft;
-            text.overflowMode = TextOverflowModes.Ellipsis;
+            text.overflowMode = TextOverflowModes.Truncate;
             text.richText = false;
             text.raycastTarget = false;
             text.margin = Vector4.zero;

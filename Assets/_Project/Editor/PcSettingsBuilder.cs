@@ -255,7 +255,7 @@ namespace Gamsamo.Editor
             text.text = value;
             text.richText = false;
             text.raycastTarget = false;
-            text.overflowMode = TextOverflowModes.Ellipsis;
+            text.overflowMode = TextOverflowModes.Truncate;
             return text;
         }
 

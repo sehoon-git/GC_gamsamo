@@ -246,6 +246,7 @@ namespace Gamsamo.Editor
             view.confirmEndButton = Button(card, "ConfirmEndVisit", font, "상담 그만하기", 302, 177, 264, 51, true);
             view.confirmationPanel = confirmation.gameObject;
             confirmation.gameObject.SetActive(false);
+            DialoguePaperStyling.Apply(view);
             EditorUtility.SetDirty(view);
             EditorUtility.SetDirty(controller);
         }

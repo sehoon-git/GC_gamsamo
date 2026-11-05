@@ -1362,3 +1362,4 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 검증: Hub UI의 등록명·경로·버전과, 설치된 Hub CLI의 `projects list --json --no-banner --no-pager` 결과가 일치했다. CLI는 `success: true`, 오류·경고 없음, `6000.3.28f1`·`arm64`·revision `8f082d2fe476`·Built-In을 반환했다.
 - 검증 제한: 이번 요청에서는 Editor 실행·Play·빌드·AI 연결 검사를 수행하지 않았다. Hub 등록 성공은 해당 검증의 완료를 뜻하지 않으며, 17.23절의 기존 Unity 통합 미완료 상태를 유지한다.
 - 다음 추천 작업: (1) 등록된 프로젝트를 기준 에디터로 열어 상담실 씬의 임포트·컴파일 상태 확인, (2) 15절의 환자·PC·치장 Play 검사, (3) 17.23절의 실제 AI 통합·복원 검증 계속 진행.
+- PR 제출 확인 시각: **2026-11-06 02:18:10 KST (UTC+09:00)**. 문서 커밋 `cb4be8d`를 `codex/unity-hub-registration`에 게시하고 main 대상 [PR #27](https://github.com/sehoon-git/GC_gamsamo/pull/27)을 생성했다. GitHub 연결 도구의 생성 요청은 403으로 실패했으나 로컬 GitHub CLI로 제출을 완료했다. 문서 diff 공백 검사를 통과했으며 이 제출 기록도 같은 PR에 반영한다. main 직접 푸시·PR 병합·자동 병합 설정은 수행하지 않는다.

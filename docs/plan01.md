@@ -1149,6 +1149,12 @@ PC 내부 네 화면, 기본 방 레이어·날씨, 원본 48종의 동적 카�
 - `CounselingPack/room/layout.json`의 `assets.window.clear.file`도 같은 파일로 설정한다. `RoomAssetPackInstaller.Apply()`가 이 설정을 읽으므로 에셋 재적용 후에도 이전 하늘 이미지로 되돌아가지 않는다. 좌표 731,52·크기 1011×534·모니터 앞뒤 순서와 기존 치장 우선순위를 유지한다.
 - 실제 대기 인원/환자 ID에 따른 자동 교체는 별도 기능이다. 이번 연결은 고정 기본 배경이며 진행·AI·저장·보상 상태를 바꾸지 않는다. 흐림·비와 장착한 창문/블라인드는 기존 변형을 사용한다. 다른 세 대기실 PNG도 보존한다.
 
+### 시작 화면 제목·대기실 배경
+
+- 표시 제목은 두 줄 `우리동네` / `상담사`다. `StartMenuUI.prefab`의 TMP 텍스트와 `StartMenuSceneBuilder.CreateScene()`의 초기값, HTML 시안을 함께 맞춘다. 제품명·저장 경로·저장 형식은 바꾸지 않는다.
+- 시작 화면의 예전 단일 `ConsultationRoom.png` 대신 상담실의 `room-base.png`와 벽지·문·대기실 창문·PC·기록부 레이어를 사용한다. `RoomBackground/DefaultRoomLayers`는 상담실 미리보기와 같은 좌표·겹침 순서이며, 창문은 `window-waiting-3-spaced.png`다. 16:9 비율을 유지해 화면을 채우고 기존 갈색 음영과 메뉴는 위에 표시한다.
+- 새로 만드는 시작 화면은 `ConsultationRoomAppearance.baseTexture`와 `editorPreviewLayers`를 복제한다. 기존 씬/프리팹을 생성 도구로 덮어쓰지 않는다. 저장된 시작 프리팹의 레이어는 독립 복사본이므로 이후 상담실 기본 원화를 바꾸면 시작 화면도 함께 갱신해야 한다. 진행별 치장·대기 인원 연동은 하지 않는다.
+
 ## 16. 진료기록부 에셋 편집 기록
 
 - 사용 도구: 기본 제공 ImageGen. CLI 대체 경로는 사용하지 않았음.
@@ -1775,3 +1781,13 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 실제 Unity 검증: 6000.3.28f1 DX12에서 실제 상담실을 복제한 임시 씬에서 진행·AI 컴포넌트를 제외하고 제품명 `GC_gamsamo_Corridor_Visual_Check`로 실행했다. Computer Use로 창문 너머 세 사람과 PC 앞뒤 배치를 확인했다. 기존 `RoomAppearanceSmokeChecks` 49개, `CosmeticSmokeChecks` 827개가 모두 통과했다. 세 날씨의 GPU 합성, PC/기록부 블러, 창문 치장/기본 복원, 블라인드 변형 및 검사 후 상태 복원을 포함한다.
 - Windows 검증 빌드 성공. 이는 AI·진행·보상·저장을 제외한 화면 검증 빌드이며 실제 AI 상담 E2E 완료를 뜻하지 않는다. 보고서·기본 배경 캡처·Windows 빌드는 로컬 `artifacts/corridor-connection/`에 보존한다. 임시 씬과 검증 도우미는 제거하고 기존 시작 씬·제품명을 복원했으며 ProjectSettings 원본 바이트가 보존되었는지 확인했다.
 - 로컬 Unity 프로젝트에는 구현 커밋을 적용했다. PR에는 씬·프리팹·layout·이 문서만 포함하며 main 직접 push/병합과 서버 배포는 하지 않는다. 다음 작업은 이 연결 PR 병합 후 팀원이 최신 main을 pull하고 Play를 재시작해 기본 창문을 확인하는 일이다. 대기 인원에 따른 네 이미지의 자동 선택은 표시 규칙 결정 후 별도로 연결한다.
+
+### 17.38 우리동네 상담사 제목과 시작 화면 대기실 배경
+
+- 완료 시각: 2026-11-06 08:40:46 KST (UTC+09:00). 최신 main `aa11c32`에서 `codex/neighborhood-counselor-title`을 만들었다. 사용자가 요청한 제목 변경과 시작 화면에도 대기실 창문을 표시하는 작업을 함께 처리했다.
+- `StartMenuUI.prefab`의 제목을 `우리동네` / `상담사`로 바꿨다. 시작 씬은 이 프리팹을 사용하므로 씬을 재생성하지 않았다. 배경은 기존 단일 이미지에서 상담실 기본 이미지와 5개 미리보기 레이어로 전환했고, 16:9 비율·창문 뒤 대기 인물·창문 앞 PC 배치를 맞췄다. 모든 배경 RawImage는 클릭을 가로채지 않는다.
+- `StartMenuSceneBuilder.CreateScene()`도 기존 상담실 프리팹의 `ConsultationRoomAppearance`에서 기본 그림과 레이어를 복제하도록 맞췄다. `README.md` 제목 및 `tools/ui-preview/start-menu/index.html`, `preview.css`의 제목·배경 구성도 갱신했다. 새 이미지·런타임 컴포넌트·저장 데이터 변경은 없다.
+- 정적 확인: 프리팹 로컬 fileID의 중복·누락, 대기실 창문 GUID와 계층 연결, 변경 파일의 diff 형식을 확인했다. 실제 열려 있는 Unity 테스트 체크아웃에 로컬 병합하고 기존 폰트·ProjectSettings 수정은 보존했다.
+- 실제 검증: Unity 6000.3.28f1의 16:9 Game 뷰에서 재컴파일 및 Play 진입을 확인했다. Computer Use로 새 제목의 한글 표시·줄 배치, 창문/대기 인물/PC 겹침, 기존 갈색 음영을 확인했다. 설정 버튼 클릭 → 설정창 표시 → 취소 → 시작 화면 복귀가 정상이며 콘솔 오류·경고는 0건이었다. Play를 종료한 시작 씬으로 남겨 두었다.
+- 검증 범위: 이번에는 시작 화면 표시와 설정창 열기/취소만 확인했다. 새 게임·불러오기·실제 AI 상담·정산 E2E, 별도 Windows 빌드, 다른 화면 비율 및 HTML 브라우저 렌더 검사는 재실행하지 않았다. 설정 적용이나 진행 저장 작업은 수행하지 않았다.
+- 다음 작업: 이 PR 병합 후 팀원들은 최신 main을 pull하고 시작 씬에서 새 제목과 대기실 창문을 확인한다. 원화/기본 레이어 변경 시 상담실과 시작 프리팹·생성 도구·HTML 시안을 함께 점검한다. main 직접 push·원격 병합·서버 배포는 이번 작업에 포함하지 않는다.

@@ -6,16 +6,19 @@ namespace UnityEngine
 {
     public class Object
     {
+        public string name;
         public static T[] FindObjectsByType<T>(FindObjectsInactive inactive, FindObjectsSortMode sort) => new T[0];
         public static T FindFirstObjectByType<T>() => default(T);
+        public static T Instantiate<T>(T original, Transform parent, bool worldPositionStays = false) => original;
     }
     public enum FindObjectsInactive { Include }
     public enum FindObjectsSortMode { None }
     public class Component : Object
     {
         public GameObject gameObject = new GameObject();
+        public Transform transform;
         public T GetComponent<T>() => default(T);
-        public T GetComponentInChildren<T>() => default(T);
+        public T GetComponentInChildren<T>(bool includeInactive = false) => default(T);
     }
     public class Behaviour : Component { public bool enabled; public bool isActiveAndEnabled = true; }
     public class MonoBehaviour : Behaviour
@@ -25,8 +28,9 @@ namespace UnityEngine
         public void StopAllCoroutines() { }
     }
     public class Coroutine { }
-    public class GameObject : Object { public void SetActive(bool active) { } public T AddComponent<T>() => default(T); }
+    public class GameObject : Object { public void SetActive(bool active) { } public T AddComponent<T>() => default(T); public T GetComponent<T>() => default(T); }
     public class RectTransform : Component { public Vector2 anchoredPosition; }
+    public class Transform : Component { public Transform parent; }
     public class Sprite : Object { }
     public class CanvasGroup : Behaviour { public float alpha; public bool interactable; public bool blocksRaycasts; }
     public class CanvasRenderer { public bool cullTransparentMesh; }

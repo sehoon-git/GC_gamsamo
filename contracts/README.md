@@ -17,7 +17,7 @@ GPU·가중치 없이 같은 API 형식으로 연결할 수 있다. 모의 서�
 
 `GET /health`에서 `inference.ready`, `mode`, `format_version`, `content_version`, `supported_patient_ids`를 먼저 확인한다. 준비 전 HTTP 503을 반환한다. 화면에 모의 대화인지 실제 AI 대화인지 표시하고, 버전이나 환자 지원 여부가 다르면 해당 상담의 AI 요청을 시작하지 않는다. `busy`는 서버의 직렬 처리 상태다.
 
-지원 환자는 **서윤(`seoyun`), 도현(`dohyeon`), 태준(`taejun`), 연우(`yeonwoo`), 하린(`harin`)**이다. `supported_patients`의 각 항목은 `id`, `display_name`, `content_version`을 포함한다. `supported_patient_ids`로 실제 지원 여부를 확인한다. `민석(minseok)`은 설정 대기인 로컬 시연이며 `/start`는 404다. 기존 화면의 지은은 연우로 변경했고 `jieun`을 AI 환자 ID로 보내지 않는다.
+최종 지원 환자는 **서윤(`seoyun`), 도현(`dohyeon`), 태준(`taejun`), 연우(`yeonwoo`), 하린(`harin`) 5명**이다. `supported_patients`의 각 항목은 `id`, `display_name`, `content_version`을 포함한다. `GET /v1/patients`는 같은 Bearer 인증으로 정식 ID·이름·이전 ID·콘텐츠 준비 여부를 제공한다. 단일 목록은 `Assets/StreamingAssets/GameData/patient-catalog.json`이다. 민석은 최종 대상에서 제외하며 `/start`는 404 `unsupported_patient`다. B는 별도로 화면·방문 목록에서 민석을 제거해야 한다. `jieun`은 목록의 `aliases`에서 `yeonwoo`로 변환한 뒤 요청하며, AI 상태와 저장에는 정식 ID만 사용한다.
 
 | patient_id | content_version | 이야기 |
 |---|---|---|
@@ -34,7 +34,8 @@ POST 요청은 서버에서 전달받은 `Authorization: Bearer <키>`를 사용
 | API | 요청 | 용도 |
 |---|---|---|
 | `GET /health` | 없음 | 준비 상태·모의/모델 모드·형식/콘텐츠/모델/프롬프트 버전·지원 환자 확인 |
-| `POST /v1/dialogue/start` | `patient_id`, `case_id`, `session_id`, `request_id`, `created_at` | 새 상담 상태와 첫 환자 발화를 함께 생성 |
+| `GET /v1/patients` | Bearer 인증 | 정식 환자 5명·이전 ID 매핑·콘텐츠 준비 상태 |
+| `POST /v1/dialogue/start` | `game_progress_id`, `patient_id`, `case_id`, `session_id`, `request_id`, `created_at` | 새 상담 상태와 첫 환자 발화를 함께 생성 |
 | `POST /v1/dialogue/open` | `state`, `session_id`, `request_id` | 첫 발화가 없는 기존 빈 회차의 환자 선발화 생성 |
 | `POST /v1/dialogue/revisit` | `state`, **새** `session_id`, `request_id`, `created_at` | 평가 미달 상담의 기억·원문을 유지하며 새 회차와 첫 환자 발화 생성 |
 | `POST /v1/dialogue/turn` | `state`, `session_id`, `turn_id`, `text` | 플레이어의 서술형 발언에 대한 환자 응답 |
@@ -42,6 +43,12 @@ POST 요청은 서버에서 전달받은 `Authorization: Bearer <키>`를 사용
 | `POST /v1/dialogue/evaluate` | `state`, `session_id`, `request_id` | 종료 기록을 평가하고 결과 반환 |
 
 모든 POST 성공 응답은 `StateResponse`다. `case_id`, `session_id`, `request_id`, `base_revision`, `state`, `replayed`, `disclosure_candidates`를 반환한다. `/revisit`만 요청의 `session_id`가 이전 상태의 현재 회차와 다르며 성공 응답은 새 회차 ID를 반환한다.
+
+게임 진행을 연결하는 B·C·D는 [A 담당 연결 계약과 검증 절차](../docs/owner-a-ai-service.md)를 따른다. `/start.game_progress_id`와 `state.game_progress_id`는 동일한 진행에 고정하며, 이후 요청·응답과 저장 원문에도 유지한다. `/health.capabilities`의 `game_progress_scope`를 확인한다. ID는 영문·숫자·`_`·`-`의 1~80자다. 진행 ID 없는 기존 형식 4는 내부적으로 `legacy`에 해당하며 이전 저장 경로·JSON을 유지한다. 기존 기록을 임의의 새 게임 진행에 자동 편입하지 않는다.
+
+**평가 HTTP 응답은 게임 정산 완료 신호가 아니다.** Unity `AiSession.Receive`의 검증과 원문·상태 저장 이후 `PatientAiAdapter.SavedEvaluationAvailable` 또는 `TryGetSavedEvaluation`로 얻은 `AiSavedEvaluation`만 B가 받는다. 진행 ID·환자 ID·사례 ID·회차 ID와 두 점수를 함께 제공하며, 모의/출처 미확인 결과와 저장 실패 중인 결과는 이 경로에서 제공하지 않는다. B의 확인 → C 계산 → B 상태 저장 → D 확정 표시를 별도로 완료해야 한다. `EvaluationCommitted(string)`은 기존 기록 표시용이며 정산용으로 사용하지 않는다.
+
+진행별 예제: [서윤 시작](scoped-seoyun-start.request.example.json), [하린 시작](scoped-harin-start.request.example.json), [대화](scoped-turn.response.example.json), [종료](scoped-close.response.example.json), [평가](scoped-evaluate.response.example.json), [재상담](scoped-revisit.request.example.json). 예제는 테스트용 모의 응답이며 실제 게임의 대체 응답으로 사용하지 않는다.
 
 ## 첫 발화와 자유 대화
 

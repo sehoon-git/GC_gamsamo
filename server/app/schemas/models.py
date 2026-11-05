@@ -2,14 +2,10 @@ from datetime import datetime, timezone
 from typing import Annotated, Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
+from app.patient_registry import PATIENT_IDS, content_version
 
-CONTENT_VERSION = "seoyun-4.0"  # Existing Seoyun saves remain compatible.
-PATIENT_IDS = ("seoyun", "dohyeon", "taejun", "yeonwoo", "harin")
-
-
-def content_version(patient_id: str) -> str:
-    return patient_id + "-4.0"
+CONTENT_VERSION = content_version("seoyun")  # Existing Seoyun saves remain compatible.
 FORMAT_VERSION = 4
 CLOSING_TEXT = "상담은 여기까지 하겠습니다. 오늘 수고하셨습니다!"
 Id = Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")]
@@ -26,6 +22,20 @@ def now() -> str:
 
 class Model(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+
+class PatientInfo(Model):
+    id: Id
+    name: str
+    aliases: list[Id]
+    ready: bool
+    content_version: str | None
+    unavailable_reason: str
+
+
+class PatientCatalogResponse(Model):
+    catalog_version: Literal[1] = 1
+    patients: list[PatientInfo]
 
 
 class MemoryItem(Model):
@@ -162,11 +172,20 @@ class CaseState(Model):
     content_version: str = CONTENT_VERSION
     case_id: Id = Field(default_factory=lambda: new_id("case"))
     patient_id: Id = "seoyun"
+    game_progress_id: Id = "legacy"
     revision: int = Field(default=0, ge=0)
     created_at: str = Field(default_factory=now)
     revealed_fact_ids: list[str] = Field(default_factory=list)
     memory: Memory = Field(default_factory=Memory)
     sessions: list[Session] = Field(default_factory=lambda: [Session()], min_length=1)
+
+    @model_serializer(mode="wrap")
+    def serialize_compatible(self, handler):
+        result = handler(self)
+        # Existing format-4 snapshots/replay bodies remain byte-structure compatible.
+        if self.game_progress_id == "legacy":
+            result.pop("game_progress_id", None)
+        return result
 
     @model_validator(mode="before")
     @classmethod
@@ -231,6 +250,7 @@ class OpenRequest(EvaluateRequest):
 
 class StartRequest(Model):
     patient_id: Id
+    game_progress_id: Id = "legacy"
     case_id: Id
     session_id: Id
     request_id: Id

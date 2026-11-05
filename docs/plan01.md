@@ -1136,7 +1136,7 @@ PC 내부 네 화면, 기본 방 레이어·날씨, 원본 48종의 동적 카�
 
 - 좌측 상단의 기본 IMGUI 저장 안내를 `RoomStatusView`로 교체한다. 평소에는 `시작 화면으로` 버튼만 보이고, 오류가 있으면 종이 안내 카드와 기존 재시도가 나타난다. 긴 오류는 카드 내부에서 스크롤하며, 진행 서비스가 없는 상태에는 재시도를 표시하지 않는다.
 - `GameProgressRuntime.Awake()`가 `Resources/Presentation/RoomStatus.prefab`을 생성하고 바인딩한다. 진행 상태·저장·정산은 기존 서비스가 소유한다. 뷰는 `LastError`, 재시도 가능 여부, `RoomControlsAvailable`을 표시하며 `RetryProgress()`와 `ReturnToStartMenu()`를 호출한다. 기록부·PC·안내서 등 모달이 입력을 점유하면 상단 버튼도 차단된다.
-- 우측 게임 안내 버튼과 안내서의 이전/다음/닫기를 하단 대화창과 같은 `PinkPaperButton`으로 통일했다. 안내서 본문에는 크림색 종이 질감, 갈색 글자, 제본선·구분선·분홍 제목표를 사용한다. 6쪽의 내용·키보드 조작·페이지 효과음은 유지한다. 하단 대화 UI와 공용 상담실 씬/프리팹은 수정하지 않는다.
+- 우측 게임 안내 버튼과 안내서의 이전/다음/닫기를 하단 대화창과 같은 `PinkPaperButton`으로 통일했다. 우측 버튼의 사각형 책 장식 3개는 제거하고 `게임 안내` 문구를 가운데 정렬한다. 버튼 위치·크기·클릭 동작은 유지한다. 안내서 본문에는 크림색 종이 질감, 갈색 글자, 제본선·구분선·분홍 제목표를 사용한다. 6쪽의 내용·키보드 조작·페이지 효과음은 유지한다. 하단 대화 UI와 공용 상담실 씬/프리팹은 수정하지 않는다.
 - `WarmPaperSurface.asset`은 기존 `DialoguePanel.png`의 빈 종이 영역을 참조하는 Sprite다. 새 이미지 생성이나 원본 PNG 수정 없이 기존 그림의 질감을 재사용한다. 새 에셋의 `.meta`와 `RoomStatus.prefab`을 함께 배포해야 한다.
 - 재적용: `Gamsamo > Presentation > Apply Room Paper Theme` (`RoomPaperPresentationBuilder.Install`). 기존 안내서 프리팹의 GUID와 이벤트 참조를 보존하고 스타일을 갱신한다. `PresentationPrefabBuilder.CreateGuidebook()`도 같은 스타일 함수를 호출한다.
 - 검증: `RoomPaperChecks.Run()`은 오류/정상/재시도 비활성/모달 입력 차단/긴 메시지 스크롤/해상도 설정을 검사하고 기존 `PresentationChecks`를 실행한다. `BuildPreview()`는 실제 상담실 레이아웃에 합성 대사·오류를 얹은 Windows 시각 검증 빌드를 만든다. `PaperGuide.exe -paper-guide-capture`로 정상/오류 화면과 안내서 6쪽을 저장한다. 별도 제품명 `GC_gamsamo_PaperGuide_Preview`이며 서버나 사용자 저장을 사용하지 않는다.
@@ -1806,3 +1806,14 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 다음 작업: 이 PR 병합 후 팀원들은 최신 main을 pull하고 시작 씬에서 새 제목과 대기실 창문을 확인한다. 원화/기본 레이어 변경 시 상담실과 시작 프리팹·생성 도구·HTML 시안을 함께 점검한다. main 직접 push·원격 병합·서버 배포는 이번 작업에 포함하지 않는다.
 
 - 2026-11-06 08:41:45 KST (UTC+09:00) 최신 main `893841b` 반영: #50의 안내 문구 제거 변경을 함께 유지했다. 문서 끝의 동시 추가 충돌은 기존 17.38을 보존하고 이번 기록을 17.39로 구분했다.
+
+### 17.40 게임 안내 버튼의 사각형 책 장식 제거
+
+- 구현·검증 완료 시각: **2026-11-06 08:33:32 KST (UTC+09:00)**. 최신 `origin/main aa11c32`에서 `codex/ui-guide-button-cleanup`으로 작업을 시작했고, PR 제출 전 **2026-11-06 08:42:02 KST (UTC+09:00)**에 갱신된 `origin/main 893841b`를 반영했다. 같은 17.38 번호로 추가된 main의 안내 문구 제거 기록을 17.38로 보존하고 이 기록을 17.39로 구분했다. 기존 폰트 미커밋 변경은 원래 작업 공간에 그대로 보존했다. PR 대상은 main이며 직접 push·병합·자동 병합은 하지 않는다.
+- 원인/변경: `Guidebook.prefab`의 `BookLeftPage`, `BookRightPage`, `BookSpine` 이미지가 책 아이콘을 사각형으로 표현하던 장식이었다. 이 세 객체만 제거하고 `게임 안내` TMP 영역을 버튼 가운데로 옮겼다. 버튼의 분홍 종이 배경·좌표·크기·Button 컴포넌트·GuidebookView 연결은 유지했다.
+- 재생성 경로: `PresentationPrefabBuilder.CreateGuidebook()`은 해당 장식을 만들지 않는다. `RoomPaperPresentationBuilder.StyleGuide()`는 기존 프리팹에 남아 있는 같은 이름의 장식을 제거하고 중앙 정렬을 적용한다. 런타임 API·안내서 내용·페이지 이동·입력 잠금·음향 연결은 변경하지 않았다. 공용 씬 생성/테마 설치 도구는 실행하지 않았다.
+- 검증: Unity **6000.3.28f1** 별도 작업 공간의 batch import/Runtime·Editor 컴파일 종료 코드 0, 컴파일 오류 없음. `git diff --check`, 프리팹 GUID 유지, 제거한 객체/컴포넌트 ID 12개의 잔여 참조 없음, 기존 openButton 직렬화 동일, 유지 객체 중 변경은 자식 목록과 라벨 RectTransform 두 블록뿐임을 확인했다. 로그는 Git 제외 임시 경로 `/tmp/gamsamo-guide-button-compile.log`. 단순 장식 수정이므로 관련 없는 전체 회귀/서버/저장 테스트는 반복하지 않았다.
+- 직접 Play 화면/클릭 검증은 이번 작업에서 실행하지 않았다. 사용자 Unity에 AI 연결 파일 선택 창이 열려 있어 그 작업을 조작하지 않았다. 확인 방법: 변경 반영 후 Play를 재시작하고 상담실 우측 상단에 사각형 없이 가운데 `게임 안내`만 보이는지 확인한 뒤, 버튼 클릭 → 안내서 페이지 이동 → Esc 닫기를 확인한다. 실행 중 생성된 Guidebook(Clone)은 Play 재시작 때 새 프리팹으로 갱신된다.
+- 주요 파일: `Assets/_Project/Prefabs/Presentation/Guidebook.prefab`, `Assets/_Project/Editor/Presentation/PresentationPrefabBuilder.cs`, `RoomPaperPresentationBuilder.cs`, 이 문서. 새 에셋/.meta/API/통합 의존성은 없다. 다음 작업은 PR 검토와 위 직접 클릭 확인이다.
+
+- 2026-11-06 08:45:46 KST (UTC+09:00) PR #52 충돌 해결: PR 생성 당시 main `893841b` 이후 제목·배경 PR #51이 `538f535`로 병합되면서 문서 끝에 같은 17.39절이 추가되어 충돌했다. main의 제목·배경 기록을 17.39로 보존하고 안내 버튼 기록은 17.40으로 구분했다. 15절의 양쪽 구현 설명도 보존했다. 안내 버튼 코드/프리팹 3개는 기존 PR head `c2bb51f`와 동일하고 나머지 제품 파일은 최신 main과 동일하다. 양쪽 문서 내용 보존·중복 절 번호·충돌 표식·diff 형식을 확인했다. 이번에는 문서 충돌만 정리했으므로 Unity 컴파일/Play/빌드는 다시 실행하지 않았으며 위 실행 검증은 원래 UI 구현 당시 결과다. 기존 PR #52를 갱신하고 원격 병합은 사용자 판단에 맡긴다.

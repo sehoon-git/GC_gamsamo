@@ -54,15 +54,12 @@ namespace Gamsamo.Editor.Presentation
         {
             var book = view.openButton;
             Place(book.GetComponent<RectTransform>(), 1620, 32, 260, 80); Button(book);
-            var label = book.GetComponentInChildren<TMP_Text>(); Place(label.rectTransform, 70, 10, 162, 58); label.fontSize = 25;
+            var label = book.GetComponentInChildren<TMP_Text>(); Place(label.rectTransform, 20, 10, 220, 60); label.fontSize = 25;
+            // Remove the old rectangular book decoration when restyling an existing prefab.
             foreach (string name in new[] { "BookLeftPage", "BookRightPage", "BookSpine" })
             {
-                var icon = book.transform.Find(name)?.GetComponent<Image>();
-                if (icon == null) continue;
-                icon.color = name == "BookSpine" ? Rule : new Color32(255, 241, 214, 255);
-                if (name == "BookLeftPage") Place(icon.rectTransform, 32, 24, 18, 32);
-                else if (name == "BookRightPage") Place(icon.rectTransform, 52, 24, 18, 32);
-                else Place(icon.rectTransform, 50, 23, 2, 34);
+                var icon = book.transform.Find(name);
+                if (icon != null) UnityEngine.Object.DestroyImmediate(icon.gameObject);
             }
             var paper = view.titleText.transform.parent.GetComponent<Image>(); Paper(paper);
             var root = paper.transform;

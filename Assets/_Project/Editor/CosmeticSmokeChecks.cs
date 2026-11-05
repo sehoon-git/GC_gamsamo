@@ -33,6 +33,11 @@ namespace Gamsamo.Editor
                 Debug.LogWarning("Close settings before cosmetic checks to preserve unapplied edits.");
                 return;
             }
+            if (appearance.desktop.TryGetWalletTotals(out _, out _))
+            {
+                Debug.LogWarning("Run the cosmetic artwork checks with the game wallet disconnected.");
+                return;
+            }
             run = new RunState(appearance);
             Application.runInBackground = true;
             steps = Exercise(run);
@@ -99,8 +104,7 @@ namespace Gamsamo.Editor
             if (!ready) yield break;
             r.Check(catalog.items.Select(item => item.id).Distinct().Count() == 48,
                 "All product IDs are unique");
-            r.Check(catalog.items.All(item => !item.hasPrice && item.thumbnail != null),
-                "Every item has a thumbnail and an explicitly unset price");
+            r.Check(catalog.items.All(item => item.thumbnail != null), "Every item has a thumbnail");
             r.Check(Targets.All(target => catalog.GetItems(target).Length == 8), "Six categories contain eight items each");
             appearance.RestoreAll();
             room.CloseRecord();
@@ -132,7 +136,11 @@ namespace Gamsamo.Editor
                     shop.itemButtons[slot].onClick.Invoke();
                     r.Check(appearance.SelectedId(item.target) == item.id, "Click previews " + item.id);
                     if (category == 0 && slot == 0)
+                    {
                         r.Check(appearance.BlindState == 1, "First window design starts half lowered");
+                        r.Check(shop.ItemActionButton != null && !shop.ItemActionButton.IsInteractable(),
+                            "Purchasing requires a bound wallet and an approved price");
+                    }
                     r.Check(shop.selectionBorders[slot].activeSelf
                         && shop.selectionBorders.Count(border => border.activeSelf) == 1,
                         "Exactly one selected card: " + item.id);
@@ -200,10 +208,12 @@ namespace Gamsamo.Editor
                 yield return 0.03f;
             }
 
-            appearance.Preview("window.oak");
             appearance.roomAppearance.SetWeather(ConsultationRoomAppearance.Weather.Rain);
             room.ClosePc();
             yield return 0.4f;
+            r.Check(string.IsNullOrEmpty(appearance.SelectedId("window")),
+                "Closing the PC discards the unsaved window preview");
+            appearance.Preview("window.oak");
             for (int blind = 0; blind < 3; blind++)
             {
                 appearance.SetBlindState(blind);
@@ -227,7 +237,11 @@ namespace Gamsamo.Editor
             room.OpenPc();
             yield return 0.4f;
             desktop.OpenShop();
-            r.Check(Targets.All(target => appearance.SelectedId(target) == target + ".sage"), "All six previews survive closing and reopening PC");
+            foreach (string target in Targets) appearance.Preview(target + ".sage");
+            desktop.CloseShop();
+            desktop.OpenShop();
+            r.Check(Targets.All(target => string.IsNullOrEmpty(appearance.SelectedId(target))),
+                "Closing the shop restores the confirmed default across all six categories");
             string selected = appearance.SelectedId("window");
             r.Check(!appearance.Preview("missing.product") && appearance.SelectedId("window") == selected,
                 "Unknown IDs cannot change appearance");
@@ -438,6 +452,8 @@ namespace Gamsamo.Editor
             if (!ready) return;
 
             var visibleControls = new List<RectTransform> { status, restore };
+            if (shop.ItemActionButton != null && shop.ItemActionButton.gameObject.activeInHierarchy)
+                visibleControls.Add((RectTransform)shop.ItemActionButton.transform);
             if (hint.gameObject.activeInHierarchy) visibleControls.Add(hint.rectTransform);
             Rect[] footerBounds = visibleControls.Select(rect => BoundsIn(rect, window)).ToArray();
             const float margin = 8f;

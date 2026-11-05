@@ -1,3 +1,4 @@
+using Gamsamo.Economy;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -6,7 +7,7 @@ using UnityEngine.UI;
 
 namespace Gamsamo.UI
 {
-    /// <summary>PC window navigation only. Inventory, currency and purchase data are not connected.</summary>
+    /// <summary>PC window navigation and the committed wallet display shared with the shop.</summary>
     [DisallowMultipleComponent]
     public sealed class PcDesktopView : MonoBehaviour
     {
@@ -42,6 +43,7 @@ namespace Gamsamo.UI
         private Button appOpener;
         private Button[] boundTabButtons;
         private UnityAction[] tabActions;
+        private EconomyWallet wallet;
 
         private void Awake()
         {
@@ -70,7 +72,36 @@ namespace Gamsamo.UI
                     Bind(boundTabButtons[index], tabActions[index]);
                 }
             }
+            InstallCoinUnit();
             ResetDesktop();
+        }
+
+        /// <summary>B calls this with the wallet for the loaded run. Bind null on sign-out.</summary>
+        public void BindEconomy(EconomyWallet confirmedWallet)
+        {
+            if (wallet != null) wallet.Changed -= RefreshBalance;
+            wallet = confirmedWallet;
+            if (wallet != null) wallet.Changed += RefreshBalance;
+            if (shopView != null) shopView.BindEconomy(wallet);
+            RefreshBalance();
+        }
+
+        /// <summary>For D: confirmed current balance and lifetime coins earned in this run.</summary>
+        public bool TryGetWalletTotals(out int balance, out int totalEarned)
+        {
+            balance = totalEarned = 0;
+            if (wallet == null || !wallet.IsReady) return false;
+            balance = wallet.Balance;
+            totalEarned = wallet.TotalEarned;
+            return true;
+        }
+
+        /// <summary>For D: returns only the receipt in the wallet's confirmed run.</summary>
+        public bool TryGetSettledReward(string patientId, string caseId, string sessionId,
+            out int baseCoins, out int bonusCoins)
+        {
+            baseCoins = bonusCoins = 0;
+            return wallet != null && wallet.TryGetSettledReward(patientId, caseId, sessionId, out baseCoins, out bonusCoins);
         }
 
         public void OpenShop()
@@ -82,7 +113,7 @@ namespace Gamsamo.UI
             shopWindow.SetActive(true);
             SelectTab(0);
             SetShortcutInput(false);
-            SetPlaceholderBalance();
+            RefreshBalance();
             Focus(closeShopButton);
         }
 
@@ -116,7 +147,7 @@ namespace Gamsamo.UI
             ActiveTabIndex = 0;
             SelectTab(0);
             SetShortcutInput(true);
-            SetPlaceholderBalance();
+            RefreshBalance();
         }
 
         /// <summary>Used by Escape and the outer backdrop; false means the whole PC can close.</summary>
@@ -215,12 +246,37 @@ namespace Gamsamo.UI
             return true;
         }
 
-        private void SetPlaceholderBalance()
+        private void RefreshBalance()
         {
-            if (balanceText == null)
-                return;
+            if (balanceText == null) return;
             balanceText.richText = false;
-            balanceText.text = "—";
+            balanceText.text = TryGetWalletTotals(out int balance, out _) ? balance.ToString("N0") : "—";
+        }
+
+        private void InstallCoinUnit()
+        {
+            if (balanceText == null) return;
+            // All six shipped templates print the KRW suffix immediately right of the number.
+            // Match the paper behind that glyph and render the real game coin unit instead.
+            RectTransform amount = balanceText.rectTransform;
+            var cover = new GameObject("CoinUnit", typeof(RectTransform), typeof(Image));
+            var rect = (RectTransform)cover.transform;
+            rect.SetParent(amount.parent, false);
+            rect.anchorMin = amount.anchorMin;
+            rect.anchorMax = amount.anchorMax;
+            rect.pivot = amount.pivot;
+            rect.sizeDelta = new Vector2(28, amount.sizeDelta.y);
+            rect.anchoredPosition = amount.anchoredPosition + Vector2.right * amount.sizeDelta.x;
+            var paper = cover.GetComponent<Image>();
+            paper.color = new Color32(230, 233, 218, 255);
+            paper.raycastTarget = false;
+            TMP_Text unit = Instantiate(balanceText, rect);
+            unit.rectTransform.anchorMin = Vector2.zero;
+            unit.rectTransform.anchorMax = Vector2.one;
+            unit.rectTransform.offsetMin = unit.rectTransform.offsetMax = Vector2.zero;
+            unit.alignment = TextAlignmentOptions.Center;
+            unit.text = "C";
+            unit.raycastTarget = false;
         }
 
         private void SetShortcutInput(bool enabled)
@@ -255,6 +311,7 @@ namespace Gamsamo.UI
 
         private void OnDestroy()
         {
+            if (wallet != null) wallet.Changed -= RefreshBalance;
             Unbind(profileButton, OpenProfile);
             Unbind(shopButton, OpenShop);
             Unbind(photosButton, OpenPhotos);

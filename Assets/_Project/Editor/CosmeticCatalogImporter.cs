@@ -43,6 +43,7 @@ namespace Gamsamo.Editor
                     AssetDatabase.CreateFolder("Assets/_Project", "Settings");
                 catalog = ScriptableObject.CreateInstance<CosmeticCatalog>();
                 catalog.items = items;
+                catalog.coinPrices = items.Select(item => new CosmeticCoinPrice { itemId = item.id }).ToArray();
                 AssetDatabase.CreateAsset(catalog, CatalogPath);
             }
             else

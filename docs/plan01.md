@@ -1,7 +1,7 @@
 # 상담 커피톡 — 통합 기획서 plan01
 
 - 가제: 상담 커피톡
-- 문서 버전: 0.15
+- 문서 버전: 0.16
 - 갱신일: 2026-11-06
 - 목적: 사용자 확정 사항과 환자별 상담 실험의 규칙을 게임 기획에 일관되게 반영한다.
 - 문서 상태: 기획·실험 규칙, 현재 구현·검증, 에셋 편집과 인수인계를 통합한 단일 문서. 구현 사실은 15절, 기획상 목표는 1~13절로 구분한다.
@@ -694,6 +694,7 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 ## 14. 참고와 변경 이력
 
+- v0.16: 상담 종료·평가 저장과 실제 퇴장을 분리한다. 완료 사례 복원도 착석 상태로 기다리며 사용자가 `환자 내보내기`를 눌러야 퇴장한다. 구현·필수 검증은 17.30절을 따른다.
 - v0.15: PR #29의 5인 AI·환자별 저장·연우 이름 변경을 PR #30의 시작 화면·48종 치장·최신 UI에 통합한다. AI 추가 이력은 17.28절, 충돌 해결과 사용자 승인 병합 기록은 17.29절을 따른다.
 
 - v0.14: 최신 main의 외부 AI·무제한 입력·책상 원문/평가를 유지하면서 feature/ui의 시작 씬·48종/6탭·벽지·창문 클릭·기록부 드래그·720p/1080p를 통합한다. UI 브랜치 고유 이력은 17.26에, 이번 병합과 필수 검사는 17.27에 구분한다.
@@ -733,7 +734,7 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 이 절은 상담실·6명 입장·기록부·PC·상점 UI와 5인 AI의 현재 구현을 기록한다. **게임의 환자 선발화·자유 서술형 입력·사용자 종료를 기준으로 AI를 수정했다.** 형식 4는 `/start`·`/open`·`/revisit`와 별도 첫 발화 원문을 제공하며 질문 0/1 분류·복수 질문 거절·횟수 계산이 없다. PR #24의 외부 API 연결·상담 자동 저장·종료·평가 어댑터에 기존 입력창을 `PatientAiInputBridge`로 연결했다. 주질문·후속질문·횟수 제한 없이 대화하고 `상담 그만하기`로 종료한다. 문 옆 `상담 중 1/6` 박스를 제거하고 네트워크 상태는 말풍선 안에서 안내한다. 결과 대화창을 없애고 원문·평가는 책상 서류에서 읽는다. [공개 함수·이벤트 명세](../contracts/README.md#unity-text-input)를 따르며 PR #24의 실제 모델·HTTPS 검증은 17.24절, 이번 입력·서류 통합의 실제 서버 Unity 검증과 남은 범위는 17.25절로 구분한다. 서윤·도현·태준·연우·하린의 환자별 AI 설정을 연결하며 민석만 로컬 시연이다. 이번 다중 환자 변경은 17.28절에서 검증 범위와 제한을 기록한다. 보상·상품 구매·해금·엔딩은 별도 미구현 범위이며 API 응답 성공을 게임 전체 완성으로 해석하지 않는다.
 
-### v0.15 게임·AI 전수 비교와 처리 기준
+### v0.16 게임·AI 전수 비교와 처리 기준
 
 초기 조사 기준은 main `8dbe1dd`이며 이번 연결 작업은 PR #22가 병합된 main `81b46df`와 PR #24 `05aa84e`의 서버·CLI·외부 연결 계층을 바탕으로 Unity 씬/프리팹·스크립트·환자 JSON·기획서를 대조했다. PR #24·#28이 병합된 main `810db9d`를 바탕으로 5인 AI를 작성한 뒤, PR #30이 반영된 main `c260a0d`의 최신 UI를 함께 통합했다. 후속 PR #28은 그 연결 계층 위의 입력 UI·책상 기록부 통합 변경이다. 실행 경로, 상태와 저장, 콘텐츠, UI와 운영을 대조했다. 이전 버전의 검증 수치는 해당 시점의 결과로 유지한다.
 
@@ -743,7 +744,7 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 | 2. 자유 서술 | 서버가 복수 질문을 `needs_split`로 거절하고 질문 수를 계산 | 분류의 질문 개수·종류·카운터 제거. 여러 문장·공감·제안·질문을 그대로 처리 |
 | 3. 입력·전송 | PR #24는 연결 함수만 제공하고 게임 입력창과 분리됨 | 기존 입력창을 `PatientAiInputBridge`로 `SubmitText/UpdateDraft`에 연결. Enter 줄바꿈·Ctrl+Enter 또는 버튼 전송·IME 조합 중 전송 차단·초안 복원 |
 | 4. 환자 범위 | 화면 방문 슬롯 6명, AI 설정·평가 원본 5명 | `/health`에 지원 ID/이름 표시, 미지원 환자 `/start` 거절. 서윤·도현·태준·연우·하린 지원. 민석만 로컬 시연; 환자 간 설정 재사용 금지 |
-| 5. 종료 순서 | 게임은 확인 즉시 퇴장, 서버는 종료 의도·안내 저장·평가 필요 | `상담 그만하기` 확정 후 요청·고정 안내·평가를 저장하고 퇴장. 결과 대화창 없이 책상 서류에서 원문·평가 열람 |
+| 5. 종료 순서 | 완료 사례 복원 시 자동 퇴장해 입장 직후 사라짐 | 종료 확정 → 원문·고정 안내·평가 저장 → 체류·책상 서류 열람 → 사용자 `환자 내보내기`. 복원 완료 사례도 동일하며 새 회차 자동 시작 없음 |
 | 6. 응답 대기 중 종료 | 서버 클라이언트는 미완료 요청 중 종료를 거절 | UI가 종료 의사를 보존하고 접수된 응답 저장 뒤 `/close`·평가를 순차 처리. 취소는 종료 의도 저장 전만 가능 |
 | 7. 발언자 | 대화창은 환자 이름만 표시, 종료 문구는 상담자 발언 | `closing_speaker=counselor`와 원문 `kind=closing` 유지. 종료 안내를 환자 이름 아래에 표시하지 않음 |
 | 8. 자동 저장·복원 | Python은 상태·원문 저장, Unity는 Play마다 초기화 | Unity 상태·원문·요청 ID·종료 의사 저장/복원 연결. 방문 ID와 API 회차 ID 분리. 형식 1~3 파일은 보존 |
@@ -762,12 +763,12 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 - 환자 방문 UI의 원 작업 브랜치는 `feature/records`이며 17.18절에 기록한다. PR #24 `codex/ai-unity-integration`의 런타임 어댑터를 채택하고 이번 후속 통합에서 기존 입력창·서류 UI에 연결한다.
 - 로컬 시연 순서는 **서윤(`seoyun`) → 도현(`dohyeon`) → 민석(`minseok`) → 태준(`taejun`) → 연우(`yeonwoo`) → 하린(`harin`)**이다. 원본은 `Assets/_Project/Settings/PatientVisits.json`이며 ID·이름·초상화 경로·임시 대사를 담는다. 환자별 `Assets/StreamingAssets/GameData/Patients/<patient_id>.json`의 상담 설정과 구분하며 기존 서윤 콘텐츠 버전·평가 항목은 유지한다. 연우의 초상화는 기존 지은 에셋 참조를 보존한다.
-- 문을 누르면 `Waiting → Entering → Consulting → Leaving → Waiting/Finished`로 진행한다. 입장 요청 직후 상태를 먼저 잠그므로 빠른 연속 클릭도 다음 환자를 예약하지 않는다. 입장·상담·퇴장 중에는 새 입장을 거부한다. 6명 이후에는 `Finished`로 남고 처음으로 돌아가지 않는다.
+- 문을 누르면 `Waiting → Entering → Consulting → Leaving → Waiting/Finished`로 진행한다. 입장 요청 직후 상태를 먼저 잠그므로 빠른 연속 클릭도 다음 환자를 예약하지 않는다. 입장·상담·종료 후 퇴장 대기·퇴장 중에는 새 입장을 거부한다. 6명 이후에는 `Finished`로 남고 처음으로 돌아가지 않는다.
 - 초상화는 문 방향에서 중앙 자리로 이동·나타나며, 책상 윗면 경계의 마스크로 하체를 가린다. 원본 이미지의 어두운 바탕은 `PatientPortrait.shader`와 전용 머티리얼로 표시에서 제거한다. 기록부·PC 클릭 영역과 기존 치장 합성은 유지한다.
-- 지원 5명은 각자의 AI 첫 발화를 받아 저장·표시하고 민석은 이름과 첫 임시 대사를 표시한다. `계속 듣기`는 타이핑 완료·다음 페이지·다음 임시 문장을 표시한다. AI 지원 환자의 `상담 그만하기` 확정은 고정 상담자 안내·평가를 저장한 뒤 방문 종료로 이어진다. 결과 대화창은 없으며 책상 서류에 원문·평가를 보관한다. 민석은 기존 확인·퇴장 흐름이다. 확인창의 `계속 상담하기` 또는 `Esc`는 종료를 취소한다.
+- 지원 5명은 각자의 AI 첫 발화를 저장·표시하고 민석은 첫 임시 대사를 표시한다. `계속 듣기`는 읽기만 진행하며 퇴장시키지 않는다. AI는 종료 확인 후 고정 안내·평가 저장을 마치고 `환자 내보내기`를 기다린다. 민석도 종료 확인 뒤 같은 버튼을 기다린다. 완료 사례를 복원해도 마지막 환자 대사와 저장 기록을 표시한 채 머물며 새 상담·재상담을 자동 시작하지 않는다. 결과는 책상 서류에서 읽는다. 확인 취소는 상담을 유지한다.
 - PC·기록부가 열리거나 닫히는 동안에는 `ConsultationRoomController.IsOverlayBlocking`으로 문·대화 입력을 막는다. 대화창은 숨기고 타이핑과 입퇴장 연출을 일시 정지하며, 창을 닫으면 같은 환자·세션을 이어간다. 상담 상태가 유지된 채 컴포넌트가 비활성화된 경우에도 다시 활성화할 때 같은 환자의 입퇴장을 재개한다.
 - 입장할 때 기록부에는 현재 환자 ID·이름·날짜와 미확인 항목을 넣는다. 병력·복약·상담 원문·공개 정보는 임의로 생성하지 않으며 사진 칸도 비운다. 입장 전의 예시 기록과 현재 이름 표시를 실제 환자 설정 연동 완료로 해석하지 않는다.
-- `useDemoDialogue=true`가 방문 컨트롤러의 기본값이며 AI 지원 환자 방문에는 런타임 어댑터의 개별 환자 연결이 우선한다. 환자별 AI 어댑터는 해당 방문에 한해 이를 끄고 `PatientArrived(sessionId, patientId)`를 받아 `PresentPatientLine(sessionId, text)`에 결과를 전달한다. 활성 세션과 다른 ID, 종료·퇴장한 세션, 빈 대사는 거부한다. `CompleteConsultation(sessionId)`는 활성 상담을 퇴장 상태로 바꾸는 연결 함수이며 팝업 차단 중에는 거부하므로 닫힌 후 호출한다. 이 함수는 환자 클리어·보상·자동 저장을 의미하지 않는다.
+- `useDemoDialogue=true`가 방문 컨트롤러의 기본값이며 AI 지원 환자 방문에는 런타임 어댑터의 개별 환자 연결이 우선한다. 환자별 AI 어댑터는 해당 방문에 한해 이를 끄고 `PatientArrived(sessionId, patientId)`를 받아 `PresentPatientLine(sessionId, text)`에 결과를 전달한다. 활성 세션과 다른 ID, 종료·퇴장한 세션, 빈 대사는 거부한다. `CompleteConsultation(sessionId)`는 동일 활성 방문·퇴장 대기·팝업 해제를 확인한 뒤 세션을 무효화하고 퇴장하는 함수다. 사용자의 DismissPatient 요청에서 ExternalFinishVisit을 통한 완료 저장 뒤 호출하며 외부 실패를 로컬 퇴장으로 대신하지 않는다. 이 함수는 환자 클리어·보상·자동 저장을 의미하지 않는다.
 - 지원 5명 방문에는 외부 API 어댑터·서술형 입력·전송·긴 대사 페이지·상담 자동 저장·책상 원문/결과 탭을 연결한다. 민석만 입력창 없는 임시 대사 시연이다. 정식 승급·엔딩은 미구현이며 고정 입장 순서는 단계별 해금 기획을 대체하지 않는다. 기존 서윤의 실제 서버 Unity 검증은 17.25절, 추가 4명의 구현·검증 범위는 17.28절에서 추적한다.
 - 기존 방문 UI 설치는 Edit 모드의 `Gamsamo > Install Patient Visits`다. AI 어댑터는 Play 시작 시 런타임 어댑터가 장착된다. 이전 로컬 방문 검사는 `Gamsamo > Run Patient Visit Checks`이며 AI 어댑터가 있으면 실행을 차단한다. AI 검증은 `Gamsamo > AI` 메뉴와 공용 계약의 체크리스트를 사용한다. 검사는 실제 UI Raycaster·버튼 이벤트와 상태 전이를 확인하도록 구성하고 `artifacts/ui/patient-visit-checks.txt`에 기록한다. 검사 뒤 Editor 전용 `ResetPreview()`가 입장 수·세션·표시를 초기 상태로 돌린다. 로컬 방문 원 구현의 실행 결과는 17.18절, 이번 어댑터 통합은 17.25절을 따른다.
 
@@ -848,7 +849,7 @@ Create a production 2D game UI asset: a single wide horizontal dialogue speech p
 
 1. Unity `6000.3.28f1`로 저장소 루트 프로젝트를 연다.
 2. `Assets/_Project/Scenes/ConsultationRoom.unity`를 열고 Play를 누른다.
-3. `Gamsamo > AI > Import Connection JSON`으로 별도 전달받은 `api_url`·`api_key`를 가져온다. 문을 눌러 서윤의 첫 이야기를 읽고 입력창에 답변한 뒤 Ctrl+Enter 또는 전송으로 보낸다. Enter는 줄바꿈이다. `상담 그만하기` 확인 후 원문·안내·평가 저장과 퇴장을 확인하고 문으로 다음 임시 시연 환자를 받는다. 6명 이후에는 입장이 끝난다.
+3. `Gamsamo > AI > Import Connection JSON`으로 별도 전달받은 `api_url`·`api_key`를 가져온다. 문을 눌러 서윤의 첫 이야기를 읽고 입력창에 답변한 뒤 Ctrl+Enter 또는 전송으로 보낸다. Enter는 줄바꿈이다. `상담 그만하기` 확인 후 원문·안내·평가 저장을 기다리고 `환자 내보내기`를 눌러 퇴장시킨 뒤 문으로 다음 환자를 받는다. 지원 5명은 AI, 민석만 로컬 시연이다. 6명 이후에는 입장이 끝난다.
 4. 왼쪽 아래 책상 서류를 열고 `상담 메모 / 대화 원문 / 상담 결과` 탭과 `이전 쪽 / 다음 쪽`, `이전 서류 / 다음 서류`를 확인한다. 결과는 별도 대화창에 나타나지 않는다. X 버튼 없이 배경 클릭·Esc로 닫으며 열람 중 원문·입력 초안·상담 상태는 보존된다.
 5. 오른쪽 모니터 → 상점 → 탭 6개와 각 카드 8개를 확인한다. 카드 선택·분류별 기본 복원을 확인하고 PC를 닫은 뒤 상담실 창문 클릭으로 블라인드 3단계를 조작한다. 내부 X·`Esc`는 바탕화면으로 돌아오고 PC X는 상담실로 돌아온다. PC를 닫고 기록부를 열면 선택한 서류철 확대 외형을 확인할 수 있다.
 6. AI 연결은 `Gamsamo > AI > Validate Current Scene`과 공용 계약의 수동 체크리스트로 검사한다. 기존 `Run Patient Visit Checks`는 AI 어댑터가 연결된 상태에서는 외부 요청·저장 보호를 위해 실행을 차단한다. 기존 검사는 `Gamsamo > Run Cosmetic Checks`, `Gamsamo > Run PC UI Smoke Checks`, `Gamsamo > Run UI Smoke Checks`로 각각 실행한다. 서로 다른 검사 메뉴는 동시에 실행하지 않는다.
@@ -889,7 +890,7 @@ Create a production 2D game UI asset: a single wide horizontal dialogue speech p
 
 | 클래스·함수 | 역할과 사용 규칙 |
 | --- | --- |
-| `PatientAiBootstrap.AttachAdapters()` | 씬 로드 시 기존 방문 컨트롤러에 서윤 API 어댑터를 한 번 장착. 씬·프리팹 직렬화 참조 보존 |
+| `PatientAiBootstrap.AttachAdapters()` | 씬 로드 시 기존 방문 컨트롤러에 지원 환자별 API 어댑터를 한 번 장착. 씬·프리팹 직렬화 참조 보존 |
 | `PatientAiAdapter.SubmitText/UpdateDraft` | 입력 원문 전달·초안 관리. `PatientAiInputBridge`가 `CanSubmit/CanEditDraft`·`StateChanged`·입력 변경·IME·전송을 연결 |
 | `AiRecordFormatter.Transcript/Results` | 확정된 회차별 전체 발언·고정 안내와 평가 두 축·항목별 이유·원문 근거를 책상 서류 표시 문자열로 변환 |
 | `MedicalRecordView.SelectSection/ChangePage` | 상담 메모·대화 원문·상담 결과 탭과 긴 내용 페이지 이동. `RecordNavigationRequested`는 같은 실행의 환자 서류 이동 |
@@ -901,7 +902,10 @@ Create a production 2D game UI asset: a single wide horizontal dialogue speech p
 | `PatientVisitController.PresentPatientLine(sessionId, text)` | 활성 상담의 동일 세션만 받아 이름과 대사를 표시. 종료된 세션·빈 대사는 거부 |
 | `PatientVisitController.NextDemoLine()` | 타이핑 완료 또는 다음 임시 문장 표시. 마지막 문장만으로 종료하지 않음 |
 | `PatientVisitController.RequestEndConsultation/CancelEndConsultation/ConfirmEndConsultation` | 상담 종료 확인창의 열기·취소·확정. 사용자 클릭은 확인 단계를 거침 |
-| `PatientVisitController.CompleteConsultation(sessionId)` | 활성 세션을 무효화하고 퇴장. 팝업 차단 중에는 거부하며 클리어·점수·보상·저장은 처리하지 않음 |
+| `PatientVisitController.MarkConsultationEnded/ClearConsultationEnded`, `IsAwaitingDeparture` | 종료 후 `Consulting` 상태 안에서 체류 설정/해제. 명시적 새 회차에서 이전 퇴장 권한 해제 |
+| `PatientVisitController.DismissPatient`, `ExternalFinishVisit` | 사용자 내보내기 진입점과 AI 완료 저장 처리기. 외부 실패·누락을 로컬 퇴장으로 대체하지 않음 |
+| `PatientVisitController.CompleteConsultation(sessionId)` | 동일 활성 세션·퇴장 대기·팝업 해제를 확인하고 ID 무효화 후 퇴장. 중복·오래된 ID 거절, 클리어·보상 부여 없음 |
+| `PatientDialogueView.SetDepartureAvailable/EnsureDepartureControl`, `DismissRequested` | 기존 종료 버튼 위치·색·폰트를 유지해 내보내기 준비. 복제 리스너 제거·중복 구독 방지. 표시·퇴장 가능·확인 없음·일시정지 아님일 때만 이벤트 전달 |
 | `PatientDialogueView.ShowLine/RevealAll/SetSuspended` | 이름·대사·타이핑·전체 표시와 팝업 중 일시 정지. `richText=false` 유지 |
 | `PatientVisitSceneInstaller.Install()` | 저장된 상담실 씬과 독립 프리팹 양쪽에 문·초상화·대화창·확인창을 추가. 기존 기능 계층은 보존 |
 | `PatientVisitSmokeChecks.Run()`, `PatientVisitController.ResetPreview()` | 새 Play의 방문 대기 상태 검사와 Editor 전용 초기 상태 복원. 실행 게임의 저장·진행 초기화 API가 아님 |
@@ -974,6 +978,7 @@ room.SetRecord(null);
 
 - 환자 방문 컨트롤러는 항상 활성인 상담실 루트에 두고, 초상화·대화창·종료 확인창의 생명주기를 분리한다. 종료 확인창은 대화창 CanvasGroup 밖에 둬 대화 입력 차단에 함께 비활성화되지 않게 한다.
 - 문과 환자 UI는 기존 `RoomFrame`의 1920×1080 좌표와 비율을 공유한다. 문 클릭은 UI 버튼 상태뿐 아니라 `TryAdmitNextPatient()`의 상태 검사로도 차단한다. 팝업 닫힘 애니메이션 도중에는 `IsRecordOpen/IsPcOpen` 대신 `IsOverlayBlocking`을 사용한다.
+- 상담 종료 후 입력·일반 종료 대신 `환자 내보내기`를 제공한다. PC·기록부·확인창, 요청·저장·오류 중에는 거부한다. 서류 닫기·페이지 이동·다음 프레임·중복 클릭으로 퇴장하지 않는다. 명시적 새 회차는 ClearConsultationEnded로 이전 권한을 해제한다. 저장된 평가 열람·퇴장에 새 서버 응답은 필요 없다.
 - 방문 세션 ID는 입장마다 새로 생성하고 퇴장 시작 즉시 무효화한다. LLM 응답은 반드시 요청 당시 세션 ID와 함께 전달한다. 이전 환자 응답을 현재 이름 아래에 표시하지 않는다. 임시 대사·초상화 목록을 서버 환자 데이터로 사용하지 않는다.
 - `PcDesktopView`는 내부 상점·앱 창 밖의 PC 루트에 둔다. 상점과 앱 창은 아이콘 전용 `shortcuts` CanvasGroup의 자식으로 두지 않는다. PC 닫기 버튼은 내부 창보다 앞에 표시한다.
 - PC 에셋의 버튼 좌표는 1520×657, 상점 내부는 1112×534 기준이다. 스케일은 공통 상위 오브젝트에 적용해 표시와 클릭 영역을 함께 움직인다. 원본 합성 화면의 아이콘·상품 카드를 중복 배치하지 않는다.
@@ -997,6 +1002,8 @@ room.SetRecord(null);
 - 한글 폰트는 Noto Sans CJK KR이며 `Assets/_Project/Fonts/OFL.txt`를 유지한다. 동적 TMP 폰트가 추가 글리프를 만들 수 있도록 원본 `.otf`도 포함한다.
 
 ### 검증 결과와 제한
+
+- **명시적 퇴장 수정(17.30절):** Runtime 29개·Editor 18개 C# 소스 컴파일과 Unity 입력 브리지 검사 56개 통과. CUA에서 완료 서윤 복원·체류·문 재클릭 차단·기록부 열기/닫기·명시적 퇴장·도현 입장·이전 평가 보존 확인. Console 오류·경고 0개. 새 대화부터 평가까지의 추가 검증은 사용자 요청으로 생략했다.
 
 - **이전 내부 창·기본 레이어 에셋 적용 검사: PC 125개 + 상담실 외형 49개 + 기록부 52개 = 226개 통과, 실패 0개.** Unity 6000.3.28f1의 실제 Play 모드에서 수행했다. 프로필 텍스트 3개가 처음에 넘친 문제와 슬라이더 손잡이 높이를 수정한 뒤 재검증했다. 이 숫자는 이번 40종 동적 상점·블라인드 구현의 최종 검사 결과가 아니다.
 - **이전 40종 치장 통합 검사: 치장 575개 + PC 125개 + 상담실 외형 49개 + 기록부 52개 = 801개 통과, 실패 0개.** Unity 6000.3.28f1 Play 모드에서 수행했다. 치장 검사는 5분류×8카드의 Raycaster·이벤트·선택, 8테마×3블라인드×3날씨의 실제 GPU 픽셀, 기본 복원·재열기·서류철 확대 동시 변경·블러·글리프·텍스트 넘침·데이터 불변과 검사 후 참조 복원을 확인한다. 보고서는 `artifacts/ui/cosmetic-checks.txt`, 캡처는 `cosmetics-shop-*.png`, `cosmetics-blinds-*.png`, `cosmetics-room-sage.png`, `cosmetics-record-sage.png`다.
@@ -1050,7 +1057,7 @@ PC 내부 네 화면, 기본 방 레이어·날씨, 원본 48종의 동적 카�
 
 <a id="ai-next-plan"></a>
 
-### AI 베타·통합 시연 실행 계획 — v0.15 반영
+### AI 베타·통합 시연 실행 계획 — v0.16 반영
 
 **11월 6일 11:30 KST까지 서윤 AI 베타, 12:00 KST까지 팀원 데모 연결과 전체 시연·검증**의 기존 목표 일정은 유지한다. 우리는 AI·API·계약·접속 검증을 담당하고 팀원은 Unity 입력·표시·저장을 연결한다. 비상업 연구·데모 기준이며 일반 대화 응답은 약 10초 이내를 목표로 한다. 환자 선발화·자유 서술형·사용자 종료 API와 Unity 연결 계층은 구현 대상으로 반영했다. 팀장이 PR을 main에 병합한 뒤 각 팀원이 데스크톱에서 실행을 검증한다. 기존 입력 UI와 책상 기록부 연결은 이번 후속 통합에 포함한다. 실제 서버 Unity 화면에서 한국어 서술형 2턴·종료·서류 표시를 확인했다. 모든 IME 환경·장애 복원·장시간 품질 검사는 후속이며 API 자동 검사와 구분한다. 실제 진행 상태는 위 연결 지점과 17절에서 확인한다.
 
@@ -1577,3 +1584,16 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 이번 검증: 서버 pytest **109개**, C# 계약·저장 **158개** 통과. OpenAPI·합성 JSON 64개 일치, 입력 어댑터 대체 타입 컴파일 오류·경고 0개. 씬 객체 **1,314개**, 프리팹 객체 **1,302개**에서 ID 중복 0개이며 연우 변경을 제외한 파일 내용이 최신 main과 정확히 일치한다. 기존 main/AI 작업 이력 보존과 문서 링크·코드 블록·충돌 표식·공백을 검사한다.
 - 운영·제한: 서버 코드·5인 설정·네트워크 연결 코드는 변경하지 않았고 실행 중인 실제 모델 API의 5인 지원·준비 상태를 확인했다. 이번에는 실제 모델 대화나 Unity Editor Play 검사를 반복하지 않았다. 새 4명의 Unity 화면·IME·OS 실행 검증은 PR 체크리스트대로 팀원이 진행한다. 기존 실모델·HTTPS 검증 결과는 17.28, 이전 Unity UI 실행 결과는 17.25·17.27을 따른다.
 - 제출·다음 단계: 검증한 변경을 PR #29에 추가하고 GitHub의 충돌·검사 상태와 최종 커밋을 확인한 뒤 사용자 요청에 따라 main에 병합한다. 병합 결과와 커밋은 GitHub PR 및 Git 이력으로 확인한다. 팀원은 병합된 main을 받아 5인 방문·입력·서류·저장 복원을 검증한다.
+
+### 17.30 상담 종료 후 명시적 환자 내보내기와 완료 사례 복원 수정
+
+- 구현·필수 검증 완료 시각: **2026-11-06 04:13:04 KST (UTC+09:00)**.
+- 요청·원인: 문으로 입장한 환자가 즉시 사라지는 현상을 고치고 직접 내보내는 버튼을 추가한다. 평가 완료 저장 복원 시 `PatientAiAdapter.Update()`가 자동 `FinishVisit()`을 실행하던 경로를 제거했다. 자유 서술형·횟수 제한 없음·책상 결과 표시를 유지한다.
+- 구현: `PatientVisitController.MarkConsultationEnded/ClearConsultationEnded`·`IsAwaitingDeparture`로 체류를 관리한다. `DismissPatient()` → `ExternalFinishVisit` → 어댑터 완료 저장 → `CompleteConsultation()`으로 퇴장한다. 동일 활성 세션·퇴장 대기·팝업 해제를 확인하고 ID를 즉시 무효화한다. 외부 실패를 로컬 성공으로 대신하지 않는다.
+- UI: `PatientDialogueView.SetDepartureAvailable/EnsureDepartureControl`이 기존 종료 버튼의 위치·색·폰트로 `환자 내보내기`를 준비한다. 복제 리스너 제거·중복 바인딩 방지, 상담 중 숨김·종료 후 입력/일반 종료 대신 표시를 적용하고 `DismissRequested`를 발행한다. 씬·프리팹을 다시 생성하지 않는다.
+- 복원·규칙: 완료 사례도 마지막 실제 환자 대사와 기록을 표시한 채 머문다. 저장된 평가 열람·퇴장에 새 서버 응답을 요구하지 않는다. 새 실험·재상담 자동 시작 없음. 문 재클릭·숨긴 버튼·확인창·PC/기록부·요청/저장/오류 중 퇴장과 중복 클릭을 차단한다. 결과는 책상 서류에 보존하며 퇴장을 클리어·보상으로 처리하지 않는다.
+- 문서: README의 지원 5명 AI/민석 로컬 실행 순서, plan01 v0.16 현행·함수표, UI 계약을 갱신한다. 기존 17.1~17.29 이력은 원문 보존한다.
+- 필수 검증: Runtime 29개·Editor 18개 C# 소스 컴파일, Unity `Gamsamo > AI > Run Input Bridge Checks` 56개 모두 통과. Console 오류 0개·경고 0개.
+- 실제 CUA: 시작 메뉴 → 상담실 → 문 클릭 → 완료 서윤 복원·체류/버튼 표시, 문 재클릭 차단, 기록부 열기/닫기 후 체류·버튼 복구, 실제 내보내기 → 서윤 퇴장 → 문 클릭 → 도현 입장, 이전 서류의 서윤 평가 보존을 확인했다.
+- 제한: 사용자가 첫 환자 대화를 직접 확인했다고 알리고 시간이 없어 추가 검증 중단을 요청했다. 새 대화·새 평가 전체 흐름, 전체 환자 순회·실행 빌드는 추가 검증하지 않았다. 사용자 변경 `ProjectSettings/ProjectSettings.asset`은 포함하지 않는다.
+- 다음 작업: 필요 시 새 상담·평가부터 명시적 퇴장과 민석 종료를 실제 화면에서 확인한다. 재상담 선택 UI·전체 진행 저장·보상·정식 해금은 별도 작업이다. 코드 커밋 `0bc6d5c`와 문서는 main 대상 PR #31에 함께 제출하며 직접 병합하지 않는다.

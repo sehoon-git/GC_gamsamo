@@ -1118,6 +1118,15 @@ PC 내부 네 화면, 기본 방 레이어·날씨, 원본 48종의 동적 카�
 - 새 PNG는 기본 제공 ImageGen으로 제작했고 원래 대화창 이미지는 보존했다. 경로: Assets/_Project/Art/UI/Dialogue/PinkPaperButton.png. 함께 저장한 .asset은 해당 texture를 참조하는 9-slice sprite다. 생성 지시: 기존 좌상단 이름표를 참고해 단일 가로형 salmon-pink 종이 버튼, 은은한 watercolor 질감·갈색 가장자리·짧은 그림자, 수평 3.3:1, 투명 배경, 글자/아이콘/크림 배경 없음. CLI는 사용하지 않았다.
 - BuildPreview는 실제 상담실 UI를 복제한 임시 씬에서 게임 동작을 제거한 Windows 시각 검증 빌드를 만든다. 사용자 요청으로 상단 5인 선택 버튼은 미리보기에서도 제거했다. 실제 게임 씬에도 해당 버튼은 없다. 사용자 저장/서버 상담은 사용하지 않는다.
 
+### 상담실 저장 안내·게임 안내서 종이 테마
+
+- 좌측 상단의 기본 IMGUI 저장 안내를 `RoomStatusView`로 교체한다. 평소에는 `시작 화면으로` 버튼만 보이고, 오류가 있으면 종이 안내 카드와 기존 재시도가 나타난다. 긴 오류는 카드 내부에서 스크롤하며, 진행 서비스가 없는 상태에는 재시도를 표시하지 않는다.
+- `GameProgressRuntime.Awake()`가 `Resources/Presentation/RoomStatus.prefab`을 생성하고 바인딩한다. 진행 상태·저장·정산은 기존 서비스가 소유한다. 뷰는 `LastError`, 재시도 가능 여부, `RoomControlsAvailable`을 표시하며 `RetryProgress()`와 `ReturnToStartMenu()`를 호출한다. 기록부·PC·안내서 등 모달이 입력을 점유하면 상단 버튼도 차단된다.
+- 우측 게임 안내 버튼과 안내서의 이전/다음/닫기를 하단 대화창과 같은 `PinkPaperButton`으로 통일했다. 안내서 본문에는 크림색 종이 질감, 갈색 글자, 제본선·구분선·분홍 제목표를 사용한다. 6쪽의 내용·키보드 조작·페이지 효과음은 유지한다. 하단 대화 UI와 공용 상담실 씬/프리팹은 수정하지 않는다.
+- `WarmPaperSurface.asset`은 기존 `DialoguePanel.png`의 빈 종이 영역을 참조하는 Sprite다. 새 이미지 생성이나 원본 PNG 수정 없이 기존 그림의 질감을 재사용한다. 새 에셋의 `.meta`와 `RoomStatus.prefab`을 함께 배포해야 한다.
+- 재적용: `Gamsamo > Presentation > Apply Room Paper Theme` (`RoomPaperPresentationBuilder.Install`). 기존 안내서 프리팹의 GUID와 이벤트 참조를 보존하고 스타일을 갱신한다. `PresentationPrefabBuilder.CreateGuidebook()`도 같은 스타일 함수를 호출한다.
+- 검증: `RoomPaperChecks.Run()`은 오류/정상/재시도 비활성/모달 입력 차단/긴 메시지 스크롤/해상도 설정을 검사하고 기존 `PresentationChecks`를 실행한다. `BuildPreview()`는 실제 상담실 레이아웃에 합성 대사·오류를 얹은 Windows 시각 검증 빌드를 만든다. `PaperGuide.exe -paper-guide-capture`로 정상/오류 화면과 안내서 6쪽을 저장한다. 별도 제품명 `GC_gamsamo_PaperGuide_Preview`이며 서버나 사용자 저장을 사용하지 않는다.
+
 ### PR #42 한이수 프로필 이미지의 실제 화면 연결
 
 - PR #42는 `CounselingPack/profile/han-isu.png`와 `.meta`만 추가했다. 기존 씬/프리팹의 `ProfileView`와 `PcContentBuilder`는 계속 빈 `female.png`를 사용하므로 파일을 pull해도 화면에는 나타나지 않았다.
@@ -1684,6 +1693,17 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 2026-11-06 07:19:26 KST (UTC+09:00) 후속: 사용자가 하단 UI를 승인하고 상단 이름 버튼 제거를 요청했다. BuildPreview의 검증용 선택 버튼 생성만 제거했다. 실제 상담실 씬/프리팹/하단 UI는 직전 승인 상태 그대로 유지한다. 갱신 미리보기 경로는 artifacts/dialogue-style/clean-player/DialogueStyle.exe다.
 - 2026-11-06 07:20:07 KST (UTC+09:00) 제출 검증: 상단 이름 버튼 제거 후 Windows 미리보기 재빌드 성공 및 5인 글자 중앙 검사 통과(clean-preview.log). Computer Use는 사용자 Escape로 중단되어 제거 후 실제 화면 확인은 미수행이다. 하단 UI와 출시 씬/프리팹은 변경하지 않았으며 기존 main 대상 PR #43에 후속 커밋으로 반영한다.
 
+### 17.34 저장 안내·게임 안내서의 종이 테마 통일
+
+- 구현·검증 완료 시각: 2026-11-06 07:35:28 KST (UTC+09:00). 최신 `origin/main`의 `58e49e4`에서 `codex/paper-guide-status` worktree를 만들었다. 사용자 Unity 체크아웃과 그곳의 폰트/ProjectSettings 변경은 보존했다.
+- 요청: 상단 저장·연결 안내와 우측 게임 안내가 기존 상담실/분홍 종이 대화 UI에 어울리도록 변경. 좌측 기본 IMGUI를 종이 안내 카드로 교체하고 우측 버튼·펼친 안내서·이전/다음/닫기를 같은 질감과 색으로 통일했다. 책 아이콘도 버튼 내부 여백에 맞췄다. 하단 UI·공용 씬·상담실 프리팹에는 변경이 없다.
+- 주요 연결: `RoomStatusView.Bind/Render`가 진행 서비스의 표시·재시도·시작 화면 이동만 연결한다. `GameProgressRuntime`은 상태 뷰를 생성/해제하고 모달 입력 차단 여부를 제공한다. `RoomPaperPresentationBuilder`는 기존 안내서 GUID를 유지하며 스타일을 적용한다. 상세 호출·메뉴·에셋 경로는 15절에 기록했다.
+- 데이터 소유권: 저장/경제/평가 상태와 정책은 기존 서비스가 소유한다. 이 작업은 저장 버전·이관 정책·보상·서버 계약을 변경하지 않는다. 기존 `PinkPaperButton`과 `DialoguePanel.png`를 재사용하며 신규 Sprite/리소스 프리팹/코드의 `.meta`를 함께 제출한다.
+- 자동 검사: 새 카드 검사 5개와 기존 presentation 검사 77개 통과. Unity 6000.3.28f1 Windows Development 시각 검증 빌드 성공 (`artifacts/paper-guide/final-build.log`). 정상/오류 표시, 재시도 비활성, 모달 차단, 긴 오류 스크롤, 기준 해상도를 확인했다.
+- 화면 검증: 빌드의 RenderTexture 캡처로 1280×720 및 1600×900의 정상/오류 화면과 안내서 6쪽을 생성했다. 모든 쪽의 본문 넘침 검사 통과, 실제 이미지에서 배치·글자·종이 질감·아이콘 여백을 확인했다. 결과는 `artifacts/paper-guide/captures-720/`, `artifacts/paper-guide/player/captures/`, `capture-720.log`, `capture-900.log`에 있으며 커밋하지 않는다.
+- 검증 범위: 캡처는 화면 전용 합성 대사·오류와 프로그램 방식 페이지 전환이다. 이번 변경 후 사용자의 실행 중인 에디터에서 수동 마우스 클릭, 실제 서버 상담·저장 재시도 E2E는 수행하지 않았다. 미리보기는 별도 제품명을 사용하며 실제 저장·AI API를 호출하지 않는다.
+- 다음 순서: 이 PR 검토·병합 후 사용자가 실제로 실행하는 Unity 체크아웃에서 최신 main을 받고, Play를 멈춘 뒤 다시 실행해 상단 버튼·오류 재시도·안내서 키보드/마우스 조작을 확인한다. main 직접 push나 PR 병합은 수행하지 않는다.
+
 ### 17.35 PR #42 한이수 프로필 화면 연결
 
 - 기록·제출 준비 완료 시각: 2026-11-06 07:47:30 KST (UTC+09:00). 최신 origin/main의 58e49e4에서 codex/han-isu-profile-connection을 만들고 작업했다. 앞선 안내서 작업의 17.34 기록은 PR #44에서 관리한다.
@@ -1694,3 +1714,5 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 화면 검증: Computer Use로 별도 제품명 GC_gamsamo_Profile_Preview의 실제 Windows 빌드를 조작했다. PC 열기 → 내 프로필 → 한이수 이름·상담실 소속·소개 문구 표시 → 닫기 → 재열기를 확인했다. 이 빌드에서는 AI·진행 서비스를 제거했으며 실제 사용자 저장이나 서버 상담을 호출하지 않았다. 이후 사용자의 물리 Escape로 Computer Use가 중단되어 추가 조작을 멈췄다.
 - 로컬 적용: 사용자가 실제로 열어 둔 GC_gamsamo_play/GC_gamsamo에도 구현 커밋 02372b5를 fast-forward로 반영했다. 해당 체크아웃의 기존 폰트·프로젝트 설정 수정은 보존했다. 사용자의 원래 저장을 사용하는 에디터 Play에서 전체 상담 E2E를 실행한 결과는 아니다.
 - 다음 작업: 이 연결 PR을 main에 병합하면 팀원들이 최신 main을 받아 같은 기본 프로필을 볼 수 있다. 진행별 프로필 편집·저장은 별도 통합 기능에서 SetProfile을 이용한다. 이 작업에서는 main 직접 push와 PR 병합을 실행하지 않는다.
+
+- 2026-11-06 07:48:58 KST (UTC+09:00) 제출 후 갱신: PR #44가 main에 병합된 것을 확인하고 최신 main 793c754를 PR #47 작업 브랜치에 반영했다. plan01 15절과 17절의 추가 기록 충돌 2곳은 양쪽 내용을 모두 보존해 해결했다. 코드 충돌은 없으며 main 직접 push·원격 PR 병합은 실행하지 않았다.

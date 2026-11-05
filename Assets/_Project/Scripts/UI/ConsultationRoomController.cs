@@ -61,6 +61,7 @@ namespace Gamsamo.UI
         private CosmeticAppearanceController subscribedAppearance;
         private readonly List<MedicalRecordData> patientRecords = new List<MedicalRecordData>();
         private int selectedRecord;
+        public System.Func<MedicalRecordData, string> CommittedSettlementForRecord;
         private readonly Dictionary<string, MedicalRecordData> archivedRecords = new Dictionary<string, MedicalRecordData>();
         public void ClearArchivedRecords()
         {
@@ -139,6 +140,7 @@ namespace Gamsamo.UI
 
         private void Update()
         {
+            if (inputBlocks > 0) return; // A nested presentation owns Escape until it closes.
             if (!Input.GetKeyDown(KeyCode.Escape))
                 return;
             if (IsPcOpen)
@@ -175,7 +177,10 @@ namespace Gamsamo.UI
         {
             if (recordView == null || patientRecords.Count == 0) return;
             selectedRecord = Mathf.Clamp(selectedRecord, 0, patientRecords.Count - 1);
-            recordView.ShowRecord(patientRecords[selectedRecord]);
+            var selected = patientRecords[selectedRecord];
+            recordView.BeginRecordContext(selected.gameProgressId, selected.caseId + "/" + selected.sessionId);
+            recordView.ShowRecord(selected);
+            recordView.SetCommittedSettlement(selected.registrationNumber, true, CommittedSettlementForRecord?.Invoke(selected));
             recordView.SetRecordNavigation(selectedRecord, patientRecords.Count);
         }
 

@@ -6131,6 +6131,7 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
+  - component: {fileID: 459871656}
   - component: {fileID: 459871652}
   - component: {fileID: 459871651}
   - component: {fileID: 459871650}
@@ -29007,15 +29008,6 @@ MonoBehaviour:
       \uB3CC\uC544\uBCF4\uACE0 \uC2F6\uC5C8\uC2B5\uB2C8\uB2E4."
     - "\uC11C\uB450\uB974\uC9C0 \uC54A\uACE0 \uD558\uB098\uC529 \uC774\uC57C\uAE30\uD574
       \uBCFC\uAC8C\uC694."
-  - patientId: minseok
-    displayName: "\uBBFC\uC11D"
-    portrait: {fileID: 21300000, guid: e9227b93ca931c5488d82a1ea89842de, type: 3}
-    demoLines:
-    - "\uBBFC\uC11D\uC785\uB2C8\uB2E4. \uC81C \uC774\uC57C\uAE30\uB97C \uC5B4\uB5BB\uAC8C
-      \uC804\uD560\uC9C0 \uC624\uB294 \uAE38\uC5D0\uB3C4 \uC0DD\uAC01\uD588\uC5B4\uC694."
-    - "\uB9D0\uB85C \uC815\uB9AC\uD558\uBA74 \uC870\uAE08 \uB354 \uC798 \uBCF4\uC77C
-      \uAC83 \uAC19\uC544\uC11C \uCC3E\uC544\uC654\uC2B5\uB2C8\uB2E4."
-    - "\uBA3C\uC800 \uCD5C\uADFC\uC5D0 \uC788\uC5C8\uB358 \uC77C\uBD80\uD130 \uB9D0\uC500\uB4DC\uB9B4\uAC8C\uC694."
   - patientId: taejun
     displayName: "\uD0DC\uC900"
     portrait: {fileID: 21300000, guid: f120c98415a3ed740b50f7da748344bf, type: 3}
@@ -31779,3 +31771,21 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Gamsamo.UI.ReferenceRectFitter
   referenceSize: {x: 1920, y: 1080}
+--- !u!114 &459871656
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 459871646}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 98b1f6cd147e84d4994cb6a70a8c7a6f, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Gamsamo.Progression.GamePresentationIntegration
+  guidePrefab: {fileID: 6385669306486029420, guid: dd216a1a580c14888bf79d0a4201dde1, type: 3}
+  endingPrefab: {fileID: 6519677477625473706, guid: 6ef58117b11454f63bcdab8213cc4bd9, type: 3}
+  photoPrefab: {fileID: 6298768163519544768, guid: c871c3ec76a844352b913aa86a348bd5, type: 3}
+  processingPrefab: {fileID: 6216503811712390737, guid: 4b23c0ee9e57b40c9b81ac73ff0ebbc9, type: 3}
+  audioPrefab: {fileID: 4422733089255386220, guid: c258cef23684c4f6781f112c1b905ced, type: 3}
+  content: {fileID: 11400000, guid: 2ef883384a4824dc6839ef9ad6c93053, type: 2}

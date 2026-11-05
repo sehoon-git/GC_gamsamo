@@ -26,6 +26,7 @@ namespace Gamsamo.UI
         public Image[] thumbnails;
         public TMP_Text[] titles;
         public TMP_Text emptyMessage;
+        public string EmptyStateText { get; set; }
         public Button closeButton;
         public PhotoViewer viewer;
         private readonly Dictionary<Button, UnityEngine.Events.UnityAction> slotListeners = new Dictionary<Button, UnityEngine.Events.UnityAction>();
@@ -117,7 +118,7 @@ namespace Gamsamo.UI
             if (emptyMessage != null)
             {
                 emptyMessage.richText = false;
-                emptyMessage.text = entries != null && Array.Exists(entries, entry => entry != null)
+                emptyMessage.text = !string.IsNullOrEmpty(EmptyStateText) ? EmptyStateText : entries != null && Array.Exists(entries, entry => entry != null)
                     ? "해금된 사진의 이미지를 준비 중입니다." : "아직 등록된 사진이 없습니다.";
                 emptyMessage.gameObject.SetActive(DisplayedPhotoCount == 0);
             }

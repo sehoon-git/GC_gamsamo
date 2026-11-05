@@ -45,7 +45,7 @@ public static class BProgressIntegrationChecks
         finally { UnityEngine.Object.DestroyImmediate(obj); }
         string path = Path.Combine(Path.GetTempPath(), "b-unity-progress-" + Guid.NewGuid().ToString("N"), "run.json");
         var store = new GameProgressStore(path); var service = new ProgressService(store);
-        service.Create(new[] { "a", "b", "c", "d", "e", "f" }); service.BeginVisit();
+        service.Create(new[] { "a", "b", "c", "d", "e" }); service.BeginVisit();
         service.CaptureAi("a", "case_a", "r1", "test-only", "evaluated");
         var evaluation = new SavedEvaluation { Identity = new RoundIdentity { ProgressId = service.State.ProgressId,
             PatientId = "a", CaseId = "case_a", RoundId = "r1" }, AiSaveCompleted = true, Phase = "evaluated", PatientScore = 70, CounselorScore = 70 };

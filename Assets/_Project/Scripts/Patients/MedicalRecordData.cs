@@ -7,6 +7,7 @@ namespace Gamsamo.Patients
     [Serializable]
     public sealed class MedicalRecordData
     {
+        public string gameProgressId, caseId, sessionId;
         public string registrationNumber;
         public string patientName;
         public string gender;

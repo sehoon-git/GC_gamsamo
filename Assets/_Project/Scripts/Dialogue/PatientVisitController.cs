@@ -8,12 +8,12 @@ using UnityEngine.UI;
 
 namespace Gamsamo.Dialogue
 {
-    /// <summary>Owns the local six-person queue. Door clicks cannot replace an unfinished visit.</summary>
+    /// <summary>Owns the local five-person queue. Door clicks cannot replace an unfinished visit.</summary>
     [DisallowMultipleComponent]
     public sealed class PatientVisitController : MonoBehaviour
     {
         public enum VisitState { Waiting, Entering, Consulting, Leaving, Finished }
-        public const int RequiredPatientCount = 6;
+        public const int RequiredPatientCount = 5;
 
         public ConsultationRoomController room;
         public Button doorButton;
@@ -119,7 +119,7 @@ namespace Gamsamo.Dialogue
             }
             if (patients == null || patients.Length != RequiredPatientCount)
             {
-                reason = "Exactly six patients are required.";
+                reason = "Exactly five patients are required.";
                 return false;
             }
             var ids = new HashSet<string>(StringComparer.Ordinal);

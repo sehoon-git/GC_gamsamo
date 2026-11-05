@@ -19,7 +19,7 @@ class Program {
  static void Main() {
   string root=Path.Combine(Path.GetTempPath(),"b-progress-check-"+Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
   string path=Path.Combine(root,"run.json"); var store=new GameProgressStore(path); var s=new ProgressService(store); var c=new FixedReward();
-  s.Create(new[]{"a","b","c","d","e","f"}); var firstId=s.State.ProgressId;
+  s.Create(new[]{"a","b","c","d","e"}); var firstId=s.State.ProgressId;
   s.BeginVisit(); Check(new ProgressService(store).State.Phase==ProgressPhase.Consulting,"restart during consultation");
   s.CaptureAi("a","case_a","r1","snapshot","pending_evaluation"); Check(new ProgressService(store).State.Phase==ProgressPhase.Evaluating,"restart during evaluation");
   Reject(()=>s.Depart(),"pending evaluation cannot depart");
@@ -39,9 +39,9 @@ class Program {
   s=new ProgressService(store); Check(s.State.Phase==ProgressPhase.Presenting && s.State.PendingPresentation.Identity.Key==r.Identity.Key,"restart during presentation");
   var coins=s.State.Economy.Balance; s.Settle(e,c,"photo_a"); Check(s.State.Economy.Balance==coins,"replayed presentation has no reward");
   Reject(()=>s.Depart(),"presentation blocks departure"); s.CompletePresentation(r.Identity.Key); s.Depart(); Check(s.State.CurrentIndex==1,"clear advances on departure");
-  for(int i=1;i<6;i++) { s.BeginVisit(); e=Eval(s,70,70,"r1"); r=s.Settle(e,c,"photo_"+i); if(i<5) Check(!s.State.FinalEndingUnlocked,"fewer than six stays locked "+i); s.CompletePresentation(r.Identity.Key); s.Depart(); }
-  Check(s.State.ClearedCount==6 && s.State.FinalEndingUnlocked && s.State.Phase==ProgressPhase.Finished,"six DISTINCT patients unlock ending"); s.CompleteFinalEnding(); Check(new ProgressService(store).State.FinalEndingPlayed,"ending play state persists");
-  var next=new ProgressService(new GameProgressStore(Path.Combine(root,"second.json"))); next.Create(new[]{"a","b","c","d","e","f"}); Check(next.State.ProgressId!=firstId && store.Load().ClearedCount==6,"new run preserves previous run and history");
+  for(int i=1;i<5;i++) { s.BeginVisit(); e=Eval(s,70,70,"r1"); r=s.Settle(e,c,"photo_"+i); if(i<4) Check(!s.State.FinalEndingUnlocked,"fewer than five stays locked "+i); s.CompletePresentation(r.Identity.Key); s.Depart(); }
+  Check(s.State.ClearedCount==5 && s.State.FinalEndingUnlocked && s.State.Phase==ProgressPhase.Finished,"five DISTINCT patients unlock ending"); s.CompleteFinalEnding(); Check(new ProgressService(store).State.FinalEndingPlayed,"ending play state persists");
+  var next=new ProgressService(new GameProgressStore(Path.Combine(root,"second.json"))); next.Create(new[]{"a","b","c","d","e"}); Check(next.State.ProgressId!=firstId && store.Load().ClearedCount==5,"new run preserves previous run and history");
   Reject(()=>new ProgressService(new GameProgressStore(Path.Combine(root,"bad-roster.json"))).Create(new[]{"a","a","b","c","d","e"}),"duplicate roster rejected");
   var detached=next.State; detached.Economy.Balance=999; Check(next.State.Economy.Balance==0,"read state cannot mutate service");
   var eco=next.State.Economy; eco.Balance=42; eco.OwnedItems.Add("test-hat"); eco.EquippedItems["hat"]="test-hat";

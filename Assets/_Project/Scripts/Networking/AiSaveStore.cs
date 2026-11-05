@@ -73,7 +73,9 @@ namespace Gamsamo.Networking
         private void Write(string path, JObject value)
         {
             BeforeWrite?.Invoke(Path.GetFileName(path));
-            string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            // Scoped game/patient/case paths are deep. Appending a GUID to the destination
+            // filename exceeds Windows Mono's MAX_PATH in normal persistentDataPath locations.
+            string temporary = Path.Combine(Path.GetDirectoryName(path), "t" + Guid.NewGuid().ToString("N").Substring(0, 16) + ".tmp");
             try
             {
                 byte[] bytes = new UTF8Encoding(false).GetBytes(AiProtocol.Encode(value));

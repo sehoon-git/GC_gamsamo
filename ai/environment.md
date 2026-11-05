@@ -1,10 +1,10 @@
-# 서윤 AI 환경변수와 A6000 이전 안내
+# 서윤 AI 환경변수와 Conda 설정 안내
 
-2026-11-05 기준 현재 코드를 실행하기 위한 안내다. 명령은 **Linux·Bash, 저장소 루트, Conda `game-ai`**를 기준으로 한다. 현재 확인한 장비는 RTX 5070 Ti이며 A6000에서의 호환성과 속도는 아직 검증하지 않았다. 모델과 질문 규칙을 변경하는 절차는 이 문서의 범위가 아니다.
+2026-11-05 기준 현재 코드를 실행하기 위한 안내다. 명령은 **Linux·Bash, 저장소 루트, Conda `game-ai`**를 기준으로 한다. 기존 PR #10의 공개 검증 기록은 아래에 보존한다. 이번 설정의 개인 장비·경로·환경 내보내기·측정값은 공개 문서에 추가하지 않는다. 후속 모델 비교와 규칙 변경 계획은 [통합 기획서 15절](../docs/plan01.md#ai-next-plan)을 따른다.
 
-## 확인한 실행 환경
+## 기존 PR #10에 공개된 실행 환경
 
-| 항목 | 현재 서버에서 확인한 값 |
+| 항목 | PR #10 당시 확인한 값 |
 |---|---|
 | Python | 3.11.18 (`server/pyproject.toml` 허용 범위: 3.11) |
 | GPU | NVIDIA GeForce RTX 5070 Ti, 16,303 MiB |
@@ -22,7 +22,7 @@
 | OpenCV | `opencv-python-headless` 5.0.0.93 |
 | pytest / pytest-asyncio | 9.2.0 / 1.4.1.post1 |
 
-직접 의존성은 [server/pyproject.toml](../server/pyproject.toml)에 고정되어 있다. 위 표는 현재 환경의 관측값이며 모든 전이 의존성을 고정한 lock 파일은 아니다. 이전 환경 백업·전체 목록은 Git에서 제외된 `ai/outputs/env-backups/`, `ai/outputs/verified-pip-freeze.txt`에 있다.
+직접 의존성은 [server/pyproject.toml](../server/pyproject.toml)에 고정되어 있다. 위 표는 이전 공개 기록이며 모든 전이 의존성을 고정한 lock 파일은 아니다. 환경 백업·전체 목록은 Git에서 제외된 `ai/outputs/`에만 보관한다.
 
 이전 설치에서 PyTorch import 오류는 NVSHMEM 의존성을 정리하며 해결했고, Conda OpenCV와 pip 설치 충돌도 해결했다. 이는 기존 서버에서 수행한 조치이며, 새 서버에서 같은 오류가 없는 상태로 OpenCV나 NVIDIA 패키지를 임의 삭제할 필요는 없다.
 
@@ -41,7 +41,7 @@
 
 저장 위치 우선순위는 `SEOYUN_DATA_DIR` → `$XDG_DATA_HOME/gc-gamsamo/seoyun` → `$HOME/.local/share/gc-gamsamo/seoyun`이다. SSH로 서버에서 CLI를 실행하면 해당 서버 사용자의 경로에 저장한다. API 서버에는 별도 상담 저장 디렉토리나 데이터베이스가 없다.
 
-이번 확인 셸에서는 위 변수와 API 키가 모두 미설정 또는 빈 값이었다. 따라서 기본 localhost 주소·기본 저장 경로를 사용하는 구성이며, 실행 중인 다른 셸의 환경까지 확인한 것은 아니다. 실제 접근 키·토큰은 이 문서와 Git에 기록하지 않는다.
+PR #10 당시 확인 셸에서는 위 변수와 API 키가 모두 미설정 또는 빈 값이었다. 이 기록은 다른 실행 환경의 설정을 의미하지 않는다. 실제 접근 키·토큰은 이 문서와 Git에 기록하지 않는다.
 
 ### 기본 설정 적용
 
@@ -96,14 +96,14 @@ set +a
 
 vLLM에는 `--language-model-only`, `--reasoning-parser qwen3`, 기본 `enable_thinking=false`를 전달하고 역할별 요청에서 thinking 설정을 지정한다. `top_p`, `top_k`, 반복 관련 설정은 현재 클라이언트가 명시하지 않는다. 모델을 바꿀 때에는 토크나이저·채팅 템플릿·reasoning parser·JSON Schema 출력 지원도 함께 확인해야 하며 모델 이름만 교체해 호환된다고 간주하지 않는다.
 
-## A6000 서버에서 준비하는 순서
+## 새 서버에서 준비하는 순서
 
-아래는 실행할 절차이며 A6000 검증 완료 기록이 아니다. 드라이버 설치나 모델 변경을 자동으로 수행하지 않는다.
+아래는 공통 실행 절차다. 실제 장비의 검증 결과와 구분하며, 드라이버 설치나 모델 변경을 자동으로 수행하지 않는다. 홈 아래에만 설치하려면 다음 절의 Conda·캐시 경로 설정을 의존성 다운로드 전에 적용한다.
 
-1. PR 브랜치 `codex/seoyun-vllm`을 가져온다. 병합 전에는 `main`만 받아서는 이 AI 구현이 포함되지 않는다. 저장소를 처음 받는 경우:
+1. 최신 `main`을 가져온다. AI 실험은 PR #10으로 이미 병합되었다. 저장소를 처음 받는 경우:
 
    ```bash
-   git clone --branch codex/seoyun-vllm https://github.com/sehoon-git/GC_gamsamo.git
+   git clone https://github.com/sehoon-git/GC_gamsamo.git
    cd GC_gamsamo
    ```
 
@@ -153,6 +153,35 @@ vLLM에는 `--language-model-only`, `--reasoning-parser qwen3`, 기본 `enable_t
    ```
 
    이 스크립트는 기존 주질문 규칙용이다. 새로운 총 질문 5개 규칙이나 한국어 자연스러움의 자동 합격 검사로 사용하지 않는다.
+
+## 홈 아래에만 설치하는 Conda 구성
+
+홈 아래에 설치된 Conda를 사용하고 프로젝트 환경을 분리한다. 기존 환경을 덮어쓰거나 `base`에 프로젝트 패키지를 설치하지 않는다. 아래는 개인 경로를 포함하지 않는 예시이며 저장소 루트에서 실행한다. 기존 `game-ai`가 있으면 생성 단계를 건너뛰고 패키지 목록부터 보관한다.
+
+```bash
+# 실제 홈 아래 Conda 설치 경로로 바꾼다.
+source "<홈 아래 Conda 설치 경로>/etc/profile.d/conda.sh"
+# game-ai가 없는 경우에만 생성한다. 패키지 캐시·환경 모두 홈 아래에 둔다.
+CONDA_ENVS_PATH="$HOME/.conda/envs" CONDA_PKGS_DIRS="$HOME/.conda/pkgs" \
+  conda create -n game-ai python=3.11 pip
+conda activate game-ai
+mkdir -p ai/outputs/cache "$HOME/.cache/gc-gamsamo/tmp"
+conda env config vars set \
+  XDG_CACHE_HOME="$PWD/ai/outputs/cache" \
+  HF_HOME="$PWD/ai/outputs/cache/huggingface" \
+  PIP_CACHE_DIR="$PWD/ai/outputs/cache/pip" \
+  CUDA_CACHE_PATH="$PWD/ai/outputs/cache/cuda" \
+  TORCHINDUCTOR_CACHE_DIR="$PWD/ai/outputs/cache/torchinductor" \
+  TRITON_CACHE_DIR="$PWD/ai/outputs/cache/triton" \
+  VLLM_CACHE_ROOT="$PWD/ai/outputs/cache/vllm" \
+  TMPDIR="$HOME/.cache/gc-gamsamo/tmp"
+conda deactivate
+conda activate game-ai
+```
+
+GPU는 `nvidia-smi`로 사용 가능한 장치를 확인해 선택하고 실제 UUID·장비 번호는 로컬 설정에만 저장한다. 이어서 위 절의 의존성·커널·고정 모델 설치와 실행 검사를 진행한다. 시스템 패키지 설치나 전역 pip 설치를 이 절차에 추가하지 않는다.
+
+`conda env config vars`는 환경을 다시 활성화해야 적용된다. `.env` 자동 로딩을 추가하는 기능은 아니다. 저장소를 옮기면 절대 캐시 경로와 editable 설치를 갱신한다. `SaveStore`는 저장소 안의 상담 저장 경로를 거부하므로 테스트용 임시 저장도 저장소 밖·홈 아래에 둔다. 가중치·캐시·환경 내보내기·원문은 Git에 포함하지 않는다.
 
 ## 저장 기록을 함께 이전할 때
 

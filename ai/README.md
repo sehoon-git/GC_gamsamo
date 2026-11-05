@@ -1,6 +1,6 @@
 # 서윤 AI 베타 실행
 
-서윤 한 명의 환자 첫 발화·한국어 서술형 대화·사용자 종료·기억·자동 저장·두 축 평가 API를 제공한다. Unity 연결 계층과 [텍스트 입력 UI 연결 명세](../contracts/README.md#unity-text-input)는 같은 계약을 사용한다. 입력창·전송 버튼은 팀원이 별도로 구현한다. `/health`의 `supported_patient_ids`에 있는 환자만 실제 AI 상담 대상이며, 나머지 다섯 명의 임상 설정·평가 데이터는 아직 없다.
+서윤 한 명의 환자 첫 발화·한국어 서술형 대화·사용자 종료·기억·자동 저장·두 축 평가 API를 제공한다. Unity 연결 계층과 [텍스트 입력 UI 연결 명세](../contracts/README.md#unity-text-input)는 같은 계약을 사용한다. 기존 입력창·전송 버튼은 `PatientAiInputBridge`로 PR #24의 `PatientAiAdapter`에 연결한다. Enter는 줄바꿈, Ctrl+Enter 또는 전송 버튼은 전송이며 한글 조합 중에는 보내지 않는다. 주질문·후속질문·횟수 제한 없이 대화하다가 `상담 그만하기`를 확정하면 종료하고, 원문·평가는 책상 서류에서 읽는다. `/health`의 `supported_patient_ids`에 있는 환자만 실제 AI 상담 대상이며, 나머지 다섯 명의 임상 설정·평가 데이터는 아직 없다.
 
 ## Conda 실행
 
@@ -31,11 +31,11 @@ python tools/run_experiment.py --server-only
 
 ## 대화·저장·이어하기
 
-환자가 먼저 이야기하고 플레이어는 공감·요약·질문을 자유로운 서술형으로 답한다. 여러 질문을 한 번에 보내도 정상적으로 대화를 이어간다. 질문 분류·차감·사용량 표시·횟수 제한은 없다. 게임의 상담 종료 버튼 또는 CLI의 `/finish`로 종료를 요청하면 **상담은 여기까지 하겠습니다. 오늘 수고하셨습니다!**를 상담자 안내로 저장하고 평가한다. 종료 안내에는 LLM을 호출하지 않는다.
+환자가 먼저 이야기하고 플레이어는 공감·요약·질문을 자유로운 서술형으로 답한다. 여러 질문을 한 번에 보내도 정상적으로 대화를 이어간다. 질문 분류·차감·사용량 표시·횟수 제한은 없다. 게임의 `상담 그만하기` 또는 CLI의 `/finish`로 종료를 요청하면 **상담은 여기까지 하겠습니다. 오늘 수고하셨습니다!**를 상담자 안내로 저장하고 평가한다. 종료 안내에는 LLM을 호출하지 않는다.
 
 `/v1/dialogue/start`는 서버가 새 상태와 첫 발화를 함께 만들고, `/revisit`는 평가가 끝난 미완료 환자의 기억을 이어 새 회차를 시작한다. `/open`은 저장된 빈 회차에 첫 발화를 만든다. 첫 발화 요청·응답도 저장 실패 시 재시도 대상으로 관리한다.
 
-`active → closing → pending_evaluation → evaluated`를 저장한다. 종료 버튼을 누르기 전에는 질문 수에 관계없이 대화를 이어간다. 버튼을 누른 뒤 중단하면 저장된 종료 의도 또는 평가 단계부터 이어간다. 자동 저장은 원문·상태의 같은 revision 쌍을 작성하고 포인터를 마지막에 교체한다. 기본 위치는 `~/.local/share/gc-gamsamo/seoyun/v4/`이며 프로젝트 밖의 `SEOYUN_DATA_DIR`로 바꿀 수 있다. 기존 형식 1·2·3 기록은 보존하고 `python tools/chat.py --new`로 새 실험을 시작한다.
+Python 참조 클라이언트는 `active → closing → pending_evaluation → evaluated`를 저장한다. Unity의 `AiSession`은 대기 중 요청과 종료 의사를 로컬 `end_requested`로 먼저 저장하고 active 상태에서 `/close`를 호출해 같은 종료 순서를 지킨다. 종료 버튼을 누르기 전에는 질문 수에 관계없이 대화를 이어간다. 버튼을 누른 뒤 중단하면 저장된 종료 의도 또는 평가 단계부터 이어간다. 자동 저장은 원문·상태의 같은 revision 쌍을 작성하고 포인터를 마지막에 교체한다. 기본 위치는 `~/.local/share/gc-gamsamo/seoyun/v4/`이며 프로젝트 밖의 `SEOYUN_DATA_DIR`로 바꿀 수 있다. 기존 형식 1·2·3 기록은 보존하고 `python tools/chat.py --new`로 새 실험을 시작한다.
 
 | 명령 | 동작 |
 |---|---|
@@ -90,7 +90,7 @@ dotnet run --project tools/unity-client-checks/UnityClientChecks.csproj -- .
 dotnet run --project tools/unity-client-checks/UnityClientChecks.csproj -- . <로컬연결설정.json>
 ```
 
-선택적으로 `dotnet build tools/unity-client-checks/AdapterCompileChecks.csproj`로 Unity 대체 타입을 사용하는 어댑터 구문·타입 검사를 할 수 있다. C# 검사는 Unity Editor의 정식 컴파일·실행이나 입력 UI 검사가 아니다. 팀원의 화면 연결·한글 IME·복원 검증은 [입력 UI 명세](../contracts/README.md#unity-text-input)와 PR 체크리스트를 따른다.
+선택적으로 `dotnet build tools/unity-client-checks/AdapterCompileChecks.csproj`로 Unity 대체 타입을 사용하는 어댑터 구문·타입 검사를 할 수 있다. C# 검사는 Unity Editor의 정식 컴파일·실행이나 입력 UI 검사가 아니다. 현재 입력·서류 UI의 실제 외부 서버 연결·한글 IME·복원 검증은 [입력 UI 명세](../contracts/README.md#unity-text-input)와 PR 체크리스트를 따른다.
 
 첫 두 검사는 모델 없이 규칙·장애·계약을 확인한다. 나머지는 실제 모델을 하나씩 실행하며 사용자 저장을 건드리지 않는다. `terminal_smoke`는 환자 첫 발화·공감과 복수 질문을 포함한 8턴 대화·명시적 종료·단계 복원·평가 재시도, `long_context_smoke`는 합성 긴 원문·요약·근거 검사를 수행한다. `compare_models`는 같은 20개 상황×2를 측정한다. 결과는 Git 제외 영역에 보존한다.
 

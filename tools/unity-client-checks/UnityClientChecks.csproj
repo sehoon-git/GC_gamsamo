@@ -12,6 +12,7 @@
     <Compile Include="../../Assets/_Project/Scripts/Networking/AiSaveStore.cs" Link="AiSaveStore.cs" />
     <Compile Include="../../Assets/_Project/Scripts/Networking/AiConnection.cs" Link="AiConnection.cs" />
     <Compile Include="../../Assets/_Project/Scripts/Networking/AiSession.cs" Link="AiSession.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Networking/AiRecordFormatter.cs" Link="AiRecordFormatter.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
 </Project>

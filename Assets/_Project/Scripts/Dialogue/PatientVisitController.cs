@@ -312,7 +312,7 @@ namespace Gamsamo.Dialogue
             else if (State == VisitState.Finished) dialogue.SetStatus("오늘의 상담을 모두 마쳤습니다");
             else if (State == VisitState.Entering) dialogue.SetStatus("내담자가 들어오고 있어요");
             else if (State == VisitState.Leaving) dialogue.SetStatus("다음 만남을 준비하고 있어요");
-            else dialogue.SetStatus("상담 중 · " + nextPatientIndex + " / " + patients.Length);
+            else dialogue.SetStatus(string.Empty);
         }
 
         private void RefreshInput()

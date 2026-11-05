@@ -107,3 +107,26 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Server / AI local environments and generated files
+**/.venv/
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+**/.pytest_cache/
+**/.ruff_cache/
+.env
+.env.*
+!.env.example
+/TestResults/
+/artifacts/
+.DS_Store
+
+# Retain directory placeholders without committing builds or model weights.
+!/Builds/
+/Builds/*
+!/Builds/.gitkeep
+/ai/models/*
+!/ai/models/.gitkeep
+/ai/outputs/*
+!/ai/outputs/.gitkeep

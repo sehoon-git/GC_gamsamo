@@ -2,13 +2,32 @@
 
 2026 게임인재원 AI 해커톤 팀 공용 저장소입니다.
 
-현재 저장소에는 **디렉토리 틀과 이 README만 준비되어 있습니다.** 게임 코드, 서버 코드, 테스트, 환자 데이터, 모델, 아트 및 Unity 프로젝트 초기 설정은 각 담당자가 추가합니다. 아직 실행하거나 빌드할 수 있는 프로젝트가 아닙니다.
+작업 시작 전 [저장소 작업 지침](AGENTS.md)과 [최신 인수인계](docs/README.md)를 확인합니다. 매 작업은 검증 후 `docs/`에 완료 시각·함수·규칙·다음 작업을 기록하고, 커밋과 GitHub 푸시 확인까지 마무리합니다.
+
+현재 저장소에는 **상담실과 진료기록부 UI 프로토타입**이 구현되어 있습니다. 상담실 왼쪽 아래 기록부를 누르면 배경이 흐려지고 환자 기록이 표시됩니다. 표시 데이터는 가상 환자 예시이며, 대화 서버와 게임 진행 시스템은 아직 이 화면에 연결하지 않았습니다.
+
+## 상담실 UI 실행
+
+1. `ProjectSettings/ProjectVersion.txt`에 기록된 Unity `6000.3.28f1`로 프로젝트를 엽니다.
+2. `Assets/_Project/Scenes/ConsultationRoom.unity`를 열고 Play를 누릅니다.
+3. 책상 왼쪽 아래 기록부를 클릭합니다. 닫기 버튼, `Esc`, 기록부 바깥 배경 클릭으로 닫을 수 있습니다.
+
+UI 프리팹은 `Assets/_Project/Prefabs/ConsultationRoomUI.prefab`입니다. 씬의 `ConsultationRoomUI`에 있는 `ConsultationRoomController`의 `record` 필드에서 예시 내용을 수정할 수 있습니다. 런타임에는 `SetRecord(MedicalRecordData)`로 내용을 교체합니다. 기록부 사진 칸은 항상 공백입니다. 배경과 팝업은 화면 비율을 유지하며, 화면 비율이 다르면 상담실 좌우 또는 상하에 여백이 생깁니다.
+
+Play 모드에서 `Gamsamo > Run UI Smoke Checks`로 클릭 영역, 모달 차단, 블러, 한글 표시, 텍스트 넘침, 닫기와 재열기를 검사합니다. 결과와 화면 캡처는 Git에서 제외된 `artifacts/ui/`에 저장됩니다. 씬을 처음 생성하는 도구는 `Gamsamo > Create Consultation Room Scene`이며, 기존 씬이 있으면 덮어쓰지 않습니다.
+
+### 화면 에셋과 폰트
+
+- 상담실: `Assets/_Project/Art/Backgrounds/ConsultationRoom.png` — 사용자 제공 상담실 원본.
+- 기록부: `Assets/_Project/Art/UI/MedicalRecord.png` — 사용자 제공 단독 기록부에서 외곽 배경을 투명하게 처리하고 사진 칸을 비운 이미지. 합성 참고 화면은 프로젝트에 포함하지 않았습니다.
+- 기록부 편집에는 기본 제공 ImageGen을 사용했습니다. 편집 지시는 원본의 1024 × 1536 구도, 클립보드·종이 질감, 한글 제목·항목명·표 선을 유지하면서 외곽과 클립 구멍만 투명하게 만들고, 사진 속 인물만 제거해 테두리 안을 종이색 공백으로 채우는 내용입니다. [최종 편집 프롬프트](docs/medical-record-image-edit.txt)를 함께 보관합니다.
+- 한글은 [Noto Sans CJK KR](https://github.com/notofonts/noto-cjk/tree/main/Sans/OTF/Korean)의 프로젝트 포함 폰트를 사용합니다. 라이선스는 `Assets/_Project/Fonts/OFL.txt`에 있습니다. TextMeshPro 필수 리소스는 `Assets/TextMesh Pro/`에 포함되어 있습니다.
 
 ## 개발 방향
 
 | 항목 | 합의 내용 |
 | --- | --- |
-| Unity | 6.3 LTS `6000.3.26f1` |
+| Unity | 6.3 LTS, 현재 프로젝트 `6000.3.28f1` |
 | 화면 구성 | 2D Built-In 렌더러, uGUI·TextMeshPro |
 | 지원 환경 | Windows·macOS |
 | 대화 | 자유 텍스트 입력, 완성 응답 수신 후 타이핑 효과 |
@@ -98,7 +117,7 @@ GC_gamsamo/
 
 ## 협업 기준
 
-1. Unity 담당자가 합의한 버전과 렌더러로 프로젝트를 초기화하고, 기본 설정을 공유합니다. 현재 `Packages/`와 `ProjectSettings/`에는 실제 설정 파일이 없습니다.
+1. Unity 담당자가 프로젝트 버전과 렌더러를 관리하고 기본 설정을 공유합니다. 현재 버전은 `ProjectSettings/ProjectVersion.txt`를 기준으로 하며, uGUI와 TextMeshPro를 사용합니다.
 2. 환자 데이터 형식과 대화 API 요청·응답 규격을 먼저 합의한 뒤 각자 구현합니다.
 3. Unity 에셋과 연결된 `.meta`는 함께 커밋합니다. 씬을 동시에 수정하기보다 담당자를 정하고 프리팹·스크립트·데이터로 작업을 나눕니다.
 4. 모델 가중치, 빌드, 캐시, 가상환경과 실제 접근 키는 Git에 넣지 않습니다. Unity가 추후 생성하는 `.meta`와 패키지 잠금 파일은 공유합니다.

@@ -1,0 +1,18 @@
+{
+  "model_id": "RedHatAI/Qwen3.5-9B-quantized.w4a16",
+  "revision": "a398088c4228b0ae0c8c78df88fd1e4bf445f068",
+  "served_model_name": "seoyun",
+  "local_directory": "ai/models/seoyun",
+  "max_model_len": 16384,
+  "summary_threshold": 12000,
+  "recent_turns": 6,
+  "gpu_memory_utilization": 0.9,
+  "max_num_seqs": 1,
+  "roles": {
+    "patient": {"temperature": 0.7, "max_tokens": 512, "thinking": false},
+    "controller": {"temperature": 0.1, "max_tokens": 1024, "thinking": false},
+    "summary": {"temperature": 0.1, "max_tokens": 2048, "thinking": false},
+    "evidence": {"temperature": 0.1, "max_tokens": 2048, "thinking": false},
+    "evaluation": {"temperature": 0.2, "max_tokens": 4096, "thinking": true, "thinking_token_budget": 1024}
+  }
+}

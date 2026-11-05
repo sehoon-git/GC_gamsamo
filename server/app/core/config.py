@@ -40,6 +40,10 @@ class Settings:
         return self.root / "server/prompts"
 
     @property
+    def patients_path(self) -> Path:
+        return self.root / "Assets/StreamingAssets/GameData/Patients"
+
+    @property
     def patient_path(self) -> Path:
         return self.root / "Assets/StreamingAssets/GameData/Patients/seoyun.json"
 

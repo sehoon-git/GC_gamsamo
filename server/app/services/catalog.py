@@ -2,16 +2,22 @@ import hashlib
 import json
 
 from app.core.config import Settings, ExperimentError
-from app.schemas.models import CONTENT_VERSION, CaseState, records
+from app.schemas.models import PATIENT_IDS, CaseState, content_version, records
 
 
 class Catalog:
-    def __init__(self, settings: Settings):
-        self.patient = json.loads(settings.patient_path.read_text("utf-8"))
-        if self.patient["content_version"] != CONTENT_VERSION:
+    def __init__(self, settings: Settings, patient_id: str = "seoyun"):
+        if patient_id not in PATIENT_IDS:
+            raise ExperimentError("이 환자의 AI 상담 콘텐츠는 아직 준비되지 않았습니다.", "unsupported_patient", 404)
+        self.patient = json.loads((settings.patients_path / (patient_id + ".json")).read_text("utf-8"))
+        if self.patient["id"] != patient_id or self.patient["content_version"] != content_version(patient_id):
             raise RuntimeError("Patient content version does not match the application.")
         self.facts = {f["id"]: f for f in self.patient["private_facts"]}
         self.rubric = {r["id"]: r for r in self.patient["rubric"]}
+        if len(self.facts) != len(self.patient["private_facts"]) or len(self.rubric) != 8:
+            raise RuntimeError("Patient facts/rubric IDs must be unique.")
+        if any(sum(r["axis"] == axis for r in self.rubric.values()) != 4 for axis in ("patient", "counselor")) or any(r["max_score"] != 25 for r in self.rubric.values()):
+            raise RuntimeError("Each axis requires four 25-point criteria.")
         self.prompts = {p.stem: p.read_text("utf-8") for p in sorted(settings.prompts.glob("*.txt"))}
         self.prompt_version = hashlib.sha256(json.dumps(self.prompts, ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:16]
         dialogue_prompts = {key: self.prompts[key] for key in ("controller", "patient", "summary")}
@@ -19,6 +25,8 @@ class Catalog:
 
     def validate_state(self, state: CaseState):
         CaseState.model_validate(state.model_dump())
+        if state.patient_id != self.patient["id"] or state.content_version != self.patient["content_version"]:
+            raise ExperimentError("다른 환자의 상담·기억·평가를 재사용할 수 없습니다.", "patient_mismatch", 409)
         if not set(state.revealed_fact_ids) <= self.facts.keys():
             raise ExperimentError("알 수 없는 공개 정보 ID가 있습니다.")
         candidates = {f for session in state.sessions
@@ -61,3 +69,9 @@ class Catalog:
             passed = all(v >= self.patient["clear_threshold"] for v in totals.values())
             if (e.patient_score, e.counselor_score, e.cleared) != (totals["patient"], totals["counselor"], passed):
                 raise ExperimentError("저장된 평가 합산 또는 클리어 상태가 올바르지 않습니다.")
+
+
+    def active_story_events(self, state: CaseState):
+        # Authored events are available by visit, never invented from the model's memory.
+        return [event for event in self.patient.get("story_events", [])
+                if len(state.sessions) >= event["min_session"]]

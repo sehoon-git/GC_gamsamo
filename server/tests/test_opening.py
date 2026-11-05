@@ -49,7 +49,7 @@ async def test_start_freeform_unlimited_finish_evaluate_and_revisit_contract():
                                  headers={"Authorization": "Bearer test-key"}) as client:
         health = (await client.get("/health")).json()
         assert health["format_version"] == 4
-        assert health["supported_patient_ids"] == ["seoyun"]
+        assert health["supported_patient_ids"] == ["seoyun", "dohyeon", "taejun", "yeonwoo", "harin"]
         start = {"patient_id": "seoyun", "case_id": "case_demo", "session_id": "session_one",
                  "request_id": "opening_one", "created_at": "2026-11-06T00:00:00+00:00"}
         assert (await client.post("/v1/dialogue/start", json=start, headers={"Authorization": "Bearer wrong"})).status_code == 401

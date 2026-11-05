@@ -26,7 +26,11 @@ class MockLLM:
             text = text.split("분류할 현재 상담자 발언:\n", 1)[-1]
             value = {"reason": "연결 검증용 맥락", "topic_label": "현재 마음", "disclose_fact_ids": []}
         elif role == "patient":
+            policy = json.JSONDecoder().raw_decode(messages[0]["content"].split("설정과 현재 상태:\n", 1)[1])[0]
+            name = policy["fixed_character"]["name"]
             value = {"text": "면접 생각을 하면 아직 긴장돼요. 지금은 제 마음을 천천히 이야기하고 싶어요.", "disclosed_fact_ids": []}
+            if name != "서윤":
+                value["text"] = f"{name}입니다. 제 이야기를 천천히 해 보고 싶어요."
         elif role == "evaluation":
             value = {key: {"score": 0, "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.", "evidence": []} for key in schema.model_fields}
         elif role == "summary":

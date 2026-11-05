@@ -17,7 +17,17 @@ GPU·가중치 없이 같은 API 형식으로 연결할 수 있다. 모의 서�
 
 `GET /health`에서 `inference.ready`, `mode`, `format_version`, `content_version`, `supported_patient_ids`를 먼저 확인한다. 준비 전 HTTP 503을 반환한다. 화면에 모의 대화인지 실제 AI 대화인지 표시하고, 버전이나 환자 지원 여부가 다르면 해당 상담의 AI 요청을 시작하지 않는다. `busy`는 서버의 직렬 처리 상태다.
 
-현재 지원 콘텐츠는 **서윤(`seoyun`) 한 명**이다. `supported_patient_ids`는 `["seoyun"]`, `supported_patients`는 `[{"id":"seoyun","display_name":"서윤"}]`이다. 게임의 도현·민석·태준·지은·하린은 이름·초상·임시 대사만 있으며 각색 사연·공개 조건·평가기준은 아직 제공되지 않았다. 이 다섯 명을 서윤 ID로 보내거나 서윤의 기억·평가를 재사용하지 않는다. 게임에서는 로컬 시연임을 표시하고 실제 AI 결과와 구분한다.
+지원 환자는 **서윤(`seoyun`), 도현(`dohyeon`), 태준(`taejun`), 연우(`yeonwoo`), 하린(`harin`)**이다. `supported_patients`의 각 항목은 `id`, `display_name`, `content_version`을 포함한다. `supported_patient_ids`로 실제 지원 여부를 확인한다. `민석(minseok)`은 설정 대기인 로컬 시연이며 `/start`는 404다. 기존 화면의 지은은 연우로 변경했고 `jieun`을 AI 환자 ID로 보내지 않는다.
+
+| patient_id | content_version | 이야기 |
+|---|---|---|
+| `seoyun` | `seoyun-4.0` | 취업 실패와 자기 가치 |
+| `dohyeon` | `dohyeon-4.0` | 가상 두 회사 조건·임금 비교와 지역 생활 |
+| `taejun` | `taejun-4.0` | 가상 지역·정당의 기대와 개인의 책임 |
+| `yeonwoo` | `yeonwoo-4.0` | 합의 이혼 후 아이의 성장과 놓친 순간 |
+| `harin` | `harin-4.0` | 다문화가정에서의 애정·부담·소속감 |
+
+상태의 `patient_id`와 `content_version`은 한 실험 내에서 고정한다. 캐릭터를 바꾸면서 기존 실험의 ID·원문·기억·공개 정보·평가를 재사용하지 않는다. `/health.content_version`은 기존 서윤 클라이언트 호환을 위해 `seoyun-4.0`을 유지하므로 **다른 환자는 반드시 supported_patients의 해당 항목에서 콘텐츠 버전을 확인**한다. 같은 모델 프로세스를 공유하되 환자별 프롬프트·저장은 분리된다.
 
 POST 요청은 서버에서 전달받은 `Authorization: Bearer <키>`를 사용한다. 로컬 모의 실행에서 키가 비어 있으면 인증을 생략한다. 외부 접속은 인증이 설정된 API만 HTTPS로 노출하며 모델 포트를 직접 연결하지 않는다. 키·개인 서버 주소는 로컬 설정으로 전달하고 원문·공유 저장 파일·저장소에 넣지 않는다. 서버와 CLI는 환경변수를 사용하며 `.env` 파일을 자동으로 읽지 않는다.
 
@@ -35,7 +45,7 @@ POST 요청은 서버에서 전달받은 `Authorization: Bearer <키>`를 사용
 
 ## 첫 발화와 자유 대화
 
-`format_version=4`, `content_version=seoyun-4.0`. `sessions`의 마지막 항목이 현재 회차다. `case_id`는 한 환자의 누적 상담 실험, `session_id`는 그 안의 한 회차, `request_id`/`turn_id`는 한 요청을 식별한다. 최초 요청 전에 ID와 생성 시각을 확정하며 재시도할 때 바꾸지 않는다.
+`format_version=4`, `content_version=<patient_id>-4.0`. 기존 서윤의 형식 4 저장은 계속 호환된다. `sessions`의 마지막 항목이 현재 회차다. `case_id`는 한 환자의 누적 상담 실험, `session_id`는 그 안의 한 회차, `request_id`/`turn_id`는 한 요청을 식별한다. 최초 요청 전에 ID와 생성 시각을 확정하며 재시도할 때 바꾸지 않는다.
 
 1. 환자가 자리에 도착하면 `/start`를 요청한다. 응답의 `base_revision=0`, `state.revision=1`이며 현재 회차의 `opening`에 첫 환자 발화가 들어 있다. 클라이언트에서 [초기 빈 상태](initial-state.example.json)를 먼저 저장한 경우 `/open`을 사용해도 된다.
 2. `opening`은 `id`, `patient_text`, `candidate_fact_ids`, `created_at`, `metrics`를 갖는다. 가짜 상담자 인사나 빈 `user_text`를 만들지 않는다. 원문에는 `opening.id + ":patient"`인 환자 기록으로 한 번 저장하며 기억·평가에도 포함한다.
@@ -91,6 +101,7 @@ POST 요청은 서버에서 전달받은 `Authorization: Bearer <키>`를 사용
 
 | 예제 접두사 | 확인할 동작 |
 |---|---|
+| `dohyeon-start`, `taejun-start`, `yeonwoo-start`, `harin-start` | 추가 캐릭터별 ID·콘텐츠 버전·초기 상태·첫 발화의 모의 예제 |
 | `health`, `start`, `open-retry` | 지원 환자·버전, 환자 선발화, 저장된 첫 발화 재사용 |
 | `unsupported-patient`, `opening-required` | 미지원 인물과 첫 발화 없는 답변 거절 |
 | `greeting`, `compound`, `turn`, `question-2`~`question-4` | 공감·복수 질문·일반 답변을 모두 정상 수락 |
@@ -116,16 +127,16 @@ Unity는 `PatientVisitController.PatientArrived(visitId, patientId)`에서 지�
 ### 설정과 데이터 소유권
 
 - 연결 설정은 `Application.persistentDataPath/ai-connection.json`의 `api_url`, `api_key`다. `GAMSAMO_AI_CONNECTION` 환경변수로 다른 로컬 파일을 지정할 수 있다. 지정/기본 파일이 없을 때는 환경변수 `SEOYUN_API_URL`·`SEOYUN_API_KEY`를 사용한다. 실제 주소·키는 저장소·씬·프리팹·Inspector 직렬화·로그에 넣지 않는다.
-- 원격 API는 HTTPS와 Bearer 키를 요구한다. 개발용 HTTP는 loopback만 허용한다. `/health`로 준비 상태·형식 4·콘텐츠 `seoyun-4.0`·서윤 지원 여부를 확인한다. 모의 서버 연결과 실제 AI 연결을 구분한다.
+- 원격 API는 HTTPS와 Bearer 키를 요구한다. 개발용 HTTP는 loopback만 허용한다. `/health`로 준비 상태·형식 4·콘텐츠 해당 환자의 콘텐츠 버전·지원 여부를 확인한다. 모의 서버 연결과 실제 AI 연결을 구분한다.
 - `AiProtocol`은 전체 상태 JSON, 기존 원문·회차, 응답 ID/revision, 공개 후보 출처, 평가 합계와 원문 인용을 검증한다. 클라이언트가 이번 응답에서 검증한 후보만 공개 확정 목록에 합친다. 게임의 보상·승급·클리어 인원 증가는 별도 진행 서비스의 책임이다.
-- `AiSession`이 요청·초안·종료 의도를 관리하고 `AiSaveStore`가 `Application.persistentDataPath/ai-saves/seoyun/`에 상태와 원문 쌍을 저장한 뒤 현재 저장 포인터를 교체한다. Python CLI의 `v4/` 경로와는 별도이며 이전 형식 파일을 자동 변환하지 않는다. 상담 종료와 앱 종료는 다르다. 앱을 다시 열면 저장된 단계부터 복원한다. 초안만 바뀔 때는 입력 후 0.75초 대기해 저장하며 정상 비활성화·일시정지·종료 시 저장을 시도한다. 프로세스 강제 종료 때는 아직 저장되지 않은 초안이 사라질 수 있다. 전송 요청은 네트워크 호출 전에 원문을 즉시 저장한다.
+- `AiSession`이 요청·초안·종료 의도를 관리하고 `AiSaveStore`가 `Application.persistentDataPath/ai-saves/<patient_id>/`에 상태와 원문 쌍을 저장한 뒤 현재 저장 포인터를 교체한다. Python CLI의 `v4/` 경로와는 별도이며 이전 형식 파일을 자동 변환하지 않는다. 상담 종료와 앱 종료는 다르다. 앱을 다시 열면 저장된 단계부터 복원한다. 초안만 바뀔 때는 입력 후 0.75초 대기해 저장하며 정상 비활성화·일시정지·종료 시 저장을 시도한다. 프로세스 강제 종료 때는 아직 저장되지 않은 초안이 사라질 수 있다. 전송 요청은 네트워크 호출 전에 원문을 즉시 저장한다.
 
 ### Editor에서 준비·검증
 
 1. `ProjectSettings/ProjectVersion.txt`의 Unity 버전으로 열고 패키지 복원을 완료한다. JSON 라이브러리는 Unity 공식 `com.unity.nuget.newtonsoft-json` 3.2.2를 사용한다.
 2. `Gamsamo > AI > Import Connection JSON`에서 별도 전달받은 설정 파일을 가져온다. 파일은 프로젝트 밖의 기본 연결 경로에 저장된다. 주소가 바뀌면 다시 가져오고 `Retry Pending Operation (Play)`을 실행한다.
-3. `ConsultationRoom.unity`를 열고 `Gamsamo > AI > Validate Current Scene`으로 참조·콘텐츠 버전을 확인한다. 이 메뉴는 네트워크를 호출하지 않는다. Play 시작 시 `PatientAiBootstrap`이 기존 방문 컨트롤러에 어댑터를 자동 장착하며 씬·프리팹은 다시 생성하지 않는다.
-4. 문을 눌러 서윤이 착석한 뒤 첫 발화를 읽는다. 입력 UI 없이 API 흐름을 확인하려면 `Gamsamo > AI > Submit Sample Utterance (Play)`을 사용한다. 이 메뉴는 고정 합성 발언으로 `SubmitText`를 호출하는 **Editor 검증 도구**이며 게임 입력 UI가 아니다.
+3. `ConsultationRoom.unity`를 열고 `Gamsamo > AI > Validate Current Scene`으로 참조·콘텐츠 버전을 확인한다. 이 메뉴는 네트워크를 호출하지 않는다. Play 시작 시 `PatientAiBootstrap`이 기존 방문 컨트롤러에 환자별 어댑터를 자동 장착하며 씬·프리팹은 다시 생성하지 않는다.
+4. 문을 눌러 지원 환자가 착석한 뒤 첫 발화를 읽는다. 입력 UI 없이 API 흐름을 확인하려면 `Gamsamo > AI > Submit Sample Utterance (Play)`을 사용한다. 이 메뉴는 고정 합성 발언으로 `SubmitText`를 호출하는 **Editor 검증 도구**이며 게임 입력 UI가 아니다.
 5. 같은 메뉴의 `Request End`, `Confirm End`, `Cancel End`, `Retry Pending Operation`, `Revisit`, `Finish Visit`, `New Experiment`(모두 `Play` 표기)로 해당 공개 함수를 확인한다. `New Experiment`는 별도 실험 생성 확인을 거친다. 기존 종료 버튼도 유지된다. 종료 안내를 읽고 `계속 듣기`를 누르면 평가 결과, 결과의 마지막 페이지 다음에는 방문 종료로 진행한다.
 
 런타임 어댑터의 Inspector에는 단계·입력 가능·대기·오류만 표시하고 주소·키·원문은 출력하지 않는다. 이전 `Run Patient Visit Checks`는 AI 어댑터가 붙어 있으면 사용자 저장과 외부 API 요청을 보호하기 위해 실행을 차단한다. 이번 AI 검증은 위 메뉴와 아래 수동 체크리스트를 사용한다. 이 도구를 추가했다는 사실은 Unity Editor에서 실제 실행한 결과가 아니다.
@@ -136,7 +147,7 @@ Unity는 `PatientVisitController.PatientArrived(visitId, patientId)`에서 지�
 |---|---|
 | `SubmitText(string text)` | 전송 버튼에서 현재 입력 원문 전달. `true`는 요청 접수이며 응답·저장 성공을 뜻하지 않음 |
 | `UpdateDraft(string text)` | 입력 변경 시 호출. UI를 다시 열 때 `Draft`를 복원. 한글 조합 확정 시에도 최신 문자열 전달 |
-| `IsSeoyunVisit` | 서윤 방문일 때만 입력 패널을 표시. 다른 다섯 명에게 서윤 입력·평가를 연결하지 않음 |
+| `IsAiVisit`, `PatientId` | AI 지원 환자일 때 입력 패널을 표시하고 현재 환자 ID 조회. `IsSeoyunVisit`은 기존처럼 서윤 방문만 의미한다. 5명 모두의 입력 패널은 `IsAiVisit` 사용 |
 | `CanSubmit`, `CanEditDraft` | 전송 버튼·입력창 활성화 조건. UI는 전송 시 공백 여부·IME 조합 여부를 추가로 확인. 대사를 다 읽기 전 초안 편집과 전송 가능 시점은 다름 |
 | `IsBusy`, `CurrentPhase`, `EndRequested` | 응답 대기·평가·종료 중 상태 표시. 질문 사용량 UI는 만들지 않음 |
 | `Draft` | 초안의 기준값. 전송 직후 임의로 지우지 않고 저장 완료 후 이 값과 동기화 |
@@ -146,7 +157,7 @@ Unity는 `PatientVisitController.PatientArrived(visitId, patientId)`에서 지�
 | `CanRevisit`, `Revisit()` | 평가 미달 후 같은 환자 기억·원문을 잇는 새 회차 |
 | `CanFinishVisit`, `FinishVisit()` | 저장된 결과 확인 후 방문 종료. 호출 자체는 클리어·보상 지급이 아님 |
 | `NewExperiment()` | 사용자가 별도 새 실험을 선택한 경우에만 호출. 연결 오류·씬 재시작에서 자동 호출하지 않음 |
-| `CaseId`, `SessionId`, `Revision` | 별도 대화 로그 UI의 중복 표시 방지 기준. 복원 시 마지막 확정 이벤트가 다시 올 수 있으므로 같은 기록을 재삽입하지 않음 |
+| `PatientId`, `CaseId`, `SessionId`, `Revision` | 별도 대화 로그 UI의 중복 표시 방지 기준. 복원 시 마지막 확정 이벤트가 다시 올 수 있으므로 같은 기록을 재삽입하지 않음 |
 | `LastPatientText`, `EvaluationJson`, `LastError` | 화면 재연결 시 마지막 확정 대사·결과·오류 조회. 오류와 상담 원문을 공개 로그로 남기지 않음 |
 | `event Action StateChanged` | 위 속성을 다시 읽어 입력 활성화·처리 상태·초안·재시도 상태 갱신 |
 | `event Action<string> PatientLineCommitted` | 응답 검증과 자동 저장이 끝난 환자 대사. 기존 대화창에도 연결되므로 별도 UI가 중복 출력하지 않도록 함 |
@@ -161,7 +172,7 @@ Unity는 `PatientVisitController.PatientArrived(visitId, patientId)`에서 지�
 3. 키보드 전송 정책은 **Enter 전송, Shift+Enter 줄바꿈**을 기준으로 구현한다. 한글 IME 조합 중 Enter는 글자 확정만 하고 전송하지 않는다. TMP의 제출 이벤트를 곧바로 `SubmitText`에 연결하지 말고 조합 중인지 확인한다. 마우스 전송도 최종 조합 문자열을 확정한 뒤 실행한다.
 4. 요청 접수 뒤 입력 편집·중복 전송을 막고 초안을 유지한다. 실패 시 같은 글을 확인할 수 있어야 한다. `StateChanged`에서 `Draft`를 반영할 때 `SetTextWithoutNotify` 등을 사용해 초안 저장 콜백이 다시 발생하지 않게 한다. 성공 여부를 HTTP 요청 시작 시점으로 판단하지 않는다.
 5. `context_overflow` 등 수정이 필요한 입력 오류는 초안을 돌려주며 사용자가 길이를 조정해 새로 전송한다. 네트워크 장애에서는 기존 요청을 그대로 재시도한다. 저장 실패에서 `SubmitText`를 다시 호출하지 않는다.
-6. 복원 시 마지막 확정 대사·평가 이벤트가 다시 발생할 수 있다. 별도 로그 UI는 `CaseId`·`SessionId`·`Revision`으로 중복 삽입을 막거나 `LastPatientText`·`EvaluationJson`으로 화면을 교체한다. 표시용 타이핑·페이지 이동은 원문을 바꾸지 않는다. 출력은 리치 텍스트 해석을 끄고 원문을 그대로 표시한다. 표시 중 PC·기록부를 열어도 상담 상태·입력 초안은 유지한다.
+6. 복원 시 마지막 확정 대사·평가 이벤트가 다시 발생할 수 있다. 별도 로그 UI는 `PatientId`·`CaseId`·`SessionId`·`Revision`으로 중복 삽입을 막거나 `LastPatientText`·`EvaluationJson`으로 화면을 교체한다. 표시용 타이핑·페이지 이동은 원문을 바꾸지 않는다. 출력은 리치 텍스트 해석을 끄고 원문을 그대로 표시한다. 표시 중 PC·기록부를 열어도 상담 상태·입력 초안은 유지한다.
 7. 종료 확인 **취소**는 상담을 계속한다. 종료 **확정**은 새 입력을 막고 현재 응답/저장을 먼저 끝낸 뒤 고정 안내 → 저장 → 평가로 진행한다. 사용자가 채팅에 “종료”라고 쓴 것만으로 종료 요청을 만들지 않는다.
 8. `pending_evaluation`에서는 “평가 중” 또는 평가 오류·재시도를 표시한다. 두 축의 점수는 저장된 평가에서 읽으며 서버 오류를 임의의 0점·클리어로 바꾸지 않는다.
 
@@ -194,12 +205,12 @@ PR을 받은 팀원이 Unity Editor와 실제 시연 데스크톱에서 검증�
 
 | 입력 UI 없이 확인 | 기대 결과 |
 |---|---|
-| 서윤 착석·첫 발화 | 준비 확인 후 환자만 먼저 한 번 발화. 가짜 상담자 인사 없음 |
+| 각 지원 환자 착석·첫 발화 | 준비 확인 후 환자만 먼저 한 번 발화. 가짜 상담자 인사 없음 |
 | PC·기록부 열기/닫기 | 뒤 입력 차단, 같은 방문·회차·대사 유지 |
 | 종료 확인 취소/확정 | 취소는 상담 유지. 확정은 고정 상담자 안내를 저장한 뒤 평가, 이후 방문 종료 가능 |
 | 첫 발화만 듣고 종료 | 상담자 근거가 없어 상담자 점수 0, 실제 오류와 구분 |
 | 평가 미달 후 재상담 | 이전 원문·공개 정보·기억 유지, 새 회차의 첫 발화 |
-| 다음 환자 | 서윤 외 5명은 기존 로컬 시연. 서윤 AI 요청·기억을 재사용하지 않음 |
+| 다음 환자 | 지원 5명은 각자의 설정·저장, 민석은 로컬 시연. 다른 환자의 원문·초안·평가를 재사용하지 않음 |
 
 | 입력 UI 구현 후 확인 | 기대 결과 |
 |---|---|
@@ -210,6 +221,16 @@ PR을 받은 팀원이 Unity Editor와 실제 시연 데스크톱에서 검증�
 | 네트워크 끊기·잘못된 키·복구 후 재시도 | 오류와 초안 유지, 같은 요청 재시도, 가짜 성공·0점 평가 없음 |
 | 저장 실패 후 재시도 | 받은 응답을 보관하고 저장만 재시도 |
 | active/종료 예약/pending_evaluation에서 재시작 | 같은 실험·회차·단계 복원, 첫 발화·종료 안내·평가 중복 없음 |
-| 공개 정보와 평가 근거 | 확정 후보와 실제 원문만 반영, 미제공 신상 생성 없음 |
+| 공개 정보와 평가 근거 | 현재 환자의 확정 후보·평가기준·실제 원문만 반영, 미제공 신상 생성 없음 |
+| 연우 첫 상담→종료·평가→재상담 | 첫 상담에는 이후의 영상 사건을 미리 말하지 않고, 두 번째 회차부터 고정 영상 사건을 이야기할 수 있음 |
 
 각 테스트에서 수행한 조작, 기대값과 실제 결과, 재현 단계, 오류 코드를 기록한다. Windows/macOS 빌드의 저장 경로·원자적 파일 교체·인증과 네트워크 오류도 대상 PC에서 확인한다.
+
+
+### 캐릭터별 이야기와 평가 연결
+
+설정 원본은 `Assets/StreamingAssets/GameData/Patients/<patient_id>.json`이다. 공통 두 축/각 70점 규칙은 유지하며 환자 축의 네 기준과 공개 사실은 캐릭터마다 다르다. 상담자 축도 해당 이야기의 현실 맥락에 맞는 label을 사용한다. C#은 `AiProtocol.RegisterPatient`로 원본을 등록한 뒤 상태·평가를 검증한다. 코드에 서윤의 사실 ID/평가 ID를 새 환자용으로 복사하지 않는다.
+
+도현의 회사·지역·급여·근무시간·복리후생·비용은 가상 비교 조건이며 실제 지역 통계나 확정 실수령액으로 취급하지 않는다. 태준의 지역·정당은 가상이다. 하린의 발표 참여 여부, 도현의 이직/잔류, 태준의 정치적 선택, 연우의 재결합 여부를 정답으로 채점하지 않는다.
+
+연우의 `story_events` 중 자전거 영상은 `min_session=2`다. `/revisit`으로 새 회차를 만든 뒤에만 해당 설정을 모델에 제공한다. 단순 앱 재실행·요청 재시도·대화 턴 증가만으로 다음 사건을 열지 않는다. 사전 작성 사건은 평가 근거 원문을 대신하지 않으며 원문에 없는 감정 변화·행동 실행을 평가하지 않는다.

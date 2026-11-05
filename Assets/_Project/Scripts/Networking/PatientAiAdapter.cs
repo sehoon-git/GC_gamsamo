@@ -14,7 +14,7 @@ using UnityEngine.SceneManagement;
 namespace Gamsamo.Networking
 {
     /// <summary>
-    /// Seoyun's external, stateless API adapter. Input widgets belong to the game UI and call SubmitText.
+    /// Patient-specific external, stateless API adapter. Input widgets belong to the game UI and call SubmitText.
     /// A true return means accepted locally; committed events fire only after durable state + transcript storage.
     /// Credentials are loaded from a local file, never serialized into this component.
     /// </summary>
@@ -28,7 +28,14 @@ namespace Gamsamo.Networking
         public event Action<string> ErrorOccurred;
 
         public static string ConnectionFile => Path.Combine(Application.persistentDataPath, "ai-connection.json");
-        public static string SaveDirectory => Path.Combine(Application.persistentDataPath, "ai-saves", "seoyun");
+        public static string SaveDirectory => SaveDirectoryFor("seoyun"); // Compatibility for the original client.
+        public static string SaveDirectoryFor(string patientId)
+        {
+            AiProtocol.Patient(patientId); // Validate before constructing a path.
+            return Path.Combine(Application.persistentDataPath, "ai-saves", patientId);
+        }
+        public string PatientId => activePatientId;
+        public bool IsAiVisit => HasActiveVisit;
         public string CurrentPhase => session == null ? "uninitialized" : session.Phase;
         public string CaseId => session == null ? "" : session.CaseId;
         public string SessionId => committedState == null ? "" : AiProtocol.Id(AiProtocol.Current(committedState), "id");
@@ -41,7 +48,7 @@ namespace Gamsamo.Networking
         public bool IsBusy => networkBusy || (session != null && (session.HasPendingSave || session.PendingRequest != null));
         public bool EndRequested => session != null && session.EndRequested;
         public bool IsMock => inferenceMode == "mock";
-        public bool IsSeoyunVisit => HasActiveVisit;
+        public bool IsSeoyunVisit => HasActiveVisit && activePatientId == "seoyun"; // Legacy meaning; use IsAiVisit for the full roster.
         public bool CanRetry => HasActiveVisit && !networkBusy && (!string.IsNullOrEmpty(LastError) || (session != null && session.HasPendingSave));
         public bool CanEditDraft => CanInteract && healthReady && session != null && !IsBusy && !EndRequested
             && CurrentPhase == "active" && string.IsNullOrEmpty(LastError)
@@ -62,6 +69,8 @@ namespace Gamsamo.Networking
         private bool healthReady;
         private string inferenceMode = "";
         private string localVisitId = "";
+        private string activePatientId = "";
+        private string patientName = "";
         private int generation;
         private int renderedRevision = -1;
         private bool showingClosing;
@@ -77,7 +86,7 @@ namespace Gamsamo.Networking
         private readonly Dictionary<string, string> criterionLabels = new Dictionary<string, string>(StringComparer.Ordinal);
         private PatientDialogueView View => visits == null ? null : visits.dialogue;
         private bool HasActiveVisit => isActiveAndEnabled && visits != null && visits.isActiveAndEnabled
-            && visits.State == PatientVisitController.VisitState.Consulting && visits.CurrentPatientId == "seoyun"
+            && visits.State == PatientVisitController.VisitState.Consulting && visits.CurrentPatientId == activePatientId
             && !string.IsNullOrEmpty(localVisitId) && visits.CurrentSessionId == localVisitId;
         private bool CanInteract => HasActiveVisit && View != null && View.IsVisible && !View.IsConfirming
             && (visits.room == null || !visits.room.IsOverlayBlocking);
@@ -92,21 +101,29 @@ namespace Gamsamo.Networking
             visits.PatientArrived += Arrived;
             visits.StateChanged += VisitChanged;
         }
-        private static bool UsesPatient(string patientId) => patientId == "seoyun";
+        private static bool UsesPatient(string patientId) => new[] { "seoyun", "dohyeon", "taejun", "yeonwoo", "harin" }.Contains(patientId);
         private void OnEnable()
         {
-            if (visits != null && visits.State == PatientVisitController.VisitState.Consulting && visits.CurrentPatientId == "seoyun")
-                Arrived(visits.CurrentSessionId, "seoyun");
+            if (visits != null && visits.State == PatientVisitController.VisitState.Consulting && UsesPatient(visits.CurrentPatientId))
+                Arrived(visits.CurrentSessionId, visits.CurrentPatientId);
         }
         private void Arrived(string visitId, string patientId)
         {
-            if (patientId != "seoyun") return;
+            if (!UsesPatient(patientId)) return;
+            FlushDraft();
             AbortNetwork();
+            if (activePatientId != patientId)
+            {
+                session = null; committedState = null; draftDirty = false; draftBuffer = "";
+                factTexts.Clear(); criterionLabels.Clear(); LastPatientText = "";
+            }
+            activePatientId = patientId;
+            patientName = visits.CurrentPatient.displayName;
             localVisitId = visitId;
             renderedRevision = -1;
             showingClosing = resultVisible = false;
             LastError = "";
-            View.ShowLine("서윤", "");
+            View.ShowLine(patientName, "");
             if (!InitializeSession()) return;
             RenderCommitted();
             ContinueFlow();
@@ -117,12 +134,14 @@ namespace Gamsamo.Networking
             {
                 if (factTexts.Count == 0)
                 {
-                    var patient = AiProtocol.Parse(File.ReadAllText(Path.Combine(Application.streamingAssetsPath, "GameData", "Patients", "seoyun.json")));
-                    AiProtocol.Require(AiProtocol.Text(patient, "content_version") == AiProtocol.ContentVersion, "환자 데이터 버전 오류");
+                    var patient = AiProtocol.Parse(File.ReadAllText(Path.Combine(Application.streamingAssetsPath, "GameData", "Patients", activePatientId + ".json")));
+                    AiProtocol.Require(AiProtocol.Id(patient, "id") == activePatientId, "환자 데이터 ID 오류");
+                    AiProtocol.RegisterPatient(patient);
+                    patientName = AiProtocol.Text(patient, "name");
                     foreach (JObject fact in AiProtocol.Array(patient, "private_facts")) factTexts.Add(AiProtocol.Text(fact, "id"), AiProtocol.Text(fact, "text"));
                     foreach (JObject criterion in AiProtocol.Array(patient, "rubric")) criterionLabels.Add(AiProtocol.Text(criterion, "id"), AiProtocol.Text(criterion, "label"));
                 }
-                if (session == null) session = new AiSession(new AiSaveStore(SaveDirectory));
+                if (session == null) session = new AiSession(new AiSaveStore(SaveDirectoryFor(activePatientId)), activePatientId);
                 committedState = session.State;
                 return true;
             }
@@ -296,7 +315,7 @@ namespace Gamsamo.Networking
                 try
                 {
                     var health = AiProtocol.Parse(request.downloadHandler.text);
-                    inferenceMode = AiProtocol.ValidateHealth(health);
+                    inferenceMode = AiProtocol.ValidateHealth(health, activePatientId);
                     healthReady = true;
                 }
                 catch (Exception) { Fail("서버의 준비 상태·데이터 버전이 일치하지 않습니다. 서버 설정을 확인해 주세요."); }
@@ -374,7 +393,7 @@ namespace Gamsamo.Networking
             {
                 bool confirming = View.IsConfirming && !EndRequested;
                 showingClosing = resultVisible = false;
-                View.ShowLine("서윤", LastPatientText);
+                View.ShowLine(patientName, LastPatientText);
                 if (confirming) View.ShowConfirmation(true);
                 if (speech != null) Emit(PatientLineCommitted, LastPatientText);
             }
@@ -426,7 +445,7 @@ namespace Gamsamo.Networking
             if (visits.room == null) return;
             visits.room.SetRecord(new MedicalRecordData
             {
-                registrationNumber = "seoyun", patientName = "서윤",
+                registrationNumber = activePatientId, patientName = this.patientName,
                 recordedDate = AiProtocol.Text(AiProtocol.Current(committedState), "started_at").Split('T')[0],
                 visitReason = "상담에서 확인한 내용",
                 medicalHistory = "아직 확인하지 않음", medication = "아직 확인하지 않음",
@@ -447,8 +466,8 @@ namespace Gamsamo.Networking
                 else if (CurrentPhase == "evaluated") status = "평가 저장 완료 · 다음으로 결과 확인";
                 else if (CurrentPhase == "pending_evaluation") status = "상담을 마쳤어요 · 평가 중";
                 else if (EndRequested) status = "응답 저장 후 상담을 마칠게요";
-                else if (networkBusy) status = "서윤의 응답을 기다리고 있어요";
-                else status = IsMock ? "모의 AI · 입력 UI 연결 대기" : "서윤과 상담 중";
+                else if (networkBusy) status = patientName + "의 응답을 기다리고 있어요";
+                else status = IsMock ? "모의 AI · 입력 UI 연결 대기" : patientName + " 상담 중";
                 View.SetStatus(status);
             }
             Emit(StateChanged);
@@ -492,7 +511,7 @@ namespace Gamsamo.Networking
         }
     }
 
-    /// <summary>Adds the adapter without rewriting existing serialized scene/prefab references.</summary>
+    /// <summary>Adds the shared patient adapter without rewriting existing serialized scene/prefab references.</summary>
     public static class PatientAiBootstrap
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]

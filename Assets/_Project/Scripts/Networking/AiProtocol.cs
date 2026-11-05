@@ -15,9 +15,28 @@ namespace Gamsamo.Networking
         public const string ContentVersion = "seoyun-4.0";
         public const string ClosingText = "상담은 여기까지 하겠습니다. 오늘 수고하셨습니다!";
         private static readonly Regex IdPattern = new Regex("^[A-Za-z0-9_-]{1,80}$");
-        private static readonly HashSet<string> Facts = new HashSet<string> { "avoidance_relief", "friend_envy", "cafe_strength" };
-        private static readonly string[] PatientCriteria = { "self_worth", "accept_emotions", "recognize_strength", "realistic_choice" };
-        private static readonly string[] CounselorCriteria = { "empathy", "exploration", "autonomy", "practical_context" };
+        private static readonly Dictionary<string, JObject> Patients = new Dictionary<string, JObject>(StringComparer.Ordinal);
+
+        public static void RegisterPatient(JObject patient)
+        {
+            string id = Id(patient, "id");
+            Require(Text(patient, "content_version") == id + "-4.0" && Number(patient, "clear_threshold") == 70, "환자 콘텐츠 버전·평가 기준 오류입니다.");
+            Text(patient, "name");
+            var facts = Array(patient, "private_facts").Cast<JObject>().Select(f => Id(f, "id")).ToList();
+            Require(facts.Distinct().Count() == facts.Count, "공개 정보 ID가 중복되었습니다.");
+            var rubric = Array(patient, "rubric").Cast<JObject>().ToList();
+            Require(rubric.Count == 8 && rubric.Select(r => Id(r, "id")).Distinct().Count() == 8
+                && rubric.Count(r => Text(r, "axis") == "patient") == 4
+                && rubric.Count(r => Text(r, "axis") == "counselor") == 4
+                && rubric.All(r => Number(r, "max_score") == 25), "환자별 평가 기준 오류입니다.");
+            Patients[id] = Copy(patient);
+        }
+        public static bool SupportsPatient(string id) => id != null && Patients.ContainsKey(id);
+        public static JObject Patient(string id)
+        {
+            Require(SupportsPatient(id), "지원하지 않거나 로드하지 않은 환자입니다.");
+            return Copy(Patients[id]);
+        }
 
         public static JObject Parse(string json)
         {
@@ -32,10 +51,12 @@ namespace Gamsamo.Networking
         }
 
         public static string Encode(JToken value) => value.ToString(Formatting.None);
-        public static string ValidateHealth(JObject health)
+        public static string ValidateHealth(JObject health, string patientId = "seoyun")
         {
-            Require(Number(health, "format_version") == FormatVersion && Text(health, "content_version") == ContentVersion
-                && Array(health, "supported_patient_ids").Any(v => (string)v == "seoyun")
+            var entry = Array(health, "supported_patients").Cast<JObject>().FirstOrDefault(p => (string)p["id"] == patientId);
+            string version = entry == null ? "" : (string)entry["content_version"] ?? (patientId == "seoyun" ? (string)health["content_version"] : "");
+            Require(Number(health, "format_version") == FormatVersion && version == Text(Patient(patientId), "content_version")
+                && Array(health, "supported_patient_ids").Any(v => (string)v == patientId)
                 && Flag(Object(health, "inference"), "ready"), "지원하지 않거나 준비되지 않은 AI 서버입니다.");
             string mode = Text(health, "mode");
             Require(mode == "mock" || mode == "model", "알 수 없는 AI 실행 모드입니다.");
@@ -76,13 +97,13 @@ namespace Gamsamo.Networking
         private static bool Empty(JToken value) => value == null || value.Type == JTokenType.Null;
         private static void Same(JToken a, JToken b, string message) => Require(JToken.DeepEquals(a, b), message);
 
-        public static JObject EmptyState()
+        public static JObject EmptyState(string patientId = "seoyun")
         {
             string time = Timestamp();
             return new JObject
             {
-                ["format_version"] = FormatVersion, ["content_version"] = ContentVersion,
-                ["case_id"] = NewId("case"), ["patient_id"] = "seoyun", ["revision"] = 0,
+                ["format_version"] = FormatVersion, ["content_version"] = Text(Patient(patientId), "content_version"),
+                ["case_id"] = NewId("case"), ["patient_id"] = patientId, ["revision"] = 0,
                 ["created_at"] = time, ["revealed_fact_ids"] = new JArray(),
                 ["memory"] = new JObject { ["items"] = new JArray(), ["through_turn_id"] = null },
                 ["sessions"] = new JArray(new JObject
@@ -119,10 +140,12 @@ namespace Gamsamo.Networking
 
         public static void ValidateState(JObject state)
         {
-            Require(Number(state, "format_version") == FormatVersion && Text(state, "content_version") == ContentVersion,
+            var patient = Patient(Id(state, "patient_id"));
+            var facts = new HashSet<string>(Array(patient, "private_facts").Select(f => (string)f["id"]));
+            Require(Number(state, "format_version") == FormatVersion && Text(state, "content_version") == Text(patient, "content_version"),
                 "지원하지 않는 저장 형식입니다. 이전 기록은 보존됩니다.");
             Id(state, "case_id");
-            Require(Text(state, "patient_id") == "seoyun" && Number(state, "revision") >= 0, "지원하지 않는 환자 또는 상태입니다.");
+            Require(Number(state, "revision") >= 0, "지원하지 않는 환자 또는 상태입니다.");
             Text(state, "created_at");
             var sessions = Array(state, "sessions");
             Require(sessions.Count > 0, "상담 회차가 없습니다.");
@@ -145,7 +168,7 @@ namespace Gamsamo.Networking
                     if (turn != opening) Require(!string.IsNullOrWhiteSpace(Text(turn, "user_text")), "상담자 발화가 비어 있습니다.");
                     foreach (JToken fact in Array(turn, "candidate_fact_ids"))
                     {
-                        Require(fact.Type == JTokenType.String && Facts.Contains((string)fact), "알 수 없는 공개 후보입니다.");
+                        Require(fact.Type == JTokenType.String && facts.Contains((string)fact), "알 수 없는 공개 후보입니다.");
                         allCandidates.Add((string)fact);
                     }
                 }
@@ -181,12 +204,14 @@ namespace Gamsamo.Networking
                 }
             for (int index = 0; index < sessions.Count; index++)
                 if (sessions[index]["evaluation"] is JObject evaluation)
-                    ValidateEvaluation(evaluation, (JObject)sessions[index], raw,
+                    ValidateEvaluation(patient, evaluation, (JObject)sessions[index], raw,
                         new HashSet<string>(sessions.Take(index + 1).Select(s => (string)s["id"])));
         }
 
-        private static void ValidateEvaluation(JObject evaluation, JObject session, Dictionary<string, JObject> raw, HashSet<string> allowedSessions)
+        private static void ValidateEvaluation(JObject patientDefinition, JObject evaluation, JObject session, Dictionary<string, JObject> raw, HashSet<string> allowedSessions)
         {
+            var patientCriteria = new HashSet<string>(Array(patientDefinition, "rubric").Cast<JObject>().Where(r => Text(r, "axis") == "patient").Select(r => Id(r, "id")));
+            var counselorCriteria = new HashSet<string>(Array(patientDefinition, "rubric").Cast<JObject>().Where(r => Text(r, "axis") == "counselor").Select(r => Id(r, "id")));
             var scores = Array(evaluation, "scores");
             Require(scores.Count == 8, "평가 항목 수가 일치하지 않습니다.");
             var seen = new HashSet<string>();
@@ -194,8 +219,8 @@ namespace Gamsamo.Networking
             foreach (JObject score in scores)
             {
                 string key = Text(score, "criterion_id");
-                bool isPatient = PatientCriteria.Contains(key);
-                Require((isPatient || CounselorCriteria.Contains(key)) && seen.Add(key), "평가 항목이 중복되거나 알 수 없습니다.");
+                bool isPatient = patientCriteria.Contains(key);
+                Require((isPatient || counselorCriteria.Contains(key)) && seen.Add(key), "평가 항목이 중복되거나 알 수 없습니다.");
                 int number = Number(score, "score");
                 Require(number >= 0 && number <= 25, "점수 범위가 올바르지 않습니다.");
                 var citations = Array(score, "evidence");
@@ -221,7 +246,7 @@ namespace Gamsamo.Networking
             string requestId = NewId(action), sessionId = Id(Current(state), "id");
             JObject body;
             if (action == "start")
-                body = new JObject { ["patient_id"] = "seoyun", ["case_id"] = Id(state, "case_id"), ["session_id"] = sessionId,
+                body = new JObject { ["patient_id"] = Id(state, "patient_id"), ["case_id"] = Id(state, "case_id"), ["session_id"] = sessionId,
                     ["request_id"] = requestId, ["created_at"] = Text(state, "created_at") };
             else
             {
@@ -241,6 +266,8 @@ namespace Gamsamo.Networking
             Require(new[] { "start", "open", "revisit", "turn", "close", "evaluate" }.Contains(action), "알 수 없는 요청입니다.");
             JObject body = Object(request, "body"), after = Object(response, "state");
             ValidateState(after);
+            Same(before["patient_id"], after["patient_id"], "응답이 다른 환자로 변경되었습니다.");
+            Same(before["content_version"], after["content_version"], "응답의 콘텐츠 버전이 변경되었습니다.");
             string requestId = Id(body, action == "turn" ? "turn_id" : "request_id");
             Require(Id(response, "case_id") == Id(before, "case_id") && Id(after, "case_id") == Id(before, "case_id")
                 && Id(response, "session_id") == Id(body, "session_id") && Id(Current(after), "id") == Id(body, "session_id")

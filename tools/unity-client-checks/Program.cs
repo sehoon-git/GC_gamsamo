@@ -23,6 +23,8 @@ internal static class Program
 
     private static void StaticChecks(string root)
     {
+        foreach (string file in Directory.GetFiles(Path.Combine(root, "Assets", "StreamingAssets", "GameData", "Patients"), "*.json"))
+            AiProtocol.RegisterPatient(AiProtocol.Parse(File.ReadAllText(file)));
         Check(AiProtocol.ValidateHealth(Read(root, "health.response")) == "mock", "health mode must be top-level");
         var notReady = Read(root, "health.response"); notReady["inference"]["ready"] = false;
         Reject(() => AiProtocol.ValidateHealth(notReady), "unready server accepted");
@@ -129,15 +131,48 @@ internal static class Program
         Reject(() => AiConnection.FromSettings("https://example.invalid", "bad\nkey"), "invalid auth header accepted");
     }
 
-    private static async Task LiveChecks(string file, string folder)
+    private static void PatientChecks(string root, string folder)
+    {
+        foreach (string id in new[] { "dohyeon", "taejun", "yeonwoo", "harin" })
+        {
+            var request = RequestFromExample(root, id + "-start", "start");
+            var body = (JObject)request["body"];
+            var before = AiProtocol.EmptyState(id);
+            before["case_id"] = body["case_id"].DeepClone(); before["created_at"] = body["created_at"].DeepClone();
+            AiProtocol.Current(before)["id"] = body["session_id"].DeepClone();
+            AiProtocol.Current(before)["started_at"] = body["created_at"].DeepClone();
+            var response = Read(root, id + "-start.response");
+            var after = AiProtocol.Accept(before, request, response);
+            Check((string)after["patient_id"] == id && (string)after["content_version"] == id + "-4.0", "patient identity changed");
+            Check(AiProtocol.ValidateHealth(Read(root, "health.response"), id) == "mock", "supported patient failed health");
+            var wrong = AiProtocol.Copy(response);
+            wrong["state"]["patient_id"] = "seoyun"; wrong["state"]["content_version"] = AiProtocol.ContentVersion;
+            Reject(() => AiProtocol.Accept(before, request, wrong), "cross-patient response accepted");
+            wrong = AiProtocol.Copy(after);
+            AiProtocol.Current(wrong)["opening"]["candidate_fact_ids"] = new JArray("cafe_strength");
+            Reject(() => AiProtocol.ValidateState(wrong), "Seoyun private fact used for another patient");
+            var store = new AiSaveStore(Path.Combine(folder, id));
+            var session = new AiSession(store, id); session.Schedule("start");
+            string pending = AiProtocol.Encode(session.PendingRequest);
+            session = new AiSession(store, id);
+            Check((string)session.State["patient_id"] == id && AiProtocol.Encode(session.PendingRequest) == pending, "patient restore lost state");
+            Reject(() => new AiSession(store, "seoyun"), "another patient's save was reused");
+            var foreign = AiSaveStore.NewSnapshot("seoyun");
+            foreign["local_revision"] = 2;
+            Reject(() => store.Save(foreign, 1), "another patient overwrote the save pointer");
+        }
+        Check(!AiProtocol.SupportsPatient("minseok") && !AiProtocol.SupportsPatient("jieun"), "unsupported character registered");
+    }
+
+    private static async Task LiveChecks(string file, string folder, string patientId = "seoyun")
     {
         var connection = AiConnection.Load(file);
         using (var http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = new Uri(connection.BaseUrl + "/"), Timeout = TimeSpan.FromSeconds(180) })
         {
             if (!string.IsNullOrEmpty(connection.ApiKey)) http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", connection.ApiKey);
             var health = AiProtocol.Parse(await http.GetStringAsync("health"));
-            Check(AiProtocol.ValidateHealth(health) != "", "health mismatch");
-            var store = new AiSaveStore(folder); var session = new AiSession(store);
+            Check(AiProtocol.ValidateHealth(health, patientId) != "", "health mismatch");
+            var store = new AiSaveStore(folder); var session = new AiSession(store, patientId);
             async Task Execute(string action, string text = null)
             {
                 session.Schedule(action, text);
@@ -151,10 +186,10 @@ internal static class Program
                 Check(JToken.DeepEquals(session.State, store.Load()["state"]), "live state did not save");
             }
             await Execute("start");
-            await Execute("turn", "그동안 많이 지치셨겠어요. 지금 어떤 마음이 드시나요? 카페에서는 어떻게 지내시는지도 궁금해요.");
+            await Execute("turn", "오늘은 어떤 마음을 이야기하고 싶으신가요? 서두르지 않고 천천히 말씀하셔도 괜찮아요.");
             session.RequestEnd(); await Execute("close");
             Check((string)AiProtocol.Current(session.State)["closing_text"] == AiProtocol.ClosingText, "closing mismatch");
-            session = new AiSession(store); Check(session.Phase == "pending_evaluation", "resume phase mismatch");
+            session = new AiSession(store, patientId); Check(session.Phase == "pending_evaluation", "resume phase mismatch");
             await Execute("evaluate"); Check(session.Phase == "evaluated", "evaluation missing");
             if (!(bool)AiProtocol.Current(session.State)["evaluation"]["cleared"]) await Execute("revisit");
             Console.WriteLine("Live C# state/save/API checks passed; mode=" + (string)health["mode"] + ". This is not a Unity Play check.");
@@ -170,7 +205,10 @@ internal static class Program
         {
             StaticChecks(root); StorageChecks(root, Path.Combine(temp, "save"));
             RecoveryChecks(root, Path.Combine(temp, "recovery"));
-            if (args.Length > 1) await LiveChecks(args[1], Path.Combine(temp, "live"));
+            PatientChecks(root, Path.Combine(temp, "patients"));
+            if (args.Length > 1)
+                foreach (string patientId in args.Length > 2 ? args[2].Split(',') : new[] { "seoyun" })
+                    await LiveChecks(args[1], Path.Combine(temp, "live", patientId), patientId);
             Console.WriteLine("Passed " + checks + " C# contract/storage checks. Unity Editor UI execution is separate.");
             return 0;
         }

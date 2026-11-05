@@ -40,11 +40,15 @@ class LegacySaveError(ValueError):
 
 class SaveStore:
     """Immutable state/transcript pairs; one index atomically commits all pointers."""
-    def __init__(self, directory: Path | None = None):
+    def __init__(self, directory: Path | None = None, patient_id: str = "seoyun"):
+        TypeAdapter(Id).validate_python(patient_id)
+        self.patient_id = patient_id
         base = Path(os.getenv("XDG_DATA_HOME", str(Path.home() / ".local/share")))
         self.directory = Path(directory or os.getenv("SEOYUN_DATA_DIR", str(base / "gc-gamsamo/seoyun"))).expanduser().resolve()
         if self.directory.is_relative_to(ROOT):
             raise ValueError("상담 기록은 프로젝트 밖에 저장해야 합니다. SEOYUN_DATA_DIR을 확인하세요.")
+        if patient_id != "seoyun":
+            self.directory = self.directory / "patients" / patient_id
         self.root = self.directory / f"v{FORMAT_VERSION}"
 
     def _index(self):
@@ -94,7 +98,7 @@ class SaveStore:
     def _read(self, case_id, head):
         folder = self.root / case_id / head["snapshot"]
         state = CaseState.model_validate_json((folder / "state.json").read_text("utf-8"))
-        if state.case_id != case_id or state.revision != head["revision"]:
+        if state.patient_id != self.patient_id or state.case_id != case_id or state.revision != head["revision"]:
             raise ValueError("저장 파일의 실험 ID 또는 revision이 일치하지 않습니다.")
         transcript = json.loads((folder / "transcript.json").read_text("utf-8"))
         if transcript != self.transcript(state):
@@ -108,6 +112,8 @@ class SaveStore:
 
     def save(self, state: CaseState, *, expected_revision=None):
         checked = CaseState.model_validate(state.model_dump())
+        if checked.patient_id != self.patient_id:
+            raise ValueError("다른 환자의 저장소에는 저장할 수 없습니다.")
         with self._lock():
             index = self._index()
             head = index["cases"].get(checked.case_id)
@@ -170,7 +176,7 @@ class RequestToken:
 class SessionClient:
     def __init__(self, settings: Settings, store: SaveStore, state: CaseState, http=None, confirm_disclosures=None):
         self.settings, self.store = settings, store
-        self.catalog = Catalog(settings)
+        self.catalog = Catalog(settings, state.patient_id)
         self.catalog.validate_state(state)
         self.state = state
         self.epoch = 0

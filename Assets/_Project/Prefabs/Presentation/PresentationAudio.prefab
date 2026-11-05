@@ -49,6 +49,18 @@ MonoBehaviour:
   music: {fileID: 7344286288943438651}
   effects: {fileID: 952125236367853976}
   content: {fileID: 11400000, guid: 2ef883384a4824dc6839ef9ad6c93053, type: 2}
+  roomMusic: {fileID: 8300000, guid: 866f4f31a5a5557292a98ea16d039456, type: 3}
+  endingMusic: {fileID: 8300000, guid: a5ded6b0cca555acacdff2612754dd17, type: 3}
+  pageSound: {fileID: 8300000, guid: 32e260b094cc56f6bc8e643cf90424b4, type: 3}
+  clearSound: {fileID: 8300000, guid: 18aa018b6580549d93e4a97f0364550a, type: 3}
+  uiConfirm: {fileID: 8300000, guid: de1792683cd859f784fb66fd4866fd82, type: 3}
+  uiBack: {fileID: 8300000, guid: 354fadf75a795e298197dd4a4cc7b880, type: 3}
+  purchaseSuccess: {fileID: 8300000, guid: c8a8a431fdb55d9cb0f6533a7b53d412, type: 3}
+  actionUnavailable: {fileID: 8300000, guid: 2024c9014863592298919b7fb6561da2, type: 3}
+  doorOpen: {fileID: 8300000, guid: fb67909746495114b826298e4ffc2989, type: 3}
+  doorClose: {fileID: 8300000, guid: b2e6c00c71445ef0b985de14956d01aa, type: 3}
+  recordOpen: {fileID: 8300000, guid: 6f23cafb517f5cb6b8b40e0ccb69f223, type: 3}
+  photoOpen: {fileID: 8300000, guid: 77615968f6f759d6986772910a9a8293, type: 3}
 --- !u!82 &7344286288943438651
 AudioSource:
   m_ObjectHideFlags: 0

@@ -1,0 +1,721 @@
+{
+  "schemaVersion": 1,
+  "sampleFormat": "PCM signed 16-bit little endian, native-rate stereo BGM / mono SFX",
+  "prefab": "Assets/_Project/Prefabs/Presentation/PresentationAudio.prefab",
+  "gainConvention": "Finished WAV masters at unity gain. GameSettings applies category and master levels; BGM transitions additionally apply the fade envelope.",
+  "sourceProfiles": {
+    "acestep-turbo-cpu": {
+      "generator": "ACE-Step 1.5 Turbo, text encoder + diffusion transformer + VAE, CPU GGUF",
+      "project": "https://github.com/ace-step/ACE-Step-1.5",
+      "officialModel": "https://huggingface.co/ACE-Step/Ace-Step1.5/tree/19671f406d603126926c1b7e2adc169acbcade22",
+      "officialLicense": "MIT",
+      "weightRepository": "https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF/tree/666ac70204440867d8c01ba4b119cc79c95b370a",
+      "weightLicenseUrl": "https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF/blob/666ac70204440867d8c01ba4b119cc79c95b370a/README.md",
+      "engineLicenseUrl": "https://github.com/ServeurpersoCom/acestep.cpp/blob/de858d8e1a94f0e1939cf9bdd8ff7d9631953077/LICENSE",
+      "encoderLicenseUrl": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B/blob/97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3/README.md",
+      "reproduction": "tools/audio-production/bgm-reproduction.md",
+      "weightFilesSha256": {
+        "acestep-v15-turbo-Q4_K_M.gguf": "55b4d8514850f3d0f82536f37e99673aaf48df802b5ae5b153eea32a2e2daa5e",
+        "Qwen3-Embedding-0.6B-Q8_0.gguf": "972f23255e46adfe744a0eb9a0039f3c63988f65753b0968d776e8b27168c321",
+        "vae-BF16.gguf": "0599862ac5d15cd308e1d2e368373aea6c02e25ebd1737ad4a4562a0901b0ef8"
+      },
+      "officialLicenseUrl": "https://huggingface.co/ACE-Step/Ace-Step1.5/blob/19671f406d603126926c1b7e2adc169acbcade22/README.md"
+    },
+    "gc-foley-logspec-pca-1": {
+      "generator": "Original class-conditional Gaussian / PCA log-STFT model trained locally on CC0 foley. The short pitched cues combine its attacks with original damped modal synthesis.",
+      "pretrainedWeights": null,
+      "trainingData": [
+        {
+          "url": "https://kenney.nl/assets/rpg-audio",
+          "zip_sha256": "6dbeaf8544da958d8f2adcb4a4a4b76c1ade34a05f8ab9edccd327da7375f38b"
+        },
+        {
+          "url": "https://kenney.nl/assets/impact-sounds",
+          "zip_sha256": "029d734af1582474edf3a694d1b0cebc97c1c152f2f39fa34d4c2bafc5de77f8"
+        }
+      ],
+      "trainingLicense": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "generatorFile": "tools/audio-production/sfx_generate.py",
+      "settingsFile": "tools/audio-production/sfx_recipes.json",
+      "environment": "Python 3.12, numpy 2.2.6, scipy 1.15.3, soundfile 0.13.1. Install in a dedicated venv."
+    }
+  },
+  "licenseReview": {
+    "stableAudioOpen": {
+      "used": false,
+      "weights": "https://huggingface.co/stabilityai/stable-audio-open-1.0/blob/main/LICENSE.md",
+      "code": "https://github.com/Stability-AI/stable-audio-tools/blob/main/LICENSE",
+      "reason": "Gated weights and separate conditions for commercial use, including registration and a revenue threshold. Team eligibility / registration was not established. No material from those weights is included."
+    },
+    "voices": "Instrumental and non-vocal source design. No voice cloning, speech synthesis, vocalist or composer reference.",
+    "distribution": "Selected WAV masters only. No training packs, candidates, pretrained weights, environments or credentials are shipped."
+  },
+  "qualityReview": {
+    "humanAudition": "not verified; automated selection delegated by user",
+    "localAudioCaptioning": {
+      "model": "mistralai/Voxtral-Mini-3B-2507",
+      "license": "Apache-2.0",
+      "weights": "https://huggingface.co/ggml-org/Voxtral-Mini-3B-2507-GGUF/tree/20616573013f28229fff61de74359d3eeff61f6a",
+      "engine": "llama.cpp b12132, CPU; native WAV converted to 16 kHz mono for review only. Model labels/descriptions are estimates, not listening sign-off."
+    },
+    "sfxTags": "All 30 candidates screened with local YAMNet. Required SFX compared as three groups of actual PCM by Voxtral.",
+    "sfxTagger": "tools/audio-production/sfx_audit.py",
+    "meter": "FFmpeg 7.1 loudnorm input true peak (dBTP) plus integrated loudness for BGM only; sample rate, channels and SHA-256 also checked by tools/audio-production/verify.py.",
+    "bgmComparison": "Full PCM reviewed for three room candidates and four ending candidates. The first three ending takes were set aside after voice-like singing/humming flags from Voxtral; their YAMNet voice scores were low. The additional plucked-instrument take passed both automated screens.",
+    "bgmTagger": "tools/audio-production/bgm_voice_check.py",
+    "unity": {
+      "version": "6000.3.28f1",
+      "deliveredClipChecks": 12,
+      "playbackChecks": 32,
+      "gameScene": "ConsultationRoom: 1 owner and 1 active listener. Verified room -> ending -> room resume and real guide-next-button page SFX.",
+      "mix": "All master/music/effects controls at 1. 7 s stereo 48 kHz capture of the shipped room master starting at 4.096 s matched the master (Pearson 1.0000 to four decimal places per second); RMS 0.0598444."
+    }
+  },
+  "clips": [
+    {
+      "id": "bgm_room",
+      "catalogSlot": "roomMusic",
+      "prefabField": "roomMusic",
+      "file": "Assets/_Project/Audio/Produced/bgm_room.wav",
+      "guid": "866f4f31a5a5557292a98ea16d039456",
+      "loop": true,
+      "recommendedGain": 1.0,
+      "event": "Consultation entered, or epilogue skipped / closed.",
+      "hookedUp": true,
+      "sha256": "2a175070d663f1dc63134475b2f8e57c87c0e4b63176532cae4bd52f72f0017a",
+      "metrics": {
+        "sampleRate": 48000,
+        "channels": 2,
+        "pcmBits": 16,
+        "frames": 4340050,
+        "durationSeconds": 90.417708,
+        "truePeakDbtp": -2.96,
+        "lufsI": -19.97,
+        "boundaryStepDbfs": -48.37,
+        "onsetMs": null
+      },
+      "profile": "acestep-turbo-cpu",
+      "seed": 268176,
+      "candidateSeeds": [
+        268104,
+        268125,
+        268176
+      ],
+      "createdAt": "2026-11-06T06:23:55+09:00",
+      "prompt": "Instrumental background music for a warm, quiet counseling-room visual novel. Soft felt piano, gentle warm electric piano, sparse acoustic guitar textures, subtle ambient pad. Around 68 BPM, restrained dynamics, spacious arrangement, reassuring and attentive, unobtrusive beneath long reading. No vocals, no humming, no speech, no drums dominating the mix, no dramatic climax, no sudden transitions. A steady harmonic texture suitable for seamless looping.",
+      "settings": {
+        "bpm": 68,
+        "keyscale": "D major",
+        "duration": 103,
+        "synth_model": "acestep-v15-turbo-Q4_K_M.gguf",
+        "lyrics": "[Instrumental]",
+        "timesignature": "4",
+        "inference_steps": 8,
+        "guidance_scale": 1.0,
+        "shift": 3.0,
+        "output_format": "wav32"
+      },
+      "generate": "python tools/audio-production/bgm_generate.py render --models <external>/models --exe <external>/build/Release/ace-synth.exe --out <external>/takes --track bgm_room --seed 268176",
+      "postprocess": "python tools/audio-production/bgm_master.py bgm_room <external>/revoice/bgm_room-268176-instrumental.wav Assets/_Project/Audio/Produced/bgm_room.wav --start 3.5653333333333332 --duration 90.41770833333334 --crossfade 2.2",
+      "trimStartSeconds": 3.5653333333333332,
+      "crossfadeOrEndFadeSeconds": 2.2,
+      "credit": "Composition generated locally with ACE-Step 1.5 Turbo. Note transcription: Spotify Basic Pitch. Acoustic piano: FreePats Upright Piano KW, recorded by Gonzalo and Roberto, edited by Roberto, CC0 1.0. Electric piano, pluck and pad synthesis: GC_gamsamo audio production.",
+      "selection": "ACE-Step seed 268176 had restrained dynamics and the strongest listening fit of the three source compositions. A brief Unity-capture audio review flagged a possibly voice-like sound, despite lower full-track vocal scores. Revoiced its note events with verified acoustic piano recordings and deterministic oscillators, preserving note times and rests. Chroma, band energy, beat phase and endpoint samples were rechecked on the instrumental re-performance.",
+      "rawTakeSha256": "ca0f98b0612a64cb30ff884b8e2b4ae82806c80f841ac6ca046364b25213b744",
+      "audioScreen": {
+        "Voxtral": "Original ACE full-length candidate labelled instrumental. A seven-second game capture of that take was labelled singing. The shipped room track therefore uses the transcribed score and newly rendered acoustic keys and synthetic instruments only.",
+        "YAMNet": {
+          "Singing": {
+            "max": 0.0039,
+            "p95": 0.0039,
+            "mean": 0.0005,
+            "maxAtSecond": 0.0
+          },
+          "Humming": {
+            "max": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "maxAtSecond": 0.0
+          },
+          "Speech": {
+            "max": 0.0117,
+            "p95": 0.0039,
+            "mean": 0.0006,
+            "maxAtSecond": 102.06
+          },
+          "Choir": {
+            "max": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "maxAtSecond": 0.0
+          },
+          "Vocal music": {
+            "max": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "maxAtSecond": 0.0
+          }
+        },
+        "shippedGameCapture": "Voxtral again labelled the entirely instrumental re-render and its 7 s Unity listener capture as soft melodic singing. This acoustic label conflicts with the known source chain and is not treated as proof of a voice. The model also described a steady, calm sound suitable for reading. Human audition remains open.",
+        "YAMNetRevoiced": {
+          "Speech": {
+            "max": 0.0117,
+            "p95": 0.0,
+            "mean": 0.0002,
+            "maxAtSecond": 99.45
+          },
+          "Singing": {
+            "max": 0.0039,
+            "p95": 0.0,
+            "mean": 0.0001,
+            "maxAtSecond": 17.55
+          },
+          "Humming": {
+            "max": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "maxAtSecond": 0.0
+          },
+          "Choir": {
+            "max": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "maxAtSecond": 0.0
+          },
+          "Vocal music": {
+            "max": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "maxAtSecond": 0.0
+          },
+          "Music": {
+            "max": 0.9961,
+            "p95": 0.9961,
+            "mean": 0.9486,
+            "maxAtSecond": 0.0
+          }
+        }
+      },
+      "loopAnalysis": {
+        "start": 3.5653333333333332,
+        "duration": 90.41770833333334,
+        "crossfade": 2.2,
+        "chromaSimilarity": 0.7022613286972046,
+        "meanBandLevelGapDb": 5.866813659667969,
+        "estimatedPulseBpm": 68.18181818181819,
+        "splicePhaseDistanceHalfTurns": 0.06495221891701859,
+        "pulseConfidence": 0.5813155278146102
+      },
+      "instrumentalResynthesis": {
+        "method": "Transcribe ACE C to note onsets/durations/confidence. Re-render into a zero-initialized stereo buffer with CC0 piano recordings, deterministic electric keys, plucked nylon model and very low sustained oscillator pad. No original waveform or vocal source is mixed.",
+        "performedAt": "2026-11-06T06:40:52+09:00",
+        "sourceGenerationSeed": 268176,
+        "synthesisSeed": null,
+        "deterministic": true,
+        "aceRawSha256": "ca0f98b0612a64cb30ff884b8e2b4ae82806c80f841ac6ca046364b25213b744",
+        "revoicedFloatWavSha256": "ba3465225c005973235acc0e111abdd48089399b8b7ee9b1d5736b19a3004b10",
+        "finalPcmSha256": "2a175070d663f1dc63134475b2f8e57c87c0e4b63176532cae4bd52f72f0017a",
+        "sourceFramesMixed": 0,
+        "transcription": {
+          "repository": "https://github.com/spotify/basic-pitch",
+          "commit": "fa5997af0a8210982619003269994a1be25eddf3",
+          "license": "Apache-2.0",
+          "licenseUrl": "https://github.com/spotify/basic-pitch/blob/fa5997af0a8210982619003269994a1be25eddf3/LICENSE",
+          "checkpoint": "https://raw.githubusercontent.com/spotify/basic-pitch/fa5997af0a8210982619003269994a1be25eddf3/basic_pitch/saved_models/icassp_2022/nmp.onnx",
+          "checkpointSha256": "2c3c1d144bfa61ad236e92e169c13535c880469a12a047d4e73451f2c059a0ec",
+          "provider": "ONNX Runtime 1.31.1 CPU",
+          "events": 418,
+          "scoreJsonSha256": "fe320a8b428ad4c8323b012522ca842ec4f30596526bfc270e10aa22780a6134",
+          "frameThreshold": 0.31,
+          "confidenceThreshold": 0.43,
+          "minNoteSeconds": 0.135,
+          "maxNoteSeconds": 5,
+          "onsetPeakHeight": 0.5,
+          "midiPitchRange": [
+            24,
+            87
+          ],
+          "timeGridQuantization": false
+        },
+        "soundBank": {
+          "name": "FreePats Upright Piano KW stereo, low velocity FLAC layer",
+          "version": "2022-02-21",
+          "license": "CC0-1.0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "sourcePage": "https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html#UprightKW",
+          "downloadUrl": "https://freepats.zenvoid.org/Piano/UprightPianoKW/UprightPianoKW-SFZ+FLAC-20220221.7z",
+          "archiveSha256": "3a66da3b25a2fd9499d90bcf09f1aee4431825796e249361b48af59b1201e703",
+          "credit": "Recorded by Gonzalo and Roberto in January 2017. Edited and processed by Roberto."
+        },
+        "instrumentSettings": {
+          "keys": "low-velocity acoustic Kawai sampled regions, dynamics from confidence",
+          "electricPiano": "analytical decaying tine below or at MIDI 60",
+          "guitar": "subdued pluck on every third eligible event, MIDI 45–68, duration > .25 s",
+          "pad": "low-amplitude nonvocal pair of sine harmonics, MIDI 40–58, duration > .95 s",
+          "mixLowPassHz": 5500,
+          "mixSampleRateHz": 48000
+        },
+        "command": "python tools/audio-production/bgm_revoice.py <external>/takes/bgm_room-2681760.wav <external>/revoice/nmp.onnx <external>/revoice/UprightPianoKW-SFZ+FLAC-20220221/UprightPianoKW-20220221.sfz <external>/revoice/bgm_room-268176-instrumental.wav --score-out <external>/revoice/room-score.json",
+        "repeatability": "Second CPU transcription and render matched the score JSON, revoiced float WAV and final PCM WAV SHA-256 on this machine."
+      }
+    },
+    {
+      "id": "bgm_ending",
+      "catalogSlot": "endingMusic",
+      "prefabField": "endingMusic",
+      "file": "Assets/_Project/Audio/Produced/bgm_ending.wav",
+      "guid": "a5ded6b0cca555acacdff2612754dd17",
+      "loop": true,
+      "recommendedGain": 1.0,
+      "event": "Postscript, replay, or final credits started.",
+      "hookedUp": true,
+      "sha256": "1ba6fb913692b4e917fd86ece90ea1c304678e3f2704cea049d8b8741495d48d",
+      "metrics": {
+        "sampleRate": 48000,
+        "channels": 2,
+        "pcmBits": 16,
+        "frames": 4944000,
+        "durationSeconds": 103.0,
+        "truePeakDbtp": -1.5,
+        "lufsI": -20.01,
+        "boundaryStepDbfs": null,
+        "onsetMs": null
+      },
+      "profile": "acestep-turbo-cpu",
+      "seed": 276247,
+      "candidateSeeds": [
+        276103,
+        276144,
+        276189,
+        276247
+      ],
+      "createdAt": "2026-11-06T06:33:05+09:00",
+      "prompt": "Intimate instrumental chamber duet, only two acoustic instruments, close-miked felt piano and lightly fingerpicked nylon-string guitar. A quiet epilogue to a warm counseling visual novel. At 76 BPM, small hopeful answering phrases between plucked strings and struck piano keys, clear gentle attacks, brief woody decays and rests between notes. Measured arpeggios, low stimulation, restrained register and dynamics. End on a softly struck resolving piano chord.",
+      "settings": {
+        "bpm": 76,
+        "keyscale": "G major",
+        "duration": 103,
+        "synth_model": "acestep-v15-turbo-Q4_K_M.gguf",
+        "lyrics": "[Instrumental]",
+        "timesignature": "4",
+        "inference_steps": 8,
+        "guidance_scale": 1.0,
+        "shift": 3.0,
+        "output_format": "wav32"
+      },
+      "generate": "python tools/audio-production/bgm_generate.py render --models <external>/models --exe <external>/build/Release/ace-synth.exe --out <external>/takes --track bgm_ending --seed 276247",
+      "postprocess": "python tools/audio-production/bgm_master.py bgm_ending <external>/takes/bgm_ending-2762470.wav Assets/_Project/Audio/Produced/bgm_ending.wav --start 0.0 --duration 103.0 --crossfade 2.4",
+      "trimStartSeconds": 0.0,
+      "crossfadeOrEndFadeSeconds": 2.4,
+      "credit": "GC_gamsamo audio production · original instrumental generated locally with ACE-Step 1.5 Turbo.",
+      "selection": "The first three takes had ambiguous singing/humming flags under full-waveform review. The fourth take uses only piano and plucked nylon-guitar instrumentation in the caption. Full-waveform Voxtral review described calm melodic instruments and no singing, humming, speech or sudden changes. YAMNet Singing p95 0.0039; Humming 0. Original ACE-Step take, preserving the final chord with a 2.4-second tail fade; no substitute performance used.",
+      "rawTakeSha256": "f97ed7fe09f987e94525ff4f5a534cb3b8f4bfc985f45fbcedefc41506c9d8bf",
+      "audioScreen": {
+        "Voxtral": "Full 103.04 s PCM input; calm instrumental, no prominent vocals or sudden changes reported.",
+        "YAMNet": {
+          "Singing": {
+            "max": 0.0117,
+            "p95": 0.0039,
+            "mean": 0.0007,
+            "maxAtSecond": 95.06
+          },
+          "Humming": {
+            "max": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "maxAtSecond": 0.0
+          },
+          "Speech": {
+            "max": 0.0117,
+            "p95": 0.0039,
+            "mean": 0.0003,
+            "maxAtSecond": 102.06
+          },
+          "Choir": {
+            "max": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "maxAtSecond": 0.0
+          },
+          "Vocal music": {
+            "max": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "maxAtSecond": 0.0
+          }
+        }
+      }
+    },
+    {
+      "id": "sfx_page_turn",
+      "catalogSlot": "pageSound",
+      "prefabField": "pageSound",
+      "file": "Assets/_Project/Audio/Produced/sfx_page_turn.wav",
+      "guid": "32e260b094cc56f6bc8e643cf90424b4",
+      "loop": false,
+      "recommendedGain": 1.0,
+      "event": "Guide page changed",
+      "hookedUp": true,
+      "sha256": "7a25d727ad6ea38f04710710d603f6f51357f0849547e1a26378d46f50d3d6e1",
+      "metrics": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "pcmBits": 16,
+        "frames": 23373,
+        "durationSeconds": 0.53,
+        "truePeakDbtp": -12.99,
+        "lufsI": null,
+        "boundaryStepDbfs": null,
+        "onsetMs": 7.21
+      },
+      "profile": "gc-foley-logspec-pca-1",
+      "seed": 5327,
+      "candidateSeeds": [
+        4913,
+        5327,
+        8753
+      ],
+      "createdAt": "2026-11-06T06:13:03+09:00",
+      "prompt": "A single gentle page turn on a wooden desk, fine dry paper friction and a soft settling edge; no tearing, exaggerated whoosh, speech, music or room noise.",
+      "promptUse": "Design brief mapped to timbre/gesture and mastering parameters; local model is class-conditioned, not text-to-audio.",
+      "generate": "python tools/audio-production/sfx_generate.py --sources <external-pack-dir> --output <external-takes-dir> --id sfx_page_turn --seed 5327",
+      "postprocess": "Generator render(): single-gesture trim, DC removal, 2.5 ms half-cosine attack/27 ms tail and fourfold oversampled true-peak scaling; quantize PCM16 at source-native or downsampled 44.1 kHz.",
+      "credit": "Original counseling-room sound design. Training foley: Kenney RPG Audio / Impact Sounds (CC0 1.0).",
+      "selection": "Blind PCM audition (local Voxtral): group 1. YAMNet Music 0.004, with a brief paper-like friction attack. Human audition was not performed."
+    },
+    {
+      "id": "sfx_clear",
+      "catalogSlot": "clearSound",
+      "prefabField": "clearSound",
+      "file": "Assets/_Project/Audio/Produced/sfx_clear.wav",
+      "guid": "18aa018b6580549d93e4a97f0364550a",
+      "loop": false,
+      "recommendedGain": 1.0,
+      "event": "First-clear notice after persistent commit",
+      "hookedUp": true,
+      "sha256": "a1c895fe5d406f074be69a6a7674e8172f1173560b418f0967b9774d81dc0022",
+      "metrics": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "pcmBits": 16,
+        "frames": 71442,
+        "durationSeconds": 1.62,
+        "truePeakDbtp": -15.0,
+        "lufsI": null,
+        "boundaryStepDbfs": null,
+        "onsetMs": 0.57
+      },
+      "profile": "gc-foley-logspec-pca-1",
+      "seed": 8753,
+      "candidateSeeds": [
+        4913,
+        5327,
+        8753
+      ],
+      "createdAt": "2026-11-06T06:13:03+09:00",
+      "prompt": "Two or three softly ascending warm felt-mallet notes, a modest confirmation of progress; no fanfare, coins, applause, sharp bell, voice or dramatic impact.",
+      "promptUse": "Design brief mapped to timbre/gesture and mastering parameters; local model is class-conditioned, not text-to-audio.",
+      "generate": "python tools/audio-production/sfx_generate.py --sources <external-pack-dir> --output <external-takes-dir> --id sfx_clear --seed 8753",
+      "postprocess": "Generator render(): single-gesture trim, DC removal, 2.5 ms half-cosine attack/27 ms tail and fourfold oversampled true-peak scaling; quantize PCM16 at source-native or downsampled 44.1 kHz.",
+      "credit": "Original counseling-room sound design. Training foley: Kenney RPG Audio / Impact Sounds (CC0 1.0).",
+      "selection": "Blind PCM audition (local Voxtral): group 1, the rounder of the ascending cues. YAMNet Glockenspiel 0.020. Human audition was not performed."
+    },
+    {
+      "id": "sfx_ui_confirm",
+      "catalogSlot": null,
+      "prefabField": "uiConfirm",
+      "file": "Assets/_Project/Audio/Produced/sfx_ui_confirm.wav",
+      "guid": "de1792683cd859f784fb66fd4866fd82",
+      "loop": false,
+      "recommendedGain": 1.0,
+      "event": "Accepted UI action",
+      "hookedUp": false,
+      "sha256": "ae08fe008853050f00e4ffa3a886325b2efbbd634564216efa573065647aeb16",
+      "metrics": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "pcmBits": 16,
+        "frames": 5601,
+        "durationSeconds": 0.127007,
+        "truePeakDbtp": -17.0,
+        "lufsI": null,
+        "boundaryStepDbfs": null,
+        "onsetMs": 0.34
+      },
+      "profile": "gc-foley-logspec-pca-1",
+      "seed": 4913,
+      "candidateSeeds": [
+        4913,
+        5327,
+        8753
+      ],
+      "createdAt": "2026-11-06T06:03:20+09:00",
+      "prompt": "One rounded, quiet tactile wooden UI click with a short dry decay; no ring, metallic edge, music or speech.",
+      "promptUse": "Design brief mapped to timbre/gesture and mastering parameters; local model is class-conditioned, not text-to-audio.",
+      "generate": "python tools/audio-production/sfx_generate.py --sources <external-pack-dir> --output <external-takes-dir> --id sfx_ui_confirm --seed 4913",
+      "postprocess": "Generator render(): single-gesture trim, DC removal, 2.5 ms half-cosine attack/27 ms tail and fourfold oversampled true-peak scaling; quantize PCM16 at source-native or downsampled 44.1 kHz.",
+      "credit": "Original counseling-room sound design. Training foley: Kenney RPG Audio / Impact Sounds (CC0 1.0).",
+      "selection": "Provisional; independent on-device YAMNet comparison and acoustic measurements; human audition pending."
+    },
+    {
+      "id": "sfx_ui_back",
+      "catalogSlot": null,
+      "prefabField": "uiBack",
+      "file": "Assets/_Project/Audio/Produced/sfx_ui_back.wav",
+      "guid": "354fadf75a795e298197dd4a4cc7b880",
+      "loop": false,
+      "recommendedGain": 1.0,
+      "event": "Panel dismissed",
+      "hookedUp": false,
+      "sha256": "95da6cecbd8bd4fda070b89e80242028eb98db6a932f830f82345146601cac4e",
+      "metrics": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "pcmBits": 16,
+        "frames": 7453,
+        "durationSeconds": 0.169002,
+        "truePeakDbtp": -18.01,
+        "lufsI": null,
+        "boundaryStepDbfs": null,
+        "onsetMs": 0.59
+      },
+      "profile": "gc-foley-logspec-pca-1",
+      "seed": 8753,
+      "candidateSeeds": [
+        4913,
+        5327,
+        8753
+      ],
+      "createdAt": "2026-11-06T06:03:20+09:00",
+      "prompt": "One low wooden tap for closing a calm interface panel, short decay, soft attack, no sharp transient or voice.",
+      "promptUse": "Design brief mapped to timbre/gesture and mastering parameters; local model is class-conditioned, not text-to-audio.",
+      "generate": "python tools/audio-production/sfx_generate.py --sources <external-pack-dir> --output <external-takes-dir> --id sfx_ui_back --seed 8753",
+      "postprocess": "Generator render(): single-gesture trim, DC removal, 2.5 ms half-cosine attack/27 ms tail and fourfold oversampled true-peak scaling; quantize PCM16 at source-native or downsampled 44.1 kHz.",
+      "credit": "Original counseling-room sound design. Training foley: Kenney RPG Audio / Impact Sounds (CC0 1.0).",
+      "selection": "Provisional; independent on-device YAMNet comparison and acoustic measurements; human audition pending."
+    },
+    {
+      "id": "sfx_purchase_success",
+      "catalogSlot": null,
+      "prefabField": "purchaseSuccess",
+      "file": "Assets/_Project/Audio/Produced/sfx_purchase_success.wav",
+      "guid": "c8a8a431fdb55d9cb0f6533a7b53d412",
+      "loop": false,
+      "recommendedGain": 1.0,
+      "event": "Purchase committed",
+      "hookedUp": false,
+      "sha256": "7e54dd8acecc72d1577dcf84841a3692ab900d626dc4b2c7736155b3ee55ec34",
+      "metrics": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "pcmBits": 16,
+        "frames": 28004,
+        "durationSeconds": 0.635011,
+        "truePeakDbtp": -16.0,
+        "lufsI": null,
+        "boundaryStepDbfs": null,
+        "onsetMs": 0.59
+      },
+      "profile": "gc-foley-logspec-pca-1",
+      "seed": 5327,
+      "candidateSeeds": [
+        4913,
+        5327,
+        8753
+      ],
+      "createdAt": "2026-11-06T06:03:20+09:00",
+      "prompt": "Two soft mellow mallet notes acknowledging a saved cosmetic purchase, no cash register, coins, or casino timbre.",
+      "promptUse": "Design brief mapped to timbre/gesture and mastering parameters; local model is class-conditioned, not text-to-audio.",
+      "generate": "python tools/audio-production/sfx_generate.py --sources <external-pack-dir> --output <external-takes-dir> --id sfx_purchase_success --seed 5327",
+      "postprocess": "Generator render(): single-gesture trim, DC removal, 2.5 ms half-cosine attack/27 ms tail and fourfold oversampled true-peak scaling; quantize PCM16 at source-native or downsampled 44.1 kHz.",
+      "credit": "Original counseling-room sound design. Training foley: Kenney RPG Audio / Impact Sounds (CC0 1.0).",
+      "selection": "Provisional; independent on-device YAMNet comparison and acoustic measurements; human audition pending."
+    },
+    {
+      "id": "sfx_action_unavailable",
+      "catalogSlot": null,
+      "prefabField": "actionUnavailable",
+      "file": "Assets/_Project/Audio/Produced/sfx_action_unavailable.wav",
+      "guid": "2024c9014863592298919b7fb6561da2",
+      "loop": false,
+      "recommendedGain": 1.0,
+      "event": "Unavailable action or insufficient funds",
+      "hookedUp": false,
+      "sha256": "28446221ca9426acc169cf0cf8db7af09df9fb6b4ff06a1d7d4833b861903f3f",
+      "metrics": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "pcmBits": 16,
+        "frames": 10893,
+        "durationSeconds": 0.247007,
+        "truePeakDbtp": -19.0,
+        "lufsI": null,
+        "boundaryStepDbfs": null,
+        "onsetMs": 0.41
+      },
+      "profile": "gc-foley-logspec-pca-1",
+      "seed": 4913,
+      "candidateSeeds": [
+        4913,
+        5327,
+        8753
+      ],
+      "createdAt": "2026-11-06T06:03:20+09:00",
+      "prompt": "Very soft neutral double tap, low wood, no buzzer or alarm, no voice.",
+      "promptUse": "Design brief mapped to timbre/gesture and mastering parameters; local model is class-conditioned, not text-to-audio.",
+      "generate": "python tools/audio-production/sfx_generate.py --sources <external-pack-dir> --output <external-takes-dir> --id sfx_action_unavailable --seed 4913",
+      "postprocess": "Generator render(): single-gesture trim, DC removal, 2.5 ms half-cosine attack/27 ms tail and fourfold oversampled true-peak scaling; quantize PCM16 at source-native or downsampled 44.1 kHz.",
+      "credit": "Original counseling-room sound design. Training foley: Kenney RPG Audio / Impact Sounds (CC0 1.0).",
+      "selection": "Provisional; independent on-device YAMNet comparison and acoustic measurements; human audition pending."
+    },
+    {
+      "id": "sfx_door_open",
+      "catalogSlot": null,
+      "prefabField": "doorOpen",
+      "file": "Assets/_Project/Audio/Produced/sfx_door_open.wav",
+      "guid": "fb67909746495114b826298e4ffc2989",
+      "loop": false,
+      "recommendedGain": 1.0,
+      "event": "Door begins opening",
+      "hookedUp": false,
+      "sha256": "8d839f6cec6588a8b6609e3ee3c3c16d608fdae460b71d143c118355086ee26e",
+      "metrics": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "pcmBits": 16,
+        "frames": 42027,
+        "durationSeconds": 0.952993,
+        "truePeakDbtp": -13.0,
+        "lufsI": null,
+        "boundaryStepDbfs": null,
+        "onsetMs": 2.99
+      },
+      "profile": "gc-foley-logspec-pca-1",
+      "seed": 4913,
+      "candidateSeeds": [
+        4913,
+        5327,
+        8753
+      ],
+      "createdAt": "2026-11-06T06:03:20+09:00",
+      "prompt": "Quiet interior wooden door handle turning and the door opening gently, soft latch; no slam, footsteps, voices or horror creak.",
+      "promptUse": "Design brief mapped to timbre/gesture and mastering parameters; local model is class-conditioned, not text-to-audio.",
+      "generate": "python tools/audio-production/sfx_generate.py --sources <external-pack-dir> --output <external-takes-dir> --id sfx_door_open --seed 4913",
+      "postprocess": "Generator render(): single-gesture trim, DC removal, 2.5 ms half-cosine attack/27 ms tail and fourfold oversampled true-peak scaling; quantize PCM16 at source-native or downsampled 44.1 kHz.",
+      "credit": "Original counseling-room sound design. Training foley: Kenney RPG Audio / Impact Sounds (CC0 1.0).",
+      "selection": "Provisional; independent on-device YAMNet comparison and acoustic measurements; human audition pending."
+    },
+    {
+      "id": "sfx_door_close",
+      "catalogSlot": null,
+      "prefabField": "doorClose",
+      "file": "Assets/_Project/Audio/Produced/sfx_door_close.wav",
+      "guid": "b2e6c00c71445ef0b985de14956d01aa",
+      "loop": false,
+      "recommendedGain": 1.0,
+      "event": "Door closes",
+      "hookedUp": false,
+      "sha256": "282bbab6fa1f6e01ccda461686e10ba0a5447417712e6eaeb4cd3e343f74250c",
+      "metrics": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "pcmBits": 16,
+        "frames": 31090,
+        "durationSeconds": 0.704989,
+        "truePeakDbtp": -14.0,
+        "lufsI": null,
+        "boundaryStepDbfs": null,
+        "onsetMs": 4.65
+      },
+      "profile": "gc-foley-logspec-pca-1",
+      "seed": 8753,
+      "candidateSeeds": [
+        4913,
+        5327,
+        8753
+      ],
+      "createdAt": "2026-11-06T06:03:20+09:00",
+      "prompt": "An interior wooden door settling into its frame followed by a small soft latch, no slam or voices.",
+      "promptUse": "Design brief mapped to timbre/gesture and mastering parameters; local model is class-conditioned, not text-to-audio.",
+      "generate": "python tools/audio-production/sfx_generate.py --sources <external-pack-dir> --output <external-takes-dir> --id sfx_door_close --seed 8753",
+      "postprocess": "Generator render(): single-gesture trim, DC removal, 2.5 ms half-cosine attack/27 ms tail and fourfold oversampled true-peak scaling; quantize PCM16 at source-native or downsampled 44.1 kHz.",
+      "credit": "Original counseling-room sound design. Training foley: Kenney RPG Audio / Impact Sounds (CC0 1.0).",
+      "selection": "Provisional; independent on-device YAMNet comparison and acoustic measurements; human audition pending."
+    },
+    {
+      "id": "sfx_record_open",
+      "catalogSlot": null,
+      "prefabField": "recordOpen",
+      "file": "Assets/_Project/Audio/Produced/sfx_record_open.wav",
+      "guid": "6f23cafb517f5cb6b8b40e0ccb69f223",
+      "loop": false,
+      "recommendedGain": 1.0,
+      "event": "Medical-record folder opened",
+      "hookedUp": false,
+      "sha256": "50a20734a9feb4eda7dea609df0aa81467d839d14a9ab15840ea063773f3ab6f",
+      "metrics": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "pcmBits": 16,
+        "frames": 20286,
+        "durationSeconds": 0.46,
+        "truePeakDbtp": -15.0,
+        "lufsI": null,
+        "boundaryStepDbfs": null,
+        "onsetMs": 1.34
+      },
+      "profile": "gc-foley-logspec-pca-1",
+      "seed": 4913,
+      "candidateSeeds": [
+        4913,
+        5327,
+        8753
+      ],
+      "createdAt": "2026-11-06T06:03:20+09:00",
+      "prompt": "Thin paper folder lifted and opened, soft paper movement and a faint cardboard touch on a wood desk, no writing, voices or music.",
+      "promptUse": "Design brief mapped to timbre/gesture and mastering parameters; local model is class-conditioned, not text-to-audio.",
+      "generate": "python tools/audio-production/sfx_generate.py --sources <external-pack-dir> --output <external-takes-dir> --id sfx_record_open --seed 4913",
+      "postprocess": "Generator render(): single-gesture trim, DC removal, 2.5 ms half-cosine attack/27 ms tail and fourfold oversampled true-peak scaling; quantize PCM16 at source-native or downsampled 44.1 kHz.",
+      "credit": "Original counseling-room sound design. Training foley: Kenney RPG Audio / Impact Sounds (CC0 1.0).",
+      "selection": "Provisional; independent on-device YAMNet comparison and acoustic measurements; human audition pending."
+    },
+    {
+      "id": "sfx_photo_open",
+      "catalogSlot": null,
+      "prefabField": "photoOpen",
+      "file": "Assets/_Project/Audio/Produced/sfx_photo_open.wav",
+      "guid": "77615968f6f759d6986772910a9a8293",
+      "loop": false,
+      "recommendedGain": 1.0,
+      "event": "A photo is opened",
+      "hookedUp": false,
+      "sha256": "7b681d0209220b9a5af6713492fe74994d05ccad3ff53085ec9d383f6f889637",
+      "metrics": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "pcmBits": 16,
+        "frames": 14156,
+        "durationSeconds": 0.320998,
+        "truePeakDbtp": -16.99,
+        "lufsI": null,
+        "boundaryStepDbfs": null,
+        "onsetMs": 1.22
+      },
+      "profile": "gc-foley-logspec-pca-1",
+      "seed": 8753,
+      "candidateSeeds": [
+        4913,
+        5327,
+        8753
+      ],
+      "createdAt": "2026-11-06T06:03:20+09:00",
+      "prompt": "A small photographic print gently lifted from an album, delicate short dry rustle, no shutter, sparkle or music.",
+      "promptUse": "Design brief mapped to timbre/gesture and mastering parameters; local model is class-conditioned, not text-to-audio.",
+      "generate": "python tools/audio-production/sfx_generate.py --sources <external-pack-dir> --output <external-takes-dir> --id sfx_photo_open --seed 8753",
+      "postprocess": "Generator render(): single-gesture trim, DC removal, 2.5 ms half-cosine attack/27 ms tail and fourfold oversampled true-peak scaling; quantize PCM16 at source-native or downsampled 44.1 kHz.",
+      "credit": "Original counseling-room sound design. Training foley: Kenney RPG Audio / Impact Sounds (CC0 1.0).",
+      "selection": "Provisional; independent on-device YAMNet comparison and acoustic measurements; human audition pending."
+    }
+  ]
+}

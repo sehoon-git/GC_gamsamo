@@ -20,6 +20,7 @@ namespace Gamsamo.Editor.UiNext
         static UiNextPreview() { EditorApplication.playModeStateChanged += Changed; }
         public static void CaptureBaseline() { Open("before"); }
         public static void CaptureAfter() { Open("after"); }
+        [MenuItem("Gamsamo/UiNext/Run Isolated UI Checks")]
         public static void RunChecks() { Open("checks"); }
         [MenuItem("Gamsamo/UiNext/Open Isolated UI Preview")]
         public static void OpenPreview() { Open("manual"); }
@@ -31,9 +32,9 @@ namespace Gamsamo.Editor.UiNext
             EditorSceneManager.OpenScene("Assets/_Project/Scenes/ConsultationRoom.unity");
             foreach(var component in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
-                string ns=component.GetType().Namespace ?? "";
-                if(ns.StartsWith("Gamsamo.Networking") || ns.StartsWith("Gamsamo.Progression") || ns.StartsWith("Gamsamo.Economy")) UnityEngine.Object.DestroyImmediate(component);
+                if(IsProductionService(component)) UnityEngine.Object.DestroyImmediate(component);
             }
+            AssertIsolated();
             // This modified copy is deliberately never saved to the production scene.
             SessionState.SetString(Key, requested); EditorApplication.isPlaying=true;
         }
@@ -46,7 +47,25 @@ namespace Gamsamo.Editor.UiNext
             }
             if(state==PlayModeStateChange.ExitingPlayMode) EditorApplication.update-=Tick;
             if(state==PlayModeStateChange.EnteredEditMode && SessionState.GetString(Key, "")!="")
-            { SessionState.EraseString(Key); if(Application.isBatchMode) EditorApplication.Exit(0); }
+            {
+                SessionState.EraseString(Key);
+                // Discard the preview-only removals; never leave a stripped scene available to save.
+                EditorSceneManager.OpenScene("Assets/_Project/Scenes/ConsultationRoom.unity");
+                if(Application.isBatchMode) EditorApplication.Exit(0);
+            }
+        }
+        static bool IsProductionService(MonoBehaviour component)
+        {
+            string ns=component.GetType().Namespace ?? "";
+            // PatientVisitController.Start recreates GameProgressRuntime if it is missing.
+            return component is Gamsamo.Dialogue.PatientVisitController ||
+                ns.StartsWith("Gamsamo.Networking") || ns.StartsWith("Gamsamo.Progression") ||
+                ns.StartsWith("Gamsamo.Economy") || ns.StartsWith("Gamsamo.Save");
+        }
+        public static void AssertIsolated()
+        {
+            foreach(var component in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if(IsProductionService(component)) throw new InvalidOperationException("UI preview contains a production service: "+component.GetType().FullName);
         }
         static void Tick()
         {
@@ -55,6 +74,7 @@ namespace Gamsamo.Editor.UiNext
             var room=UnityEngine.Object.FindFirstObjectByType<ConsultationRoomController>();
             try
             {
+                if(step==0) AssertIsolated();
                 if(mode=="checks")
                 {
                     if(step==0) { room.OpenPc(); step++; next=EditorApplication.timeSinceStartup+.6; return; }

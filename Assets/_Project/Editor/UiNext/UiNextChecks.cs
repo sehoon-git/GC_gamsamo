@@ -27,14 +27,18 @@ namespace Gamsamo.Editor.UiNext
         {
             report.Clear();passed=0;
             var watermark=Watermark(room);
-            try { var steps=Profile(room); while(steps.MoveNext()) yield return steps.Current; Endings(room); Records(room); yield return null; Status(room); report.AppendLine("TOTAL "+passed+" passed; Editor-only mock callbacks, no actual save/server calls."); }
+            try { UiNextPreview.AssertIsolated(); Check(true,"Preview has no production services or visit bootstrap after Start"); var steps=Profile(room); while(steps.MoveNext()) yield return steps.Current; Endings(room); Records(room); yield return null; Status(room); report.AppendLine("TOTAL "+passed+" passed; Editor-only mock callbacks, no actual save/server calls."); }
             finally {UnityEngine.Object.Destroy(watermark);Directory.CreateDirectory("artifacts/ui-next");File.WriteAllText("artifacts/ui-next/ui-checks.txt",report.ToString());}
             Debug.Log("UiNext checks: "+passed+" passed.");
         }
         static IEnumerator Profile(ConsultationRoomController room)
         {
             var bindings=room.GetComponentInChildren<UiNextBindings>(true);var editor=bindings.profileEditor;var ports=bindings.ports;
-            room.OpenPc();room.pcDesktopView.OpenProfile();editor.BeginEdit();
+            room.OpenPc();room.pcDesktopView.ResetDesktop();yield return null;
+            Check(RaycastHits(room.pcDesktopView.endingsButton.gameObject,room.pcDesktopView.endingsButton),"Desktop ending shortcut receives pointer raycast");
+            room.pcDesktopView.OpenProfile();yield return null;
+            Check(RaycastHits(editor.editButton.gameObject,editor.editButton),"Profile edit button receives pointer raycast");
+            editor.BeginEdit();
             Check(editor.IsOpen && !editor.saveButton.interactable,"Unconnected editor is visible but cannot save");
             editor.Cancel();ports.SetContext("UI-TEST-RUN");ports.PublishProfile(ports.ContextId,new ProfileDisplay("기존 이름","기존 소개","UI 검사"));
             ports.PublishProgress(ports.ContextId,new ProgressDisplay("서윤","재상담 대기","승급 기준 준비 중",0,5));
@@ -146,7 +150,7 @@ namespace Gamsamo.Editor.UiNext
         }
         static bool RaycastHits(GameObject panel,Button behind)
         {
-            Canvas.ForceUpdateCanvases();var point=RectTransformUtility.WorldToScreenPoint(null,behind.transform.position);
+            Canvas.ForceUpdateCanvases();var rect=(RectTransform)behind.transform;var point=RectTransformUtility.WorldToScreenPoint(null,rect.TransformPoint(rect.rect.center));
             var results=new List<RaycastResult>();EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current){position=point},results);
             Debug.Log("UiNext raycast: "+point+" "+string.Join(",",results.Select(r=>r.gameObject.name+"["+r.sortingOrder+","+r.module.sortOrderPriority+"]")));
             return results.Count>0&&(results[0].gameObject==panel||results[0].gameObject.transform.IsChildOf(panel.transform));

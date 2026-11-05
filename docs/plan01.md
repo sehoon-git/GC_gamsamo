@@ -794,6 +794,8 @@ Create a production 2D game UI asset: a single wide horizontal dialogue speech p
 
 ### 실행과 주요 파일
 
+Unity Hub에 처음 등록할 때는 **프로젝트 → 추가 → 디스크에서 프로젝트 추가**에서 `Assets/`, `Packages/`, `ProjectSettings/`가 함께 있는 `GC_gamsamo` 저장소 루트를 선택한다. 등록 후 목록의 경로와 에디터 버전이 `ProjectSettings/ProjectVersion.txt`의 `6000.3.28f1`과 일치하는지 확인한다. Hub 등록 정보는 각 PC의 로컬 설정이므로 Git으로 공유되지 않으며, 새로 받은 PC에서는 해당 PC의 저장소 경로를 등록한다. 등록을 위해 새 Unity 프로젝트를 만들거나 기준 버전을 바꾸지 않는다.
+
 1. Unity `6000.3.28f1`로 저장소 루트 프로젝트를 연다.
 2. `Assets/_Project/Scenes/ConsultationRoom.unity`를 열고 Play를 누른다.
 3. 왼쪽 문을 눌러 환자 입장·이름·임시 대사를 확인한다. `계속 듣기`, `상담 마치기`의 취소·확인을 조작하고 퇴장 후 문으로 다음 환자를 받는다. 6명 이후에는 입장이 끝난다.
@@ -1350,3 +1352,13 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - Unity 단계: 입력·통신·자동 저장·긴 대화 페이지·종료 예약·결과 표시 어댑터를 작성하고 독립 C# 컴파일을 통과했다. 씬/프리팹 적용·Play·실제 모델 연결은 아직 별도 검증 전이다. AI 첫 제출에는 미검증 Unity 변경을 포함하지 않는다.
 - 보존: 기존 로컬 `ProjectSettings/ProjectSettings.asset`의 SHA256이 작업 시작과 동일함을 확인했으며 제출에서 제외한다. 과거 17.1~17.22 기록은 보존한다.
 - 남은 검증: 서버 업데이트/기동 → 실제 연결과 첫 발화/서술형 답변/6턴 초과/정보 획득 → 종료 취소·응답 중 종료·평가·퇴장 → 재실행 복원·연결 오류·재시도 → 발견 문제 수정 및 같은 PR 갱신. 실제 한국어 품질/지연과 Windows·macOS 빌드는 자동 API 검사로 확인한 것이 아니다.
+
+### 17.24 현재 저장소 Unity Hub 등록
+
+- 등록·확인 완료 시각: **2026-11-06 02:16:16 KST (UTC+09:00)**.
+- 요청·결과: 현재 로컬 `GC_gamsamo` 저장소 루트를 Unity Hub에 등록했다. Hub 프로젝트 목록에 이름·저장소 경로·Unity `6000.3.28f1`이 표시되는 것을 확인했다. 시작 시 미커밋 변경이 없는 main에서 `git pull --ff-only`를 수행했으며 원격과 이미 일치했다.
+- 주요 파일·실행: `ProjectSettings/ProjectVersion.txt`의 버전과 revision `8f082d2fe476`을 기준으로 기존 프로젝트를 추가했다. 이후 실행은 Hub의 `GC_gamsamo` → `Assets/_Project/Scenes/ConsultationRoom.unity` → Play 순서다. 저장소 변경은 이 문서의 15절 등록 안내와 17절 기록뿐이다.
+- 함수·연결·소유권: 새 함수·클래스나 게임 기능은 추가하지 않았다. Hub 목록은 로컬 앱 설정이며 프로젝트 코드·씬·프리팹·에셋 참조와 분리된다. 각 PC에서는 자신의 저장소 경로를 등록하고 기준 Unity 버전을 유지한다. 작업 중 발견된 사용자 로컬 연결 설정은 보존하고 제출 대상에서 제외한다.
+- 검증: Hub UI의 등록명·경로·버전과, 설치된 Hub CLI의 `projects list --json --no-banner --no-pager` 결과가 일치했다. CLI는 `success: true`, 오류·경고 없음, `6000.3.28f1`·`arm64`·revision `8f082d2fe476`·Built-In을 반환했다.
+- 검증 제한: 이번 요청에서는 Editor 실행·Play·빌드·AI 연결 검사를 수행하지 않았다. Hub 등록 성공은 해당 검증의 완료를 뜻하지 않으며, 17.23절의 기존 Unity 통합 미완료 상태를 유지한다.
+- 다음 추천 작업: (1) 등록된 프로젝트를 기준 에디터로 열어 상담실 씬의 임포트·컴파일 상태 확인, (2) 15절의 환자·PC·치장 Play 검사, (3) 17.23절의 실제 AI 통합·복원 검증 계속 진행.

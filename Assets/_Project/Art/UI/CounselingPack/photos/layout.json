@@ -1,0 +1,123 @@
+{
+  "coordinate_system": {
+    "origin": "top-left",
+    "units": "px",
+    "local_to": "window"
+  },
+  "window_rect_in_pc": {
+    "x": 253,
+    "y": 202,
+    "width": 1112,
+    "height": 264
+  },
+  "image": "window.png",
+  "close_hit_rect": {
+    "x": 1059,
+    "y": 5,
+    "width": 41,
+    "height": 34
+  },
+  "slots": [
+    {
+      "index": 0,
+      "rect": {
+        "x": 30,
+        "y": 81,
+        "width": 162,
+        "height": 110
+      },
+      "thumbnail_rect": {
+        "x": 35,
+        "y": 86,
+        "width": 152,
+        "height": 100
+      },
+      "initial_art": "baked_commemorative_photo_icon_and_label"
+    },
+    {
+      "index": 1,
+      "rect": {
+        "x": 208,
+        "y": 81,
+        "width": 162,
+        "height": 110
+      },
+      "thumbnail_rect": {
+        "x": 213,
+        "y": 86,
+        "width": 152,
+        "height": 100
+      },
+      "initial_art": "blank"
+    },
+    {
+      "index": 2,
+      "rect": {
+        "x": 386,
+        "y": 81,
+        "width": 162,
+        "height": 110
+      },
+      "thumbnail_rect": {
+        "x": 391,
+        "y": 86,
+        "width": 152,
+        "height": 100
+      },
+      "initial_art": "blank"
+    },
+    {
+      "index": 3,
+      "rect": {
+        "x": 564,
+        "y": 81,
+        "width": 162,
+        "height": 110
+      },
+      "thumbnail_rect": {
+        "x": 569,
+        "y": 86,
+        "width": 152,
+        "height": 100
+      },
+      "initial_art": "blank"
+    },
+    {
+      "index": 4,
+      "rect": {
+        "x": 742,
+        "y": 81,
+        "width": 162,
+        "height": 110
+      },
+      "thumbnail_rect": {
+        "x": 747,
+        "y": 86,
+        "width": 152,
+        "height": 100
+      },
+      "initial_art": "blank"
+    },
+    {
+      "index": 5,
+      "rect": {
+        "x": 920,
+        "y": 81,
+        "width": 162,
+        "height": 110
+      },
+      "thumbnail_rect": {
+        "x": 925,
+        "y": 86,
+        "width": 152,
+        "height": 100
+      },
+      "initial_art": "blank"
+    }
+  ],
+  "first_slot_caption": {
+    "rendering": "baked",
+    "top": 202
+  },
+  "notes_ko": "첫 칸의 기념사진 아이콘·이름 및 바로 아래 예시 캡션은 첨부 이미지에 포함되어 있습니다. 다른 사진과 캡션을 넣으려면 기존 내용을 덮어 그려야 합니다."
+}

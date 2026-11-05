@@ -1,0 +1,171 @@
+{
+  "coordinate_system": {
+    "origin": "top-left",
+    "units": "px",
+    "local_to": "shop-window",
+    "scene_size": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "window_rect_in_pc": {
+    "x": 253,
+    "y": 81,
+    "width": 1112,
+    "height": 534
+  },
+  "window_rect_in_scene": {
+    "x": 467,
+    "y": 204,
+    "width": 1112,
+    "height": 534
+  },
+  "default_tab": "window",
+  "tabs": [
+    {
+      "id": "window",
+      "label": "창문",
+      "active_window_png": "tabs/window.png",
+      "hit_rect": {
+        "x": 34,
+        "y": 89,
+        "width": 146,
+        "height": 48
+      },
+      "scene_asset_key": "window",
+      "products": []
+    },
+    {
+      "id": "door",
+      "label": "문",
+      "active_window_png": "tabs/door.png",
+      "hit_rect": {
+        "x": 185,
+        "y": 89,
+        "width": 146,
+        "height": 48
+      },
+      "scene_asset_key": "door",
+      "products": []
+    },
+    {
+      "id": "clipboard",
+      "label": "서류철",
+      "active_window_png": "tabs/clipboard.png",
+      "hit_rect": {
+        "x": 336,
+        "y": 89,
+        "width": 146,
+        "height": 48
+      },
+      "scene_asset_key": "clipboard",
+      "products": []
+    },
+    {
+      "id": "pc",
+      "label": "PC",
+      "active_window_png": "tabs/pc.png",
+      "hit_rect": {
+        "x": 487,
+        "y": 89,
+        "width": 146,
+        "height": 48
+      },
+      "scene_asset_key": "pc",
+      "products": []
+    },
+    {
+      "id": "wallpaper",
+      "label": "PC 배경화면",
+      "active_window_png": "tabs/wallpaper.png",
+      "hit_rect": {
+        "x": 638,
+        "y": 89,
+        "width": 155,
+        "height": 48
+      },
+      "pc_desktop_image_key": "wallpaper",
+      "products": []
+    }
+  ],
+  "balance": {
+    "label": "보유 금액",
+    "currency": "KRW",
+    "suffix_on_image": "원",
+    "render": "amount_only",
+    "binding": "player_balance",
+    "alignment": "right-center",
+    "number_rect": {
+      "x": 899,
+      "y": 89,
+      "width": 143,
+      "height": 32
+    },
+    "example_format": "12,000"
+  },
+  "slot_template": "empty-slot.png",
+  "slots": [
+    {
+      "index": 0,
+      "x": 34,
+      "y": 154,
+      "width": 249,
+      "height": 164
+    },
+    {
+      "index": 1,
+      "x": 298,
+      "y": 154,
+      "width": 249,
+      "height": 164
+    },
+    {
+      "index": 2,
+      "x": 562,
+      "y": 154,
+      "width": 249,
+      "height": 164
+    },
+    {
+      "index": 3,
+      "x": 826,
+      "y": 154,
+      "width": 249,
+      "height": 164
+    },
+    {
+      "index": 4,
+      "x": 34,
+      "y": 333,
+      "width": 249,
+      "height": 164
+    },
+    {
+      "index": 5,
+      "x": 298,
+      "y": 333,
+      "width": 249,
+      "height": 164
+    },
+    {
+      "index": 6,
+      "x": 562,
+      "y": 333,
+      "width": 249,
+      "height": 164
+    },
+    {
+      "index": 7,
+      "x": 826,
+      "y": 333,
+      "width": 249,
+      "height": 164
+    }
+  ],
+  "close_hit_rect": {
+    "x": 1059,
+    "y": 5,
+    "width": 41,
+    "height": 34
+  }
+}

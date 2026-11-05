@@ -108,8 +108,8 @@ namespace Gamsamo.Editor
             yield return 0.4f;
             desktop.OpenShop();
             yield return 0.2f;
-            r.Check(shop.itemButtons.Length == 8 && shop.blindButtons.Length == 3, "Eight cards and three blind controls are installed");
-            CheckFooterLayout(r, desktop, shop, "initial disabled controls");
+            r.Check(shop.itemButtons.Length == 8 && room.windowBlindButton != null, "Eight design cards and a room window hotspot are installed");
+            CheckFooterLayout(r, desktop, shop, "initial shop");
             r.Capture("cosmetics-footer-disabled.png");
             yield return 0.15f;
 
@@ -119,7 +119,10 @@ namespace Gamsamo.Editor
                 yield return 0.1f;
                 var entries = catalog.GetItems(Targets[category]);
                 r.Check(shop.ActiveCategoryIndex == category && shop.ActiveTarget == Targets[category], "Tab routes to " + Targets[category]);
-                r.Check(shop.blindControls.activeSelf == (category == 0), "Blind controls only appear on window tab " + category);
+                r.Check(shop.blindControls == null || !shop.blindControls.activeSelf,
+                    "Shop has no blind-state controls on tab " + category);
+                r.Check(shop.windowBlindHint != null && shop.windowBlindHint.gameObject.activeSelf == (category == 0),
+                    "Window click hint only appears on window tab " + category);
                 for (int slot = 0; slot < entries.Length; slot++)
                 {
                     CosmeticItem item = entries[slot];
@@ -128,6 +131,8 @@ namespace Gamsamo.Editor
                     r.Check(Hit(shop.itemButtons[slot]) == shop.itemButtons[slot], "Card receives pointer input: " + item.id);
                     shop.itemButtons[slot].onClick.Invoke();
                     r.Check(appearance.SelectedId(item.target) == item.id, "Click previews " + item.id);
+                    if (category == 0 && slot == 0)
+                        r.Check(appearance.BlindState == 1, "First window design starts half lowered");
                     r.Check(shop.selectionBorders[slot].activeSelf
                         && shop.selectionBorders.Count(border => border.activeSelf) == 1,
                         "Exactly one selected card: " + item.id);
@@ -157,19 +162,26 @@ namespace Gamsamo.Editor
                 r.Check(string.IsNullOrEmpty(appearance.SelectedId(Targets[category])), "Category default restores: " + category);
             }
 
+            var windowChecks = CheckWindowInteraction(r, room, appearance);
+            while (windowChecks.MoveNext()) yield return windowChecks.Current;
+            room.OpenPc();
+            yield return 0.4f;
+            desktop.OpenShop();
             desktop.SelectTab(0);
             yield return 0.1f;
-            r.Check(shop.blindButtons.All(button => !button.interactable), "Original window has no unsupported blind controls");
             foreach (CosmeticItem item in catalog.GetItems("window"))
             {
                 r.Check(appearance.Preview(item.id), "Window preview route accepts " + item.id);
-                // Newly enabled controls join the UI graphic/raycast registry on the next player frame.
+                // Let the preview redraw before inspecting its rendered artwork combinations.
                 yield return 0.05f;
                 var hashes = new HashSet<string>();
                 for (int blind = 0; blind < 3; blind++)
                 {
-                    r.Check(Hit(shop.blindButtons[blind]) == shop.blindButtons[blind], "Blind control receives pointer input: " + item.id + "/" + blind);
-                    shop.blindButtons[blind].onClick.Invoke();
+                    // API setup exercises all artwork combinations while the PC modal stays open.
+                    // Player input is covered separately through the room's actual window hotspot.
+                    appearance.SetBlindState(blind);
+                    r.Check(!room.windowBlindButton.IsInteractable(),
+                        "Room window stays blocked behind PC: " + item.id + "/" + blind);
                     for (int weather = 0; weather < 3; weather++)
                     {
                         appearance.roomAppearance.SetWeather((ConsultationRoomAppearance.Weather)weather);
@@ -222,13 +234,128 @@ namespace Gamsamo.Editor
             r.Check(desktop.balanceText.text == "—", "No invented currency or free purchase is granted");
         }
 
-        private static Button Hit(Button button)
+        private static IEnumerator CheckWindowInteraction(RunState r, ConsultationRoomController room,
+            CosmeticAppearanceController appearance)
+        {
+            Button window = room.windowBlindButton;
+            r.Check(window != null, "Window interaction is connected");
+            if (window == null) yield break;
+            room.ClosePc();
+            room.CloseRecord();
+            yield return 0.4f;
+            appearance.RestoreCategory("window");
+            int originalState = appearance.BlindState;
+            room.CycleWindowBlinds();
+            r.Check(!appearance.CanControlBlinds && !window.IsInteractable()
+                && appearance.BlindState == originalState, "Original room window cannot cycle blinds");
+
+            appearance.Preview("window.oak");
+            yield return 0.1f;
+            r.Check(room.CanInteractWithRoom && window.IsInteractable() && appearance.BlindState == 1,
+                "Choosing a window design enables room interaction at half lowered");
+            r.Check(Hit(window) == window, "Exposed window receives pointer input");
+            r.Check(Hit(window, new Vector2(-0.1f, 0.5f)) != window,
+                "Adjacent wall does not receive window input");
+            r.Check(Hit(window, new Vector2(0.9f, 0.1f)) == room.openPcButton,
+                "Monitor overlapping the window keeps PC input");
+
+            foreach (CosmeticItem item in appearance.catalog.GetItems("window"))
+            {
+                int retained = appearance.BlindState;
+                appearance.Preview(item.id);
+                yield return 0.05f;
+                r.Check(appearance.BlindState == retained, "Changing design preserves blind degree: " + item.id);
+                for (int click = 0; click < 3; click++)
+                {
+                    int expected = (appearance.BlindState + 1) % 3;
+                    r.Check(Hit(window) == window, "Window hotspot receives input: " + item.id + "/" + click);
+                    PointerClick(window);
+                    r.Check(appearance.BlindState == expected
+                        && appearance.SelectedId("window") == item.id,
+                        "Window click advances one degree and preserves design: " + item.id + "/" + click);
+                    yield return 0.03f;
+                }
+                r.Check(appearance.BlindState == retained, "Three clicks complete one cycle: " + item.id);
+            }
+
+            room.OpenPc();
+            CheckWindowBlocked(r, room, appearance, "PC opening", false);
+            // Input guards update synchronously; newly activated modal graphics register on a player frame.
+            int pcOpeningFrame = Time.frameCount;
+            while (Time.frameCount == pcOpeningFrame) yield return 0.01f;
+            r.Check(Hit(window) != window, "PC backdrop intercepts window input after its first player frame");
+            yield return 0.4f;
+            appearance.Preview("window.sage");
+            CheckWindowBlocked(r, room, appearance, "PC open after changing design");
+            room.ClosePc();
+            CheckWindowBlocked(r, room, appearance, "PC closing transition");
+            yield return 0.4f;
+            int previous = appearance.BlindState;
+            PointerClick(window);
+            r.Check(window.IsInteractable() && appearance.BlindState == (previous + 1) % 3,
+                "Window input resumes after PC closes");
+
+            room.OpenRecord();
+            CheckWindowBlocked(r, room, appearance, "Record opening", false);
+            int recordOpeningFrame = Time.frameCount;
+            while (Time.frameCount == recordOpeningFrame) yield return 0.01f;
+            r.Check(Hit(window) != window, "Record backdrop intercepts window input after its first player frame");
+            yield return 0.4f;
+            CheckWindowBlocked(r, room, appearance, "Record open");
+            room.CloseRecord();
+            CheckWindowBlocked(r, room, appearance, "Record closing transition");
+            yield return 0.4f;
+            previous = appearance.BlindState;
+            PointerClick(window);
+            r.Check(window.IsInteractable() && appearance.BlindState == (previous + 1) % 3,
+                "Window input resumes after record closes");
+
+            previous = appearance.BlindState;
+            appearance.roomAppearance.SetWeather(ConsultationRoomAppearance.Weather.Rain);
+            r.Check(appearance.BlindState == previous && window.IsInteractable(),
+                "Weather changes preserve room window degree and interaction");
+            appearance.RestoreCategory("window");
+            originalState = appearance.BlindState;
+            PointerClick(window);
+            room.CycleWindowBlinds();
+            r.Check(!window.IsInteractable() && appearance.BlindState == originalState,
+                "Restoring the default window disables pointer and direct interaction");
+            appearance.Preview("window.oak");
+            r.Check(window.IsInteractable() && appearance.BlindState == 1,
+                "Selecting a design again starts at half lowered");
+        }
+
+        private static void CheckWindowBlocked(RunState r, ConsultationRoomController room,
+            CosmeticAppearanceController appearance, string context, bool requireRegisteredBackdrop = true)
+        {
+            int state = appearance.BlindState;
+            Button window = room.windowBlindButton;
+            r.Check(!room.CanInteractWithRoom && !window.IsInteractable()
+                && (!requireRegisteredBackdrop || Hit(window) != window),
+                "Window is blocked by modal: " + context);
+            PointerClick(window);
+            room.CycleWindowBlinds();
+            r.Check(appearance.BlindState == state, "Blocked input cannot change blind degree: " + context);
+        }
+
+        private static void PointerClick(Button button)
+        {
+            ExecuteEvents.Execute(button.gameObject,
+                new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left },
+                ExecuteEvents.pointerClickHandler);
+        }
+
+        private static Button Hit(Button button) => Hit(button, new Vector2(0.5f, 0.5f));
+
+        private static Button Hit(Button button, Vector2 normalized)
         {
             Canvas.ForceUpdateCanvases();
             RectTransform rect = (RectTransform)button.transform;
             var canvas = rect.GetComponentInParent<Canvas>().rootCanvas;
             var camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
-            var point = RectTransformUtility.WorldToScreenPoint(camera, rect.TransformPoint(rect.rect.center));
+            var local = new Vector3(Mathf.LerpUnclamped(rect.rect.xMin, rect.rect.xMax, normalized.x),
+                Mathf.LerpUnclamped(rect.rect.yMin, rect.rect.yMax, normalized.y));
+            var point = RectTransformUtility.WorldToScreenPoint(camera, rect.TransformPoint(local));
             var hits = new List<RaycastResult>();
             EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = point }, hits);
             return hits.Count > 0 ? hits[0].gameObject.GetComponentInParent<Button>() : null;
@@ -251,26 +378,17 @@ namespace Gamsamo.Editor
             var pc = desktop.transform as RectTransform;
             var status = shop.statusText != null ? shop.statusText.rectTransform : null;
             var restore = shop.restoreCategoryButton != null ? shop.restoreCategoryButton.transform as RectTransform : null;
-            var blinds = shop.blindControls != null ? shop.blindControls.transform as RectTransform : null;
-            var blindLabel = blinds != null ? blinds.Find("Label")?.GetComponent<TMP_Text>() : null;
-            bool ready = window != null && pc != null && status != null && restore != null && blinds != null
-                && blindLabel != null && desktop.wallpaper != null
-                && shop.blindButtons != null && shop.blindButtons.Length == 3
-                && shop.blindButtons.All(button => button != null)
-                && shop.itemButtons != null && shop.itemButtons.Length == 8
+            var hint = shop.windowBlindHint;
+            bool ready = window != null && pc != null && status != null && restore != null && hint != null
+                && desktop.wallpaper != null && shop.itemButtons != null && shop.itemButtons.Length == 8
                 && shop.itemButtons.All(button => button != null);
             r.Check(ready, "Footer geometry references are complete: " + context);
             if (!ready) return;
 
-            // Read real world corners back into the shop's coordinate system. This includes
-            // inactive tab controls and non-interactable buttons, without altering their state.
-            var topLevel = new[] { status, blinds, restore };
-            var blindParts = new[] { blindLabel.rectTransform }
-                .Concat(shop.blindButtons.Select(button => (RectTransform)button.transform)).ToArray();
-            Rect[] footerBounds = topLevel.Concat(blindParts).Select(rect => BoundsIn(rect, window)).ToArray();
+            var visibleControls = new List<RectTransform> { status, restore };
+            if (hint.gameObject.activeInHierarchy) visibleControls.Add(hint.rectTransform);
+            Rect[] footerBounds = visibleControls.Select(rect => BoundsIn(rect, window)).ToArray();
             const float margin = 8f;
-            // The source artwork has a 12px bottom frame. Controls need another 8px of paper
-            // below them, so containment in the outer window rectangle alone is insufficient.
             Rect paper = Rect.MinMaxRect(window.rect.xMin + 8f + margin, window.rect.yMin + 12f + margin,
                 window.rect.xMax - 8f - margin, window.rect.yMax - margin);
             r.Check(footerBounds.All(bounds => Contains(paper, bounds)),
@@ -278,19 +396,11 @@ namespace Gamsamo.Editor
             float lowestCardEdge = shop.itemButtons.Min(button => BoundsIn((RectTransform)button.transform, window).yMin);
             r.Check(footerBounds.All(bounds => bounds.yMax <= lowestCardEdge - margin + 0.1f),
                 "Footer has at least eight pixels below product cards: " + context);
-            r.Check(DoNotOverlap(topLevel.Select(rect => BoundsIn(rect, window)).ToArray()),
-                "Status, blind controls and restore button do not overlap: " + context);
-            Rect[] blindBounds = blindParts.Select(rect => BoundsIn(rect, window)).ToArray();
-            r.Check(DoNotOverlap(blindBounds), "Blind label and three buttons do not overlap: " + context);
-            Rect blindGroup = BoundsIn(blinds, window);
-            r.Check(blindBounds.All(bounds => Contains(blindGroup, bounds)),
-                "Blind controls remain within their group: " + context);
+            r.Check(DoNotOverlap(footerBounds), "Status, window hint and restore button do not overlap: " + context);
             r.Check(Contains(BoundsIn(desktop.wallpaper.rectTransform, pc), BoundsIn(window, pc)),
                 "Shop window fits inside the PC desktop content: " + context);
-
-            CheckText(r, blindLabel, "blind group label " + context);
-            foreach (Button button in shop.blindButtons.Concat(new[] { shop.restoreCategoryButton }))
-                CheckText(r, button.GetComponentInChildren<TMP_Text>(true), button.name + " label " + context);
+            if (hint.gameObject.activeInHierarchy) CheckText(r, hint, "window click hint " + context);
+            CheckText(r, shop.restoreCategoryButton.GetComponentInChildren<TMP_Text>(true), "restore label " + context);
         }
 
         private static Rect BoundsIn(RectTransform rect, RectTransform relativeTo)

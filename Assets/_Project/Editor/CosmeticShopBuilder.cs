@@ -103,30 +103,27 @@ namespace Gamsamo.Editor
             view.restoreCategoryButton = TextButton("RestoreCategory", content, font,
                 946, FooterTop, 129, ButtonHeight, "기본 복원", buttonSprite);
 
-            RectTransform blindControls = Rect("BlindControls", content);
-            Place(blindControls, 520, FooterTop, 386, ButtonHeight);
-            view.blindControls = blindControls.gameObject;
-            Label("Label", blindControls, font, 0, 0, 86, ButtonHeight, 17,
-                TextAlignmentOptions.MidlineLeft, "블라인드");
+            view.windowBlindHint = Label("WindowBlindHint", content, font,
+                520, FooterTop, 386, ButtonHeight, 18,
+                TextAlignmentOptions.MidlineLeft, "창문을 눌러 블라인드 조절");
+            // Keep installed control IDs/references for migration; new shops need no hidden legacy buttons.
+            Transform blindControls = content.Find("BlindControls");
+            view.blindControls = blindControls != null ? blindControls.gameObject : null;
             view.blindButtons = new Button[3];
             view.blindSelections = new GameObject[3];
-            string[] labels = { "올림", "절반", "내림" };
-            for (int index = 0; index < 3; index++)
+            if (blindControls != null)
             {
-                Button button = TextButton("State" + index, blindControls, font,
-                    88 + index * 87, 0, 79, ButtonHeight, labels[index], buttonSprite);
-                view.blindButtons[index] = button;
-                RectTransform selection = Rect("Selected", button.transform);
-                Place(selection, 0, 0, 79, ButtonHeight);
-                DisableStraightBorder(selection);
-                Image selectedOutline = Component<Image>(selection);
-                selectedOutline.sprite = buttonSprite;
-                selectedOutline.type = Image.Type.Sliced;
-                selectedOutline.fillCenter = false;
-                selectedOutline.pixelsPerUnitMultiplier = 2;
-                selectedOutline.color = Accent;
-                selectedOutline.raycastTarget = false;
-                view.blindSelections[index] = selection.gameObject;
+                blindControls.gameObject.SetActive(false);
+                for (int index = 0; index < 3; index++)
+                {
+                    Transform state = blindControls.Find("State" + index);
+                    Button button = state != null ? state.GetComponent<Button>() : null;
+                    view.blindButtons[index] = button;
+                    if (button != null) button.interactable = false;
+                    Transform selection = state != null ? state.Find("Selected") : null;
+                    view.blindSelections[index] = selection != null ? selection.gameObject : null;
+                    if (selection != null) selection.gameObject.SetActive(false);
+                }
             }
 
             desktop.shopView = view;

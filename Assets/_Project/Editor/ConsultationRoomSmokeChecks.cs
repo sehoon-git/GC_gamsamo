@@ -87,7 +87,7 @@ namespace Gamsamo.Editor
         {
             ConsultationRoomController room = run.Controller;
             bool references = room.modal != null && room.openRecordButton != null
-                && room.closeRecordButton != null && room.backdropButton != null
+                && room.recordPanel != null && room.backdropButton != null && room.recordDrag != null
                 && room.recordView != null && room.background != null
                 && room.backgroundTexture != null && room.backgroundBlur != null
                 && room.blurShader != null && EventSystem.current != null;
@@ -121,6 +121,13 @@ namespace Gamsamo.Editor
                 && Mathf.Approximately(room.modal.alpha, 1f) && room.modal.blocksRaycasts
                 && room.modal.interactable && !room.openRecordButton.interactable,
                 "Click opens a visible modal and blocks the underlying button");
+            run.Check(room.closeRecordButton == null || !room.closeRecordButton.gameObject.activeInHierarchy,
+                "Expanded record has no visible close button");
+            var artwork = (RectTransform)room.recordView.transform;
+            Vector2 centeredPosition = ScreenPoint(artwork, new Vector2(0.5f, 0.5f));
+            ClickAt(centeredPosition);
+            yield return null;
+            run.Check(room.IsRecordOpen, "Clicking inside the record keeps it open");
             Material material = room.background.material;
             run.Check(material != null && material.shader == room.blurShader
                 && material.HasProperty("_Amount") && Mathf.Approximately(material.GetFloat("_Amount"), 1f),
@@ -147,6 +154,40 @@ namespace Gamsamo.Editor
             ScreenCapture.CaptureScreenshot(Path.Combine(run.OutputDirectory, "record-open.png"));
             yield return null;
 
+            PointerEventData dragPointer;
+            GameObject dragTarget = BeginDrag(centeredPosition,
+                centeredPosition + new Vector2(Screen.width * 0.15f, Screen.height * 0.03f), out dragPointer);
+            run.Check(dragTarget != null, "Record artwork routes to a drag handler");
+            if (dragTarget != null)
+            {
+                yield return null; // Detect layout components undoing the drag on the following frame.
+                Vector2 movedPosition = ScreenPoint(artwork, new Vector2(0.5f, 0.5f));
+                run.Check(Vector2.Distance(centeredPosition, movedPosition) > 1f && room.IsRecordOpen,
+                    "Dragging moves the record without closing it", centeredPosition + " -> " + movedPosition);
+                room.backdropButton.onClick.Invoke();
+                run.Check(room.IsRecordOpen && room.recordDrag != null && room.recordDrag.IsDragging,
+                    "Backdrop callback cannot close the record during a drag");
+                DragTo(dragTarget, dragPointer, new Vector2(Screen.width * 3, Screen.height * 3));
+                yield return null;
+                run.Check(IsContained(artwork, (RectTransform)room.modal.transform),
+                    "Record remains within the viewport when dragged past top-right");
+                DragTo(dragTarget, dragPointer, new Vector2(-Screen.width * 2, -Screen.height * 2));
+                yield return null;
+                run.Check(IsContained(artwork, (RectTransform)room.modal.transform),
+                    "Record remains within the viewport when dragged past bottom-left");
+                ExecuteEvents.Execute(dragTarget, dragPointer, ExecuteEvents.pointerUpHandler);
+                ExecuteEvents.Execute(dragTarget, dragPointer, ExecuteEvents.endDragHandler);
+                dragPointer.dragging = false;
+                // Even a stray backdrop callback in the release frame must not close the record.
+                room.backdropButton.onClick.Invoke();
+                yield return null;
+                run.Check(room.IsRecordOpen && Mathf.Approximately(room.modal.alpha, 1f),
+                    "Releasing a drag outside the record does not act as an outside click");
+                yield return new WaitForEndOfFrame();
+                ScreenCapture.CaptureScreenshot(Path.Combine(run.OutputDirectory, "record-dragged.png"));
+                yield return null;
+            }
+
             room.SetRecord(null);
             run.Check(fields.Where(field => field != null).All(field => field.text == "—"),
                 "Clearing record data removes all stale patient text");
@@ -160,20 +201,88 @@ namespace Gamsamo.Editor
                 && Mathf.Approximately(room.modal.alpha, 1f) && room.modal.blocksRaycasts,
                 "Reopening during the close animation ends fully open");
 
-            room.closeRecordButton.onClick.Invoke();
-            yield return new WaitForSecondsRealtime(0.35f);
-            CheckClosed(run, "Close button");
-            run.Check(EventSystem.current.currentSelectedGameObject == room.openRecordButton.gameObject,
-                "Closing restores keyboard focus to the clipboard");
+            run.Check(Vector2.Distance(centeredPosition, ScreenPoint(artwork, new Vector2(0.5f, 0.5f))) < 1f,
+                "Reopening the record resets its drag position to center");
 
-            room.openRecordButton.onClick.Invoke();
-            yield return new WaitForSecondsRealtime(0.35f);
-            room.backdropButton.onClick.Invoke();
-            yield return new WaitForSecondsRealtime(0.35f);
-            CheckClosed(run, "Backdrop after reopening");
+            // Exercise all sides through the actual backdrop raycast, rather than invoking its callback.
+            var outsidePoints = new[] { new Vector2(0.01f, 0.5f), new Vector2(0.99f, 0.5f),
+                new Vector2(0.5f, 0.01f), new Vector2(0.5f, 0.99f) };
+            for (int index = 0; index < outsidePoints.Length; index++)
+            {
+                Vector2 point = ScreenPoint((RectTransform)room.modal.transform, outsidePoints[index]);
+                List<RaycastResult> hits = Raycast(point);
+                run.Check(FirstButton(hits) == room.backdropButton,
+                    "Outside record side reaches backdrop: " + index, DescribeHits(hits));
+                ClickAt(point);
+                yield return new WaitForSecondsRealtime(0.35f);
+                CheckClosed(run, "Outside click " + index);
+                if (index == 0)
+                    run.Check(EventSystem.current.currentSelectedGameObject == room.openRecordButton.gameObject,
+                        "Closing restores keyboard focus to the clipboard");
+                if (index == outsidePoints.Length - 1) continue;
+                room.openRecordButton.onClick.Invoke();
+                yield return new WaitForSecondsRealtime(0.35f);
+                run.Check(Vector2.Distance(centeredPosition, ScreenPoint(artwork, new Vector2(0.5f, 0.5f))) < 1f,
+                    "Record reopens centered after outside close: " + index);
+            }
             yield return new WaitForEndOfFrame();
             ScreenCapture.CaptureScreenshot(Path.Combine(run.OutputDirectory, "record-closed.png"));
             yield return null;
+        }
+
+        private static void ClickAt(Vector2 position)
+        {
+            List<RaycastResult> hits = Raycast(position);
+            if (hits.Count == 0) return;
+            var pointer = new PointerEventData(EventSystem.current)
+            {
+                position = position, pressPosition = position, button = PointerEventData.InputButton.Left,
+                pointerPressRaycast = hits[0], pointerCurrentRaycast = hits[0], eligibleForClick = true
+            };
+            GameObject target = hits[0].gameObject;
+            ExecuteEvents.ExecuteHierarchy(target, pointer, ExecuteEvents.pointerDownHandler);
+            ExecuteEvents.ExecuteHierarchy(target, pointer, ExecuteEvents.pointerUpHandler);
+            ExecuteEvents.ExecuteHierarchy(target, pointer, ExecuteEvents.pointerClickHandler);
+        }
+
+        private static GameObject BeginDrag(Vector2 start, Vector2 end, out PointerEventData pointer)
+        {
+            pointer = null;
+            List<RaycastResult> hits = Raycast(start);
+            if (hits.Count == 0) return null;
+            GameObject target = ExecuteEvents.GetEventHandler<IDragHandler>(hits[0].gameObject);
+            if (target == null) return null;
+            pointer = new PointerEventData(EventSystem.current)
+            {
+                position = start, pressPosition = start, button = PointerEventData.InputButton.Left,
+                pointerPressRaycast = hits[0], pointerCurrentRaycast = hits[0],
+                pointerDrag = target, eligibleForClick = false, useDragThreshold = false
+            };
+            ExecuteEvents.ExecuteHierarchy(hits[0].gameObject, pointer, ExecuteEvents.pointerDownHandler);
+            ExecuteEvents.Execute(target, pointer, ExecuteEvents.initializePotentialDrag);
+            ExecuteEvents.Execute(target, pointer, ExecuteEvents.beginDragHandler);
+            pointer.dragging = true;
+            DragTo(target, pointer, end);
+            return target;
+        }
+
+        private static void DragTo(GameObject target, PointerEventData pointer, Vector2 position)
+        {
+            pointer.delta = position - pointer.position;
+            pointer.position = position;
+            ExecuteEvents.Execute(target, pointer, ExecuteEvents.dragHandler);
+        }
+
+        private static bool IsContained(RectTransform inner, RectTransform outer)
+        {
+            Canvas.ForceUpdateCanvases();
+            var corners = new Vector3[4];
+            inner.GetWorldCorners(corners);
+            const float tolerance = 1f;
+            Rect bounds = outer.rect;
+            return corners.Select(outer.InverseTransformPoint).All(point =>
+                point.x >= bounds.xMin - tolerance && point.x <= bounds.xMax + tolerance
+                && point.y >= bounds.yMin - tolerance && point.y <= bounds.yMax + tolerance);
         }
 
         private static void CheckClosed(CheckRun run, string action)

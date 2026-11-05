@@ -14,9 +14,15 @@ namespace Gamsamo.Editor
     {
         private const string ArtPath = "Assets/_Project/Art/UI/CosmeticShop/";
         private const string ContentName = "DynamicCosmeticShop";
-        private static readonly string[] Targets = { "window", "door", "clipboard", "pc", "wallpaper" };
+        private static readonly string[] Targets = { "window", "door", "clipboard", "pc", "wallpaper", "room-wallpaper" };
         private static readonly Color Ink = new Color32(72, 63, 52, 255);
         private static readonly Color Accent = new Color32(69, 110, 91, 255);
+        // Keep the original 500 px of tabs/cards and the 12 px bottom frame unscaled.
+        // Only the blank paper between them grows to accommodate the footer controls.
+        private static readonly Vector4 TemplateBorder = new Vector4(8, 12, 8, 500);
+        private const float WindowHeight = 574;
+        private const float FooterTop = 514;
+        private const float ButtonHeight = 34;
 
         public static CosmeticShopView Build(PcDesktopView desktop, CosmeticCatalog catalog,
             CosmeticAppearanceController appearance, TMP_FontAsset font)
@@ -28,12 +34,31 @@ namespace Gamsamo.Editor
                 throw new ArgumentException("The existing PC shop, cosmetic catalog, appearance controller and font are required.");
 
             ShopLayout layout = JsonUtility.FromJson<ShopLayout>(File.ReadAllText(ArtPath + "layout.json"));
+            if (layout?.tabs == null || !layout.tabs.Select(tab => tab?.id).SequenceEqual(Targets)
+                || layout.tabs.Any(tab => tab.hit_rect == null || tab.hit_rect.width <= 0 || tab.hit_rect.height <= 0))
+                throw new InvalidOperationException("Shop layout must contain the six supported tab rectangles in order.");
             if (layout?.slots == null || layout.slots.Length != CosmeticShopView.SlotCount
                 || layout.slots.Select(slot => slot.index).Distinct().Count() != CosmeticShopView.SlotCount
                 || layout.slots.Any(slot => slot.index < 0 || slot.index >= CosmeticShopView.SlotCount
                     || slot.width < 200 || slot.height < 150 || slot.x < 0 || slot.y < 0))
                 throw new InvalidOperationException("Shop layout must contain eight valid card rectangles.");
-            Sprite[] templates = Targets.Select(target => LoadSprite(ArtPath + "templates/" + target + ".png")).ToArray();
+            Sprite[] templates = Targets.Select(target => PrepareTemplate(ArtPath + "templates/" + target + ".png")).ToArray();
+            Sprite buttonSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            if (buttonSprite == null) throw new InvalidOperationException("The Unity UI button sprite is missing.");
+            Place((RectTransform)desktop.shopWindow.transform, 253, 61, 1112, WindowHeight);
+            desktop.shopImage.type = Image.Type.Sliced;
+            desktop.shopImage.preserveAspect = false;
+            desktop.shopImage.pixelsPerUnitMultiplier = 1;
+            // Reuse the installed tabs by name and append the wallpaper tab without replacing old IDs.
+            desktop.tabButtons = new Button[layout.tabs.Length];
+            for (int index = 0; index < layout.tabs.Length; index++)
+            {
+                ShopTab tab = layout.tabs[index];
+                RectTransform rect = Rect(tab.id + "Tab", desktop.shopWindow.transform);
+                Slot bounds = tab.hit_rect;
+                Place(rect, bounds.x, bounds.y, bounds.width, bounds.height);
+                desktop.tabButtons[index] = HitButton(rect);
+            }
 
             var view = desktop.shopWindow.GetComponent<CosmeticShopView>();
             if (view == null) view = desktop.shopWindow.AddComponent<CosmeticShopView>();
@@ -46,7 +71,7 @@ namespace Gamsamo.Editor
             view.selectionBorders = new GameObject[CosmeticShopView.SlotCount];
             view.selectedBadges = new TMP_Text[CosmeticShopView.SlotCount];
             RectTransform content = Rect(ContentName, desktop.shopWindow.transform);
-            Place(content, 0, 0, 1112, 534);
+            Place(content, 0, 0, 1112, WindowHeight);
 
             foreach (Slot slot in layout.slots)
             {
@@ -62,6 +87,11 @@ namespace Gamsamo.Editor
                 thumbnail.raycastTarget = false;
                 view.thumbnails[slot.index] = thumbnail;
 
+                // Empty templates still contain a placeholder rule through the name baseline.
+                // Cover that printed rule with matching paper before drawing the live label.
+                Image namePaper = Solid("NamePaper", card, 12, 125, 148, 31,
+                    new Color32(255, 249, 234, 255));
+                namePaper.transform.SetAsFirstSibling();
                 view.itemLabels[slot.index] = Label("Name", card, font, 13, 126, 146, 31, 18,
                     TextAlignmentOptions.MidlineLeft, "");
                 view.priceLabels[slot.index] = Label("Price", card, font, 172, 126, 56, 27, 16,
@@ -79,28 +109,34 @@ namespace Gamsamo.Editor
             }
 
             // All prices are unspecified. The source currency artwork remains unchanged.
-            view.statusText = Label("PreviewStatus", content, font, 34, 500, 265, 29, 18,
+            Solid("FooterDivider", content, 34, 505, 1041, 1, new Color32(207, 191, 165, 255));
+            Solid("FooterDividerLight", content, 34, 506, 1041, 1, new Color32(255, 249, 233, 255));
+            view.statusText = Label("PreviewStatus", content, font, 34, FooterTop, 265, ButtonHeight, 18,
                 TextAlignmentOptions.MidlineLeft, "미리보기 · 가격 미정");
             view.restoreCategoryButton = TextButton("RestoreCategory", content, font,
-                946, 500, 129, 29, "기본 복원");
+                946, FooterTop, 129, ButtonHeight, "기본 복원", buttonSprite);
 
-            RectTransform blindControls = Rect("BlindControls", content);
-            Place(blindControls, 520, 500, 386, 29);
-            view.blindControls = blindControls.gameObject;
-            Label("Label", blindControls, font, 0, 0, 86, 29, 17,
-                TextAlignmentOptions.MidlineLeft, "블라인드");
+            view.windowBlindHint = Label("WindowBlindHint", content, font,
+                520, FooterTop, 386, ButtonHeight, 18,
+                TextAlignmentOptions.MidlineLeft, "창문을 눌러 블라인드 조절");
+            // Keep installed control IDs/references for migration; new shops need no hidden legacy buttons.
+            Transform blindControls = content.Find("BlindControls");
+            view.blindControls = blindControls != null ? blindControls.gameObject : null;
             view.blindButtons = new Button[3];
             view.blindSelections = new GameObject[3];
-            string[] labels = { "올림", "절반", "내림" };
-            for (int index = 0; index < 3; index++)
+            if (blindControls != null)
             {
-                Button button = TextButton("State" + index, blindControls, font,
-                    88 + index * 87, 0, 79, 29, labels[index]);
-                view.blindButtons[index] = button;
-                RectTransform selection = Rect("Selected", button.transform);
-                Place(selection, 0, 0, 79, 29);
-                Border(selection, 79, 29, Accent, 2);
-                view.blindSelections[index] = selection.gameObject;
+                blindControls.gameObject.SetActive(false);
+                for (int index = 0; index < 3; index++)
+                {
+                    Transform state = blindControls.Find("State" + index);
+                    Button button = state != null ? state.GetComponent<Button>() : null;
+                    view.blindButtons[index] = button;
+                    if (button != null) button.interactable = false;
+                    Transform selection = state != null ? state.Find("Selected") : null;
+                    view.blindSelections[index] = selection != null ? selection.gameObject : null;
+                    if (selection != null) selection.gameObject.SetActive(false);
+                }
             }
 
             desktop.shopView = view;
@@ -116,6 +152,18 @@ namespace Gamsamo.Editor
             Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
             if (sprite == null) throw new InvalidOperationException("Sprite has not imported: " + path);
             return sprite;
+        }
+
+        private static Sprite PrepareTemplate(string path)
+        {
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null) throw new InvalidOperationException("Shop template importer is missing: " + path);
+            if (importer.spriteBorder != TemplateBorder)
+            {
+                importer.spriteBorder = TemplateBorder;
+                importer.SaveAndReimport();
+            }
+            return LoadSprite(path);
         }
 
         private static RectTransform Rect(string name, Transform parent)
@@ -199,26 +247,52 @@ namespace Gamsamo.Editor
         }
 
         private static Button TextButton(string name, Transform parent, TMP_FontAsset font,
-            float x, float y, float width, float height, string text)
+            float x, float y, float width, float height, string text, Sprite sprite)
         {
             RectTransform rect = Rect(name, parent);
             Place(rect, x, y, width, height);
             Button button = HitButton(rect);
+            DisableStraightBorder(rect);
+            Image rim = rect.GetComponent<Image>();
+            rim.sprite = sprite;
+            rim.type = Image.Type.Sliced;
+            rim.pixelsPerUnitMultiplier = 2;
+            rim.color = new Color32(151, 130, 101, 255);
+            // A rounded paper face inset from the rim leaves a shallow lower bevel.
+            Image face = Solid("Face", rect, 1.5f, 1.5f, width - 3, height - 4, Color.white);
+            face.sprite = sprite;
+            face.type = Image.Type.Sliced;
+            face.pixelsPerUnitMultiplier = 2;
+            face.transform.SetAsFirstSibling();
+            button.targetGraphic = face;
             ColorBlock colors = button.colors;
-            colors.normalColor = Color.white;
-            colors.highlightedColor = colors.selectedColor = new Color(0.88f, 0.91f, 0.82f);
-            colors.pressedColor = new Color(0.73f, 0.81f, 0.7f);
-            colors.disabledColor = new Color(0.84f, 0.82f, 0.75f, 0.65f);
+            colors.normalColor = new Color32(247, 239, 219, 255);
+            colors.highlightedColor = colors.selectedColor = new Color32(233, 238, 218, 255);
+            colors.pressedColor = new Color32(198, 213, 188, 255);
+            colors.disabledColor = new Color32(221, 215, 198, 255);
+            colors.fadeDuration = 0.1f;
             button.colors = colors;
-            button.targetGraphic.color = new Color32(228, 224, 205, 255);
-            Border(rect, width, height, new Color32(178, 161, 136, 255), 1);
-            Label("Text", rect, font, 3, 0, width - 6, height, 17,
+            Solid("TopLight", rect, 6, 3, width - 12, 1, new Color32(255, 252, 238, 180));
+            TMP_Text label = Label("Text", rect, font, 5, 0, width - 10, height - 1, 18,
                 TextAlignmentOptions.Center, text);
+            label.fontStyle = FontStyles.Bold;
+            label.transform.SetAsLastSibling();
             return button;
         }
 
+        private static void DisableStraightBorder(RectTransform parent)
+        {
+            // Preserve existing serialized nodes when upgrading an installed shop.
+            foreach (string edge in new[] { "Top", "Bottom", "Left", "Right" })
+            {
+                Transform child = parent.Find(edge);
+                if (child != null) child.gameObject.SetActive(false);
+            }
+        }
+
 #pragma warning disable CS0649
-        [Serializable] private sealed class ShopLayout { public Slot[] slots; }
+        [Serializable] private sealed class ShopLayout { public Slot[] slots; public ShopTab[] tabs; }
+        [Serializable] private sealed class ShopTab { public string id; public Slot hit_rect; }
         [Serializable] private sealed class Slot { public int index; public float x, y, width, height; }
 #pragma warning restore CS0649
     }

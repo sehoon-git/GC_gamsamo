@@ -172,6 +172,7 @@ namespace Gamsamo.Editor
             controller.backdropButton = backdropButton;
             controller.recordView = recordView;
             controller.record = MedicalRecordData.CreateSample();
+            RoomAssetPackInstaller.ConfigureRecordInteraction(controller);
             modal.alpha = 0;
             modal.blocksRaycasts = false;
             modal.interactable = false;

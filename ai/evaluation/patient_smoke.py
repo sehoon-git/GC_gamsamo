@@ -23,7 +23,8 @@ SCENARIOS = {
 async def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--api-url', default='http://127.0.0.1:8001')
-    parser.add_argument('--patients', nargs='+', choices=PATIENT_IDS, default=list(SCENARIOS)[1:])
+    parser.add_argument('--patients', nargs='+', choices=PATIENT_IDS, default=list(PATIENT_IDS))
+    parser.add_argument('--game-progress-id', default=new_id('validation'))
     parser.add_argument('--label', default='characters')
     args = parser.parse_args()
     if not args.label.replace('-', '').replace('_', '').isalnum():
@@ -41,10 +42,10 @@ async def main():
             started = perf_counter()
             try:
                 with tempfile.TemporaryDirectory(prefix='gamsamo-patient-') as temporary:
-                    payload = dict(patient_id=patient_id, case_id=new_id('case'), session_id=new_id('session'), request_id=new_id('opening'), created_at=now())
+                    payload = dict(patient_id=patient_id, game_progress_id=args.game_progress_id, case_id=new_id('case'), session_id=new_id('session'), request_id=new_id('opening'), created_at=now())
                     response = await http.post('/v1/dialogue/start', json=payload);response.raise_for_status()
                     state = CaseState.model_validate(response.json()['state'])
-                    store = SaveStore(Path(temporary), patient_id=patient_id)
+                    store = SaveStore(Path(temporary), patient_id=patient_id, game_progress_id=args.game_progress_id)
                     store.save(state)
                     client = SessionClient(settings, store, state, http=http)
                     result['checks'].append('opening')
@@ -63,6 +64,10 @@ async def main():
                         next_state = CaseState.model_validate(response.json()['state'])
                         client.catalog.validate_state(next_state)
                         assert next_state.sessions[:-1] == client.state.sessions
+                        assert next_state.game_progress_id == args.game_progress_id
+                        assert next_state.revealed_fact_ids == client.state.revealed_fact_ids
+                        store.save(next_state)
+                        assert store.load().current.id == next_state.current.id
                         result['revisit_state'] = next_state.model_dump(mode='json')
                         result['checks'].append('revisit')
                     result['ok'] = True

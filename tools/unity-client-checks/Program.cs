@@ -228,8 +228,10 @@ internal static class Program
         {
             if (!string.IsNullOrEmpty(connection.ApiKey)) http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", connection.ApiKey);
             var health = AiProtocol.Parse(await http.GetStringAsync("health"));
-            Check(AiProtocol.ValidateHealth(health, patientId) != "", "health mismatch");
-            var store = new AiSaveStore(folder); var session = new AiSession(store, patientId);
+            string mode = AiProtocol.ValidateHealth(health, patientId);
+            Check(AiProtocol.Array(health, "capabilities").Any(v => (string)v == "game_progress_scope"), "server does not support game progress scope");
+            var key = new AiConversationKey(AiProtocol.NewId("test_game"), patientId, AiProtocol.NewId("case"), AiProtocol.NewId("session"));
+            var store = new AiSaveStore(folder, key); var session = new AiSession(store, patientId, key);
             async Task Execute(string action, string text = null)
             {
                 session.Schedule(action, text);
@@ -238,7 +240,7 @@ internal static class Program
                 using (var response = await http.PostAsync("v1/dialogue/" + action, content))
                 {
                     Check(response.IsSuccessStatusCode, "HTTP failed: " + (int)response.StatusCode + " (URL/key omitted)");
-                    session.Receive(request, AiProtocol.Parse(await response.Content.ReadAsStringAsync()));
+                    session.Receive(request, AiProtocol.Parse(await response.Content.ReadAsStringAsync()), mode);
                 }
                 Check(JToken.DeepEquals(session.State, store.Load()["state"]), "live state did not save");
             }
@@ -248,8 +250,18 @@ internal static class Program
             Check((string)AiProtocol.Current(session.State)["closing_text"] == AiProtocol.ClosingText, "closing mismatch");
             session = new AiSession(store, patientId); Check(session.Phase == "pending_evaluation", "resume phase mismatch");
             await Execute("evaluate"); Check(session.Phase == "evaluated", "evaluation missing");
+            Check(session.TryGetSavedEvaluation(out var saved) == (mode == "model"), "model/mock saved result gate mismatch");
+            if (saved != null) Check(saved.Key.SettlementId == key.SettlementId, "live receipt scope mismatch");
+            var evaluatedState = session.State;
             if (!(bool)AiProtocol.Current(session.State)["evaluation"]["cleared"]) await Execute("revisit");
-            Console.WriteLine("Live C# state/save/API checks passed; mode=" + (string)health["mode"] + ". This is not a Unity Play check.");
+            string reportDirectory = Environment.GetEnvironmentVariable("GAMSAMO_AI_CHECK_REPORT_DIR");
+            if (!string.IsNullOrEmpty(reportDirectory))
+            {
+                Directory.CreateDirectory(reportDirectory);
+                File.WriteAllText(Path.Combine(reportDirectory, patientId + ".json"), AiProtocol.Encode(new JObject {
+                    ["mode"] = mode, ["evaluated_state"] = evaluatedState, ["final_state"] = session.State }));
+            }
+            Console.WriteLine("Live C# state/save/API checks passed; patient=" + patientId + "; mode=" + mode + ". This is not a Unity Play check.");
         }
     }
 
@@ -264,6 +276,7 @@ internal static class Program
             RecoveryChecks(root, Path.Combine(temp, "recovery"));
             RecordPresentationChecks(root);
             PatientChecks(root, Path.Combine(temp, "patients"));
+            checks += OwnerAChecks.Run(root, Path.Combine(temp, "owner-a"));
             if (args.Length > 1)
                 foreach (string patientId in args.Length > 2 ? args[2].Split(',') : new[] { "seoyun" })
                     await LiveChecks(args[1], Path.Combine(temp, "live", patientId), patientId);

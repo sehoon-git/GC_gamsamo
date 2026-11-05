@@ -18,8 +18,8 @@ def normalized(value):
     if isinstance(value, list):
         return [normalized(x) for x in value]
     if isinstance(value, dict):
-        return {key: FIXED_TIME if key in {"created_at", "started_at", "closed_at", "evaluated_at"} and item else
-                0.0 if key == "seconds" else normalized(item) for key, item in value.items()}
+        return {key: FIXED_TIME if key in {"created_at", "started_at", "closed_at", "evaluated_at"} and isinstance(item, str) and item else
+                0.0 if key == "seconds" and isinstance(item, (int, float)) else normalized(item) for key, item in value.items()}
     return value
 
 
@@ -40,6 +40,7 @@ async def documents():
         def step(request_id):
             return {"state": state, "session_id": state["sessions"][-1]["id"], "request_id": request_id}
         result["health.response.example.json"] = (await client.get("/health")).json()
+        result["patients.response.example.json"] = (await client.get("/v1/patients")).json()
         await send("opening-required", "/v1/dialogue/turn", turn("안녕하세요", "before_opening"), 409)
         await send("unsupported-patient", "/v1/dialogue/start", {"patient_id": "demo_only", "case_id": "case_unsupported", "session_id": "session_unsupported", "request_id": "opening_unsupported", "created_at": FIXED_TIME}, 404)
         state = (await send("start", "/v1/dialogue/start", {"patient_id": "seoyun", "case_id": "case_example", "session_id": "session_example", "request_id": "opening_example", "created_at": FIXED_TIME}))["state"]
@@ -75,9 +76,18 @@ async def documents():
                 "session_id": "session_" + patient_id, "request_id": "opening_" + patient_id,
                 "created_at": FIXED_TIME,
             })
+        for patient_id in ("seoyun", "harin"):
+            state = (await send("scoped-" + patient_id + "-start", "/v1/dialogue/start", {
+                "game_progress_id": "game_example", "patient_id": patient_id, "case_id": "case_scoped",
+                "session_id": "session_one", "request_id": "opening_one", "created_at": FIXED_TIME,
+            }))["state"]
+        state = (await send("scoped-turn", "/v1/dialogue/turn", turn("가족을 돕는 마음과 부담을 함께 이야기해도 괜찮아요.", "turn_scoped")))["state"]
+        state = (await send("scoped-close", "/v1/dialogue/close", step("close_scoped")))["state"]
+        state = (await send("scoped-evaluate", "/v1/dialogue/evaluate", step("evaluation_scoped")))["state"]
+        await send("scoped-revisit", "/v1/dialogue/revisit", {"state": state, "session_id": "session_two", "request_id": "opening_two", "created_at": FIXED_TIME})
     result["unauthorized.error.example.json"] = {"detail": {"code": "unauthorized", "message": "접근 키를 확인하세요."}}
     result["legacy.error.example.json"] = {"detail": {"code": "unsupported_save_version", "message": "이전 기록은 보존하고 형식 4의 새 실험을 시작하세요."}}
-    return {name: json.dumps(normalized(value), ensure_ascii=False, indent=2) + "\n" for name, value in result.items()}
+    return {name: json.dumps(value if name.endswith(".openapi.json") else normalized(value), ensure_ascii=False, indent=2) + "\n" for name, value in result.items()}
 
 
 async def main():

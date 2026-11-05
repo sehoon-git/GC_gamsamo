@@ -26,9 +26,21 @@ namespace Gamsamo.Networking
         public event Action<string> PatientLineCommitted;
         public event Action<string> CounselorNoticeCommitted;
         public event Action<string> EvaluationCommitted;
+        public event Action<AiSavedEvaluation> SavedEvaluationAvailable;
         public event Action<string> ErrorOccurred;
 
         public static string ConnectionFile => Path.Combine(Application.persistentDataPath, "ai-connection.json");
+        private static AiPatientCatalog patientCatalog;
+        public static AiPatientCatalog PatientCatalog => patientCatalog ?? (patientCatalog = new AiPatientCatalog(Path.Combine(Application.streamingAssetsPath, "GameData")));
+        public static AiCaseRepository CreateCaseRepository() => new AiCaseRepository(Path.Combine(Application.persistentDataPath, "ai-saves"), PatientCatalog);
+        public AiServiceStatus ServiceStatus => new AiServiceStatus(session, LastError, networkBusy);
+        public AiConversationKey ConversationKey => session == null ? null : AiConversationKey.FromState(session.State);
+        public AiCaseRecord ReadCommittedRecord() => session == null ? null : new AiCaseRecord(session.State);
+        public bool TryGetSavedEvaluation(out AiSavedEvaluation evaluation)
+        {
+            evaluation = null;
+            return session != null && session.TryGetSavedEvaluation(out evaluation);
+        }
         public static string SaveDirectory => SaveDirectoryFor("seoyun"); // Compatibility for the original client.
         public static string SaveDirectoryFor(string patientId)
         {
@@ -58,6 +70,7 @@ namespace Gamsamo.Networking
         public bool CanFinishVisit => CanInteract && visits.IsAwaitingDeparture && !IsBusy
             && CurrentPhase == "evaluated" && string.IsNullOrEmpty(LastError);
         public bool CanRevisit => CanFinishVisit && !AiProtocol.Flag(AiProtocol.Object(AiProtocol.Current(committedState), "evaluation"), "cleared");
+        public bool CanChangeConversation => !networkBusy && !draftDirty && (session == null || (!session.HasPendingSave && session.PendingRequest == null));
         public IReadOnlyList<string> ConfirmedFacts => committedState == null ? new string[0]
             : AiProtocol.Array(committedState, "revealed_fact_ids").Select(v => (string)v)
                 .Where(factTexts.ContainsKey).Select(id => factTexts[id]).ToArray();
@@ -86,7 +99,7 @@ namespace Gamsamo.Networking
         private readonly Dictionary<string, string> criterionLabels = new Dictionary<string, string>(StringComparer.Ordinal);
         private PatientDialogueView View => visits == null ? null : visits.dialogue;
         private bool HasActiveVisit => isActiveAndEnabled && visits != null && visits.isActiveAndEnabled
-            && visits.State == PatientVisitController.VisitState.Consulting && visits.CurrentPatientId == activePatientId
+            && visits.State == PatientVisitController.VisitState.Consulting && CanonicalPatientId(visits.CurrentPatientId) == activePatientId
             && !string.IsNullOrEmpty(localVisitId) && visits.CurrentSessionId == localVisitId;
         private bool CanInteract => HasActiveVisit && View != null && View.IsVisible && !View.IsConfirming
             && (visits.room == null || !visits.room.IsOverlayBlocking);
@@ -101,7 +114,8 @@ namespace Gamsamo.Networking
             visits.PatientArrived += Arrived;
             visits.StateChanged += VisitChanged;
         }
-        private static bool UsesPatient(string patientId) => new[] { "seoyun", "dohyeon", "taejun", "yeonwoo", "harin" }.Contains(patientId);
+        private static bool UsesPatient(string patientId) => PatientCatalog.Contains(patientId);
+        private static string CanonicalPatientId(string patientId) => UsesPatient(patientId) ? PatientCatalog.Get(patientId).Id : patientId;
         private void OnEnable()
         {
             if (visits != null && visits.State == PatientVisitController.VisitState.Consulting && UsesPatient(visits.CurrentPatientId))
@@ -110,11 +124,14 @@ namespace Gamsamo.Networking
         private void Arrived(string visitId, string patientId)
         {
             if (!UsesPatient(patientId)) return;
+            patientId = CanonicalPatientId(patientId);
             FlushDraft();
+            // Never discard a response whose state/transcript write failed when another visit arrives.
+            if (session != null && session.HasPendingSave) { Fail("이전 상담의 자동 저장을 먼저 복구해 주세요."); return; }
             AbortNetwork();
             if (activePatientId != patientId)
             {
-                session = null; committedState = null; draftDirty = false; draftBuffer = "";
+                BindSession(null); committedState = null; draftDirty = false; draftBuffer = "";
                 factTexts.Clear(); criterionLabels.Clear(); LastPatientText = "";
             }
             activePatientId = patientId;
@@ -133,14 +150,15 @@ namespace Gamsamo.Networking
             {
                 if (factTexts.Count == 0)
                 {
-                    var patient = AiProtocol.Parse(File.ReadAllText(Path.Combine(Application.streamingAssetsPath, "GameData", "Patients", activePatientId + ".json")));
+                    PatientCatalog.Register(activePatientId);
+                    var patient = AiProtocol.Patient(activePatientId);
                     AiProtocol.Require(AiProtocol.Id(patient, "id") == activePatientId, "환자 데이터 ID 오류");
                     AiProtocol.RegisterPatient(patient);
                     patientName = AiProtocol.Text(patient, "name");
                     foreach (JObject fact in AiProtocol.Array(patient, "private_facts")) factTexts.Add(AiProtocol.Text(fact, "id"), AiProtocol.Text(fact, "text"));
                     foreach (JObject criterion in AiProtocol.Array(patient, "rubric")) criterionLabels.Add(AiProtocol.Text(criterion, "id"), AiProtocol.Text(criterion, "label"));
                 }
-                if (session == null) session = new AiSession(new AiSaveStore(SaveDirectoryFor(activePatientId)), activePatientId);
+                if (session == null) BindSession(new AiSession(new AiSaveStore(SaveDirectoryFor(activePatientId)), activePatientId));
                 committedState = session.State;
                 return true;
             }
@@ -150,6 +168,42 @@ namespace Gamsamo.Networking
                 Fail("환자 데이터 또는 자동 저장을 읽을 수 없습니다. 기존 기록을 보존한 채 파일·버전·쓰기 권한을 확인해 주세요.");
                 return false;
             }
+        }
+        private void BindSession(AiSession value)
+        {
+            if (session != null) session.PersistenceChanged -= Publish;
+            session = value;
+            if (session != null) session.PersistenceChanged += Publish;
+        }
+
+        /// <summary>B calls before PatientArrived, with IDs already persisted in its game progress intent.</summary>
+        public bool StartNewCase(AiConversationKey key) => SelectCase(key, () => CreateCaseRepository().StartNewCase(key));
+        public bool ResumeSession(AiConversationKey key) => SelectCase(key, () => CreateCaseRepository().Resume(key));
+        public bool StartRevisit(AiConversationKey previous, string newSessionId) =>
+            SelectCase(previous, () => CreateCaseRepository().StartRevisit(previous, newSessionId));
+
+        private bool SelectCase(AiConversationKey key, Func<AiSession> load)
+        {
+            if (key == null || networkBusy || (session != null && session.HasPendingSave)) return false;
+            if (HasActiveVisit && activePatientId != key.PatientId) return false;
+            FlushDraft();
+            if (draftDirty || (session != null && session.HasPendingSave)) return false;
+            // A saved in-flight body may only be resumed in the same case; never abandon it through a UI switch.
+            if (session != null && session.PendingRequest != null && !key.SameCase(AiConversationKey.FromState(session.State))) return false;
+            try
+            {
+                var selected = load();
+                AbortNetwork();
+                BindSession(selected);
+                activePatientId = key.PatientId;
+                factTexts.Clear(); criterionLabels.Clear();
+                committedState = session.State; renderedRevision = -1;
+                draftDirty = false; draftBuffer = session.Draft; LastError = ""; LastPatientText = ""; inferenceMode = "";
+                if (HasActiveVisit && InitializeSession()) { RenderCommitted(); ContinueFlow(); }
+                else Publish();
+                return true;
+            }
+            catch (Exception) { Fail("진행·환자·사례·회차 ID 또는 자동 저장을 확인해 주세요. 기존 기록은 보존됩니다."); return false; }
         }
         private void VisitChanged(PatientVisitController.VisitState value)
         {
@@ -254,6 +308,8 @@ namespace Gamsamo.Networking
         }
         public bool Revisit()
         {
+            // Scoped games allocate/persist the new session ID in B's intent, then call StartRevisit.
+            if (session != null && AiProtocol.ProgressId(session.State) != "legacy") return false;
             if (!CanRevisit || !Schedule("revisit")) return false;
             ContinueFlow(); return true;
         }
@@ -267,6 +323,7 @@ namespace Gamsamo.Networking
         /// <summary>Starts a separate case after evaluation. The caller owns its confirmation UI; old snapshots are retained.</summary>
         public bool NewExperiment()
         {
+            if (session != null && AiProtocol.ProgressId(session.State) != "legacy") return false;
             if (!CanFinishVisit) return false;
             try { session.NewExperiment(); }
             catch (Exception) { Fail("새 실험을 저장하지 못했습니다. 기존 기록은 보존됩니다."); return false; }
@@ -316,6 +373,9 @@ namespace Gamsamo.Networking
                 {
                     var health = AiProtocol.Parse(request.downloadHandler.text);
                     inferenceMode = AiProtocol.ValidateHealth(health, activePatientId);
+                    if (AiProtocol.ProgressId(session.State) != "legacy")
+                        AiProtocol.Require(health["capabilities"] is JArray capabilities && capabilities.Any(v => (string)v == "game_progress_scope"),
+                            "게임 진행별 저장을 지원하는 서버가 필요합니다.");
                     healthReady = true;
                 }
                 catch (Exception) { Fail("서버의 준비 상태·데이터 버전이 일치하지 않습니다. 서버 설정을 확인해 주세요."); }
@@ -346,7 +406,7 @@ namespace Gamsamo.Networking
                     }
                     Fail(NetworkError(request)); yield break;
                 }
-                try { session.Receive(pending, AiProtocol.Parse(request.downloadHandler.text)); }
+                try { session.Receive(pending, AiProtocol.Parse(request.downloadHandler.text), inferenceMode); }
                 catch (Exception)
                 {
                     Fail(session.HasPendingSave ? "응답은 받았지만 자동 저장을 완료하지 못했습니다. 재시도하면 저장부터 진행합니다."
@@ -412,6 +472,7 @@ namespace Gamsamo.Networking
             {
                 visits.MarkConsultationEnded(localVisitId);
                 Emit(EvaluationCommitted, EvaluationJson);
+                if (session.TryGetSavedEvaluation(out var evaluation)) Emit(SavedEvaluationAvailable, evaluation);
             }
             Publish();
         }
@@ -448,13 +509,18 @@ namespace Gamsamo.Networking
                 View.SetNextAvailable(false);
                 View.SetDepartureAvailable(CanFinishVisit);
                 string status;
-                if (!string.IsNullOrEmpty(LastError)) status = "연결·자동 저장 확인 필요 · 재시도";
-                else if (session != null && session.HasPendingSave) status = "자동 저장을 기다리고 있어요";
-                else if (CurrentPhase == "evaluated") status = "상담 저장 완료 · 기록부를 확인한 뒤 환자 내보내기를 눌러 주세요";
-                else if (CurrentPhase == "pending_evaluation") status = "상담을 마쳤어요 · 평가 중";
-                else if (EndRequested) status = "응답 저장 후 상담을 마칠게요";
-                else if (networkBusy) status = patientName + "의 응답을 기다리고 있어요";
-                else status = "답변을 자유롭게 적어 주세요";
+                switch (ServiceStatus.Phase)
+                {
+                    case AiServicePhase.Error: status = "연결·자동 저장 확인 필요 · 재시도"; break;
+                    case AiServicePhase.SavingEvaluation: status = "평가 결과를 저장하고 있어요"; break;
+                    case AiServicePhase.Saving: status = "상담 기록을 저장하고 있어요"; break;
+                    case AiServicePhase.PreparingOpening: status = "첫 이야기를 준비하고 있어요"; break;
+                    case AiServicePhase.Evaluating: status = "상담을 마쳤어요 · 평가 중"; break;
+                    case AiServicePhase.Closing: status = "응답 저장 후 상담을 마칠게요"; break;
+                    case AiServicePhase.GeneratingReply: status = patientName + "의 응답을 기다리고 있어요"; break;
+                    case AiServicePhase.Completed: status = "상담 저장 완료 · 기록부를 확인한 뒤 환자 내보내기를 눌러 주세요"; break;
+                    default: status = networkBusy ? "AI 연결을 확인하고 있어요" : "답변을 자유롭게 적어 주세요"; break;
+                }
                 View.SetStatus(status);
             }
             Emit(StateChanged);
@@ -477,6 +543,12 @@ namespace Gamsamo.Networking
             foreach (Action<string> listener in listeners.GetInvocationList())
                 try { listener(value); } catch (Exception) { Debug.LogError("AI UI event listener failed. Saved conversation state was preserved."); }
         }
+        private static void Emit(Action<AiSavedEvaluation> listeners, AiSavedEvaluation value)
+        {
+            if (listeners == null) return;
+            foreach (Action<AiSavedEvaluation> listener in listeners.GetInvocationList())
+                try { listener(value); } catch (Exception) { Debug.LogError("AI evaluation listener failed. Saved result is available for retry."); }
+        }
         private void AbortNetwork()
         {
             generation++;
@@ -489,6 +561,7 @@ namespace Gamsamo.Networking
         private void OnDisable() { FlushDraft(); AbortNetwork(); }
         private void OnDestroy()
         {
+            if (session != null) session.PersistenceChanged -= Publish;
             if (visits == null) return;
             if (visits.UsesExternalDialogue == UsesPatient) visits.UsesExternalDialogue = null;
             if (visits.ExternalConfirmEnd == ConfirmFromView) visits.ExternalConfirmEnd = null;

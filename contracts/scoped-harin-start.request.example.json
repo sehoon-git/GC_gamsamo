@@ -1,0 +1,8 @@
+{
+  "game_progress_id": "game_example",
+  "patient_id": "harin",
+  "case_id": "case_scoped",
+  "session_id": "session_one",
+  "request_id": "opening_one",
+  "created_at": "2026-11-06T00:00:00+00:00"
+}

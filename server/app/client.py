@@ -40,14 +40,19 @@ class LegacySaveError(ValueError):
 
 class SaveStore:
     """Immutable state/transcript pairs; one index atomically commits all pointers."""
-    def __init__(self, directory: Path | None = None, patient_id: str = "seoyun"):
+    def __init__(self, directory: Path | None = None, patient_id: str = "seoyun", game_progress_id: str = "legacy"):
         TypeAdapter(Id).validate_python(patient_id)
+        TypeAdapter(Id).validate_python(game_progress_id)
         self.patient_id = patient_id
+        self.game_progress_id = game_progress_id
         base = Path(os.getenv("XDG_DATA_HOME", str(Path.home() / ".local/share")))
-        self.directory = Path(directory or os.getenv("SEOYUN_DATA_DIR", str(base / "gc-gamsamo/seoyun"))).expanduser().resolve()
+        default = base / "gc-gamsamo" / ("seoyun" if game_progress_id == "legacy" else "ai")
+        self.directory = Path(directory or os.getenv("SEOYUN_DATA_DIR", str(default))).expanduser().resolve()
         if self.directory.is_relative_to(ROOT):
             raise ValueError("상담 기록은 프로젝트 밖에 저장해야 합니다. SEOYUN_DATA_DIR을 확인하세요.")
-        if patient_id != "seoyun":
+        if game_progress_id != "legacy":
+            self.directory = self.directory / "progress" / game_progress_id / "patients" / patient_id
+        elif patient_id != "seoyun":
             self.directory = self.directory / "patients" / patient_id
         self.root = self.directory / f"v{FORMAT_VERSION}"
 
@@ -98,7 +103,8 @@ class SaveStore:
     def _read(self, case_id, head):
         folder = self.root / case_id / head["snapshot"]
         state = CaseState.model_validate_json((folder / "state.json").read_text("utf-8"))
-        if state.patient_id != self.patient_id or state.case_id != case_id or state.revision != head["revision"]:
+        if (state.game_progress_id != self.game_progress_id or state.patient_id != self.patient_id
+                or state.case_id != case_id or state.revision != head["revision"]):
             raise ValueError("저장 파일의 실험 ID 또는 revision이 일치하지 않습니다.")
         transcript = json.loads((folder / "transcript.json").read_text("utf-8"))
         if transcript != self.transcript(state):
@@ -107,13 +113,16 @@ class SaveStore:
 
     @staticmethod
     def transcript(state):
-        return {"case_id": state.case_id, "revision": state.revision,
+        result = {"case_id": state.case_id, "revision": state.revision,
                 "records": [r.model_dump(mode="json") for r in records(state)]}
+        if state.game_progress_id != "legacy":
+            result.update(game_progress_id=state.game_progress_id, patient_id=state.patient_id)
+        return result
 
     def save(self, state: CaseState, *, expected_revision=None):
         checked = CaseState.model_validate(state.model_dump())
-        if checked.patient_id != self.patient_id:
-            raise ValueError("다른 환자의 저장소에는 저장할 수 없습니다.")
+        if checked.patient_id != self.patient_id or checked.game_progress_id != self.game_progress_id:
+            raise ValueError("다른 진행 또는 환자의 저장소에는 저장할 수 없습니다.")
         with self._lock():
             index = self._index()
             head = index["cases"].get(checked.case_id)
@@ -178,6 +187,8 @@ class SessionClient:
         self.settings, self.store = settings, store
         self.catalog = Catalog(settings, state.patient_id)
         self.catalog.validate_state(state)
+        if (store.game_progress_id, store.patient_id) != (state.game_progress_id, state.patient_id):
+            raise ValueError("진행·환자 저장 범위가 상담과 다릅니다.")
         self.state = state
         self.epoch = 0
         self.active_request = None
@@ -217,6 +228,8 @@ class SessionClient:
             raise ExperimentError("응답의 상태 버전이 일치하지 않습니다.", "invalid_response", 502)
         self.catalog.validate_state(response.state)
         before, after = self.state, response.state
+        if (before.game_progress_id, before.patient_id) != (after.game_progress_id, after.patient_id):
+            raise ExperimentError("응답이 게임 진행 또는 환자를 변경했습니다.", "invalid_response", 502)
         if before.sessions[:-1] != after.sessions[:-1] or len(before.sessions) != len(after.sessions):
             raise ExperimentError("응답이 이전 회차 원문을 변경했습니다.", "invalid_response", 502)
         if (before.created_at, before.current.started_at) != (after.created_at, after.current.started_at):
@@ -394,6 +407,8 @@ class SessionClient:
     def phase_request_id(self, phase):
         # A saved phase produces the same request ID even after restarting the CLI.
         source = f"{self.state.case_id}/{self.state.current.id}/{self.state.revision}/{phase}"
+        if self.state.game_progress_id != "legacy":
+            source = f"{self.state.game_progress_id}/{self.state.patient_id}/" + source
         return phase + "_" + hashlib.sha256(source.encode()).hexdigest()[:32]
 
     async def close(self):

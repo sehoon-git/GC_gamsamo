@@ -1,0 +1,10 @@
+{
+  "catalog_version": 1,
+  "patients": [
+    { "id": "seoyun", "name": "서윤", "aliases": [], "ready": true, "content_version": "seoyun-4.0", "unavailable_reason": "" },
+    { "id": "dohyeon", "name": "도현", "aliases": [], "ready": true, "content_version": "dohyeon-4.0", "unavailable_reason": "" },
+    { "id": "taejun", "name": "태준", "aliases": [], "ready": true, "content_version": "taejun-4.0", "unavailable_reason": "" },
+    { "id": "yeonwoo", "name": "연우", "aliases": ["jieun"], "ready": true, "content_version": "yeonwoo-4.0", "unavailable_reason": "" },
+    { "id": "harin", "name": "하린", "aliases": [], "ready": true, "content_version": "harin-4.0", "unavailable_reason": "" }
+  ]
+}

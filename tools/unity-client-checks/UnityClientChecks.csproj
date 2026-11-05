@@ -13,6 +13,10 @@
     <Compile Include="../../Assets/_Project/Scripts/Networking/AiConnection.cs" Link="AiConnection.cs" />
     <Compile Include="../../Assets/_Project/Scripts/Networking/AiSession.cs" Link="AiSession.cs" />
     <Compile Include="../../Assets/_Project/Scripts/Networking/AiRecordFormatter.cs" Link="AiRecordFormatter.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Networking/AiReadModels.cs" Link="AiReadModels.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Networking/AiPatientCatalog.cs" Link="AiPatientCatalog.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Networking/AiCaseRepository.cs" Link="AiCaseRepository.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="OwnerAChecks.cs" />
   </ItemGroup>
 </Project>

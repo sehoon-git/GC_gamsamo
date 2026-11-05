@@ -1,0 +1,71 @@
+{
+  "case_id": "case_scoped",
+  "session_id": "session_one",
+  "request_id": "close_scoped",
+  "base_revision": 2,
+  "state": {
+    "format_version": 4,
+    "content_version": "harin-4.0",
+    "case_id": "case_scoped",
+    "patient_id": "harin",
+    "game_progress_id": "game_example",
+    "revision": 3,
+    "created_at": "2026-11-06T00:00:00+00:00",
+    "revealed_fact_ids": [],
+    "memory": {
+      "items": [],
+      "through_turn_id": null
+    },
+    "sessions": [
+      {
+        "id": "session_one",
+        "started_at": "2026-11-06T00:00:00+00:00",
+        "closed_at": "2026-11-06T00:00:00+00:00",
+        "opening": {
+          "id": "opening_one",
+          "patient_text": "하린입니다. 제 이야기를 천천히 해 보고 싶어요.",
+          "candidate_fact_ids": [],
+          "created_at": "2026-11-06T00:00:00+00:00",
+          "metrics": {
+            "seconds": 0.0,
+            "calls": 1,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "role_seconds": {}
+          }
+        },
+        "phase": "pending_evaluation",
+        "closing_request_id": "close_scoped",
+        "closing_text": "상담은 여기까지 하겠습니다. 오늘 수고하셨습니다!",
+        "closing_speaker": "counselor",
+        "closing_metrics": {
+          "seconds": 0.0,
+          "calls": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "role_seconds": {}
+        },
+        "turns": [
+          {
+            "id": "turn_scoped",
+            "user_text": "가족을 돕는 마음과 부담을 함께 이야기해도 괜찮아요.",
+            "patient_text": "하린입니다. 제 이야기를 천천히 해 보고 싶어요.",
+            "topic_label": "현재 마음",
+            "candidate_fact_ids": [],
+            "created_at": "2026-11-06T00:00:00+00:00",
+            "metrics": {
+              "seconds": 0.0,
+              "calls": 2,
+              "prompt_tokens": 0,
+              "completion_tokens": 0,
+              "role_seconds": {}
+            }
+          }
+        ],
+        "evaluation": null
+      }
+    ]
+  },
+  "replayed": false,
+  "disclosure_candidates": []
+}

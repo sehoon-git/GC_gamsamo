@@ -6,10 +6,14 @@
   },
   "content_version": "seoyun-4.0",
   "model_revision": "mock-fixture-v4",
-  "prompt_version": "7b0f7098d64d0d70",
+  "prompt_version": "e8445168f1a23c20",
   "busy": false,
   "format_version": 4,
   "mode": "mock",
+  "capabilities": [
+    "game_progress_scope",
+    "patient_catalog_v1"
+  ],
   "supported_patient_ids": [
     "seoyun",
     "dohyeon",

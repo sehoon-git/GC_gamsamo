@@ -1151,6 +1151,12 @@ PC 내부 네 화면, 기본 방 레이어·날씨, 원본 48종의 동적 카�
 - `CounselingPack/room/layout.json`의 `assets.window.clear.file`도 같은 파일로 설정한다. `RoomAssetPackInstaller.Apply()`가 이 설정을 읽으므로 에셋 재적용 후에도 이전 하늘 이미지로 되돌아가지 않는다. 좌표 731,52·크기 1011×534·모니터 앞뒤 순서와 기존 치장 우선순위를 유지한다.
 - 실제 대기 인원/환자 ID에 따른 자동 교체는 별도 기능이다. 이번 연결은 고정 기본 배경이며 진행·AI·저장·보상 상태를 바꾸지 않는다. 흐림·비와 장착한 창문/블라인드는 기존 변형을 사용한다. 다른 세 대기실 PNG도 보존한다.
 
+### 시작 화면 제목·대기실 배경
+
+- 표시 제목은 두 줄 `우리동네` / `상담사`다. `StartMenuUI.prefab`의 TMP 텍스트와 `StartMenuSceneBuilder.CreateScene()`의 초기값, HTML 시안을 함께 맞춘다. 제품명·저장 경로·저장 형식은 바꾸지 않는다.
+- 시작 화면의 예전 단일 `ConsultationRoom.png` 대신 상담실의 `room-base.png`와 벽지·문·대기실 창문·PC·기록부 레이어를 사용한다. `RoomBackground/DefaultRoomLayers`는 상담실 미리보기와 같은 좌표·겹침 순서이며, 창문은 `window-waiting-3-spaced.png`다. 16:9 비율을 유지해 화면을 채우고 기존 갈색 음영과 메뉴는 위에 표시한다.
+- 새로 만드는 시작 화면은 `ConsultationRoomAppearance.baseTexture`와 `editorPreviewLayers`를 복제한다. 기존 씬/프리팹을 생성 도구로 덮어쓰지 않는다. 저장된 시작 프리팹의 레이어는 독립 복사본이므로 이후 상담실 기본 원화를 바꾸면 시작 화면도 함께 갱신해야 한다. 진행별 치장·대기 인원 연동은 하지 않는다.
+
 ## 16. 진료기록부 에셋 편집 기록
 
 - 사용 도구: 기본 제공 ImageGen. CLI 대체 경로는 사용하지 않았음.
@@ -1789,7 +1795,19 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 재현·후속: StartMenu에서 저장이 있거나 없는 정상 상태의 불러오기 하단과, 상담실에서 AI 응답이 끝난 뒤 빈 입력창·입력 대기 상태를 확인한다. 실제 오류나 처리 중 안내는 보여야 한다. 다음 우선순위는 **1) 최신 통합 동작에 맞게 오래된 시작 메뉴 검사 정리, 2) Unity Play에서 두 화면의 정상/오류 상태 확인**이다. 씬/프리팹 생성 도구를 실행하거나 사용자 씬을 재생성할 필요가 없다.
 - 제출: 구현·직렬화 에셋·기존 검사·문서를 동일 브랜치의 main 대상 PR 하나로 제출하며 커밋·게시·PR 결과는 Git 이력과 최종 보고로 확인한다. main 직접 푸시·PR 병합은 하지 않는다.
 
-### 17.39 게임 안내 버튼의 사각형 책 장식 제거
+### 17.39 우리동네 상담사 제목과 시작 화면 대기실 배경
+
+- 완료 시각: 2026-11-06 08:40:46 KST (UTC+09:00). 최신 main `aa11c32`에서 `codex/neighborhood-counselor-title`을 만들었다. 사용자가 요청한 제목 변경과 시작 화면에도 대기실 창문을 표시하는 작업을 함께 처리했다.
+- `StartMenuUI.prefab`의 제목을 `우리동네` / `상담사`로 바꿨다. 시작 씬은 이 프리팹을 사용하므로 씬을 재생성하지 않았다. 배경은 기존 단일 이미지에서 상담실 기본 이미지와 5개 미리보기 레이어로 전환했고, 16:9 비율·창문 뒤 대기 인물·창문 앞 PC 배치를 맞췄다. 모든 배경 RawImage는 클릭을 가로채지 않는다.
+- `StartMenuSceneBuilder.CreateScene()`도 기존 상담실 프리팹의 `ConsultationRoomAppearance`에서 기본 그림과 레이어를 복제하도록 맞췄다. `README.md` 제목 및 `tools/ui-preview/start-menu/index.html`, `preview.css`의 제목·배경 구성도 갱신했다. 새 이미지·런타임 컴포넌트·저장 데이터 변경은 없다.
+- 정적 확인: 프리팹 로컬 fileID의 중복·누락, 대기실 창문 GUID와 계층 연결, 변경 파일의 diff 형식을 확인했다. 실제 열려 있는 Unity 테스트 체크아웃에 로컬 병합하고 기존 폰트·ProjectSettings 수정은 보존했다.
+- 실제 검증: Unity 6000.3.28f1의 16:9 Game 뷰에서 재컴파일 및 Play 진입을 확인했다. Computer Use로 새 제목의 한글 표시·줄 배치, 창문/대기 인물/PC 겹침, 기존 갈색 음영을 확인했다. 설정 버튼 클릭 → 설정창 표시 → 취소 → 시작 화면 복귀가 정상이며 콘솔 오류·경고는 0건이었다. Play를 종료한 시작 씬으로 남겨 두었다.
+- 검증 범위: 이번에는 시작 화면 표시와 설정창 열기/취소만 확인했다. 새 게임·불러오기·실제 AI 상담·정산 E2E, 별도 Windows 빌드, 다른 화면 비율 및 HTML 브라우저 렌더 검사는 재실행하지 않았다. 설정 적용이나 진행 저장 작업은 수행하지 않았다.
+- 다음 작업: 이 PR 병합 후 팀원들은 최신 main을 pull하고 시작 씬에서 새 제목과 대기실 창문을 확인한다. 원화/기본 레이어 변경 시 상담실과 시작 프리팹·생성 도구·HTML 시안을 함께 점검한다. main 직접 push·원격 병합·서버 배포는 이번 작업에 포함하지 않는다.
+
+- 2026-11-06 08:41:45 KST (UTC+09:00) 최신 main `893841b` 반영: #50의 안내 문구 제거 변경을 함께 유지했다. 문서 끝의 동시 추가 충돌은 기존 17.38을 보존하고 이번 기록을 17.39로 구분했다.
+
+### 17.40 게임 안내 버튼의 사각형 책 장식 제거
 
 - 구현·검증 완료 시각: **2026-11-06 08:33:32 KST (UTC+09:00)**. 최신 `origin/main aa11c32`에서 `codex/ui-guide-button-cleanup`으로 작업을 시작했고, PR 제출 전 **2026-11-06 08:42:02 KST (UTC+09:00)**에 갱신된 `origin/main 893841b`를 반영했다. 같은 17.38 번호로 추가된 main의 안내 문구 제거 기록을 17.38로 보존하고 이 기록을 17.39로 구분했다. 기존 폰트 미커밋 변경은 원래 작업 공간에 그대로 보존했다. PR 대상은 main이며 직접 push·병합·자동 병합은 하지 않는다.
 - 원인/변경: `Guidebook.prefab`의 `BookLeftPage`, `BookRightPage`, `BookSpine` 이미지가 책 아이콘을 사각형으로 표현하던 장식이었다. 이 세 객체만 제거하고 `게임 안내` TMP 영역을 버튼 가운데로 옮겼다. 버튼의 분홍 종이 배경·좌표·크기·Button 컴포넌트·GuidebookView 연결은 유지했다.
@@ -1797,3 +1815,5 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 검증: Unity **6000.3.28f1** 별도 작업 공간의 batch import/Runtime·Editor 컴파일 종료 코드 0, 컴파일 오류 없음. `git diff --check`, 프리팹 GUID 유지, 제거한 객체/컴포넌트 ID 12개의 잔여 참조 없음, 기존 openButton 직렬화 동일, 유지 객체 중 변경은 자식 목록과 라벨 RectTransform 두 블록뿐임을 확인했다. 로그는 Git 제외 임시 경로 `/tmp/gamsamo-guide-button-compile.log`. 단순 장식 수정이므로 관련 없는 전체 회귀/서버/저장 테스트는 반복하지 않았다.
 - 직접 Play 화면/클릭 검증은 이번 작업에서 실행하지 않았다. 사용자 Unity에 AI 연결 파일 선택 창이 열려 있어 그 작업을 조작하지 않았다. 확인 방법: 변경 반영 후 Play를 재시작하고 상담실 우측 상단에 사각형 없이 가운데 `게임 안내`만 보이는지 확인한 뒤, 버튼 클릭 → 안내서 페이지 이동 → Esc 닫기를 확인한다. 실행 중 생성된 Guidebook(Clone)은 Play 재시작 때 새 프리팹으로 갱신된다.
 - 주요 파일: `Assets/_Project/Prefabs/Presentation/Guidebook.prefab`, `Assets/_Project/Editor/Presentation/PresentationPrefabBuilder.cs`, `RoomPaperPresentationBuilder.cs`, 이 문서. 새 에셋/.meta/API/통합 의존성은 없다. 다음 작업은 PR 검토와 위 직접 클릭 확인이다.
+
+- 2026-11-06 08:45:46 KST (UTC+09:00) PR #52 충돌 해결: PR 생성 당시 main `893841b` 이후 제목·배경 PR #51이 `538f535`로 병합되면서 문서 끝에 같은 17.39절이 추가되어 충돌했다. main의 제목·배경 기록을 17.39로 보존하고 안내 버튼 기록은 17.40으로 구분했다. 15절의 양쪽 구현 설명도 보존했다. 안내 버튼 코드/프리팹 3개는 기존 PR head `c2bb51f`와 동일하고 나머지 제품 파일은 최신 main과 동일하다. 양쪽 문서 내용 보존·중복 절 번호·충돌 표식·diff 형식을 확인했다. 이번에는 문서 충돌만 정리했으므로 Unity 컴파일/Play/빌드는 다시 실행하지 않았으며 위 실행 검증은 원래 UI 구현 당시 결과다. 기존 PR #52를 갱신하고 원격 병합은 사용자 판단에 맡긴다.

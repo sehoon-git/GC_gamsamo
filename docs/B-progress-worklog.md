@@ -52,3 +52,18 @@
 7. 서로 다른 roster 6명의 실제 정산 완료 후에만 FinalEndingUnlocked가 true인지 확인. 민석 지원 및 C/D 연결 전에는 이 전체 시나리오를 실제로 완료할 수 없다.
 
 브랜치 게시/PR 결과는 마지막 Git 이력과 최종 보고에서 확인한다. main 직접 푸시·병합은 하지 않는다.
+
+
+## 병합 전 실제 Unity PlayMode 확인 — 2026-11-06 04:42:46 KST (UTC+09:00)
+
+사용자 요청에 따라 PR #33 브랜치에서 실제 Unity 6000.3.28f1 Editor 창을 열고 PlayMode를 실행했다. 기존 다른 프로젝트 Editor와 사용자 저장을 건드리지 않도록 검사 중에만 productName을 고유 테스트 이름으로 변경하고 `Application.persistentDataPath`가 분리되는지 검증했다. 종료/실패/Play 정지 시 원래 productName으로 복원한다. ProjectSettings와 씬은 커밋 변경 없음.
+
+- 추가 메뉴: `Gamsamo > B > Run Isolated PlayMode Checks` (Ctrl+Shift+F10). `Assets/_Project/Tests/Editor/BProgressPlayChecks.cs`에 있으며 Editor 전용이다. PlayMode 시작 전에 저장되지 않은 씬 변경이 있으면 거부한다.
+- **실제 PlayMode 검사 19개 통과**: 새 게임/불러오기 가용성, 문 대기, 데모 비활성, 기록부 모달의 입장 차단, 첫 환자 입장, A 사례/회차 저장, 연결 설정 오류를 클리어/퇴장으로 오인하지 않음, 중복 입장 차단, Play 정지·재시작 후 동일 진행/사례/회차 복원, 오류 후 시작 화면 복귀, 새 진행 ID, 이전 진행/AI 이력 보존, 환자 입장 없는 기록부 열기, 빈 방 복귀, 손상 저장 시 새 게임·이어하기 차단 및 손상 파일 보존.
+- 검사 방식: 실제 씬/MonoBehaviour/코루틴/도메인 재로드를 실행하고 기존 UI 버튼 이벤트와 공개 API를 호출했다. Editor 검사 메뉴는 실제 창에서 입력했고 실행 화면도 확인했다. 모든 게임 버튼을 물리적 마우스로 클릭한 검증은 아니다.
+- **발견·수정한 버그**: `ReturnToStartMenu`가 A.CanRetry를 무조건 차단해, 미완료 요청·저장이 없는 단순 연결 설정 오류에서도 방을 나갈 수 없었다. 이제 IsBusy를 검사하고 저장된 draft 일치 확인·B 저장을 완료한 후 복귀한다. 첫 PlayMode 검사에서 재현, 수정 후 전체 19개 통과.
+- .NET 진행/저장 33개도 재실행하여 통과. 이번 변경 후 Unity 스크립트 컴파일 오류 없음.
+- 초기 Unity 자체 `UnityEditor.Search.SearchDatabase` 검색 인덱스 예외로 검사 시작이 방해받았다. 게임 코드의 예외와 분리해 기록하며, Editor 준비 후 메뉴에서 다시 실행한 최종 검사는 통과했다.
+- 결과: `artifacts/b-progression/playmode-results.txt`의 `B_PLAYMODE_PASS`, 화면: `playmode-room.png`, `playmode-corruption.png`, Editor 로그: `unity-playmode.log` (모두 git 제외).
+- **아직 미검증**: 실제 서버 응답/70점 평가, C 실제 보상 계산기, D 클리어·사진·엔딩 연출, 플레이어 빌드/강제 프로세스 종료. 이 검사는 연결 설정이 없는 격리 환경을 사용하며 가짜 AI·점수·보상 공급자를 게임에 연결하지 않는다.
+- 검사 후 PlayMode를 정지하고 StartMenu 씬을 열어 두었다. main 병합은 하지 않는다. 수정·검사 추가는 기존 PR #33에 반영한다.

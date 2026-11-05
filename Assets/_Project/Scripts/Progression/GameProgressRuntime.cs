@@ -206,7 +206,9 @@ namespace Gamsamo.Progression
         public bool ReturnToStartMenu()
         {
             if (visits != null && visits.room != null && visits.room.IsOverlayBlocking) return false;
-            if (ai != null && (ai.IsBusy || ai.CanRetry)) { LastError = "요청·자동 저장을 완료한 후 돌아가세요."; return false; }
+            // CanRetry also covers a missing connection setting with no pending request/save.
+            // That recoverable error must not trap a durably saved consultation in the room.
+            if (ai != null && ai.IsBusy) { LastError = "요청·자동 저장을 완료한 후 돌아가세요."; return false; }
             try
             {
                 if (ai != null && ai.IsAiVisit)

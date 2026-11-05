@@ -1,0 +1,332 @@
+using System.Collections;
+using Gamsamo.Patients;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+namespace Gamsamo.UI
+{
+    /// <summary>Owns the room's record/PC overlays and their shared background blur.</summary>
+    [DisallowMultipleComponent]
+    public sealed class ConsultationRoomController : MonoBehaviour
+    {
+        public RawImage background;
+        public Texture backgroundTexture;
+        public Shader blurShader;
+        public ConsultationBackgroundBlur backgroundBlur;
+        public CanvasGroup modal;
+        public RectTransform recordPanel;
+        public Button openRecordButton;
+        public Button closeRecordButton;
+        public Button backdropButton;
+        public MedicalRecordView recordView;
+        public MedicalRecordData record = MedicalRecordData.CreateSample();
+
+        public CanvasGroup pcModal;
+        public RectTransform pcPanel;
+        public Button openPcButton;
+        public Button closePcButton;
+        public Button pcBackdropButton;
+        public PcDesktopView pcDesktopView;
+
+        [SerializeField, Min(0f)] private float transitionDuration = 0.2f;
+
+        public bool IsRecordOpen { get; private set; }
+        public bool IsPcOpen { get; private set; }
+
+        private enum ModalKind { None, Record, Pc }
+
+        private Coroutine transition;
+        private float visibleAmount;
+        private bool initialized;
+        private GameObject previousSelection;
+        private Button returnButton;
+        private ModalKind activeModal;
+
+        private CanvasGroup ActiveGroup => activeModal == ModalKind.Record ? modal
+            : activeModal == ModalKind.Pc ? pcModal : null;
+        private RectTransform ActivePanel => activeModal == ModalKind.Record ? recordPanel
+            : activeModal == ModalKind.Pc ? pcPanel : null;
+
+        private void Awake()
+        {
+            if (backgroundBlur != null)
+                backgroundBlur.Configure(background, backgroundTexture, blurShader);
+            else if (background != null)
+                background.texture = backgroundTexture;
+
+            if (openRecordButton != null)
+            {
+                // A fully transparent hotspot must still participate in GraphicRaycaster input.
+                if (openRecordButton.targetGraphic != null)
+                    openRecordButton.targetGraphic.canvasRenderer.cullTransparentMesh = false;
+                openRecordButton.onClick.AddListener(OpenRecord);
+            }
+            if (closeRecordButton != null)
+                closeRecordButton.onClick.AddListener(CloseRecord);
+            if (backdropButton != null)
+                backdropButton.onClick.AddListener(CloseRecord);
+            if (openPcButton != null)
+            {
+                if (openPcButton.targetGraphic != null)
+                    openPcButton.targetGraphic.canvasRenderer.cullTransparentMesh = false;
+                openPcButton.onClick.AddListener(OpenPc);
+            }
+            if (closePcButton != null)
+                closePcButton.onClick.AddListener(ClosePc);
+            if (pcBackdropButton != null)
+                pcBackdropButton.onClick.AddListener(ClosePcTopmost);
+
+            if (recordView != null)
+                recordView.ShowRecord(record);
+
+            initialized = true;
+            ResetClosed();
+        }
+
+        private void OnEnable()
+        {
+            if (initialized)
+                ResetClosed();
+        }
+
+        private void Update()
+        {
+            if (!Input.GetKeyDown(KeyCode.Escape))
+                return;
+            if (IsPcOpen)
+                ClosePcTopmost();
+            else if (IsRecordOpen)
+                CloseRecord();
+        }
+
+        public void SetRecord(MedicalRecordData data)
+        {
+            record = data;
+            if (recordView != null)
+                recordView.ShowRecord(record);
+        }
+
+        public void OpenRecord()
+        {
+            if (!isActiveAndEnabled || modal == null || IsRecordOpen)
+                return;
+            if (recordView != null)
+                recordView.ShowRecord(record);
+            OpenModal(ModalKind.Record, openRecordButton, closeRecordButton);
+        }
+
+        public void CloseRecord()
+        {
+            if (!isActiveAndEnabled || modal == null || !IsRecordOpen)
+                return;
+
+            CloseModal();
+        }
+
+        public void OpenPc()
+        {
+            if (!isActiveAndEnabled || pcModal == null || IsPcOpen)
+                return;
+            if (pcDesktopView != null)
+                pcDesktopView.ResetDesktop();
+            OpenModal(ModalKind.Pc, openPcButton, closePcButton);
+        }
+
+        /// <summary>Closes the whole PC, including its shop/app window.</summary>
+        public void ClosePc()
+        {
+            if (!isActiveAndEnabled || pcModal == null || !IsPcOpen)
+                return;
+            CloseModal();
+        }
+
+        private void ClosePcTopmost()
+        {
+            if (!IsPcOpen)
+                return;
+            if (pcDesktopView != null && pcDesktopView.CloseActiveWindow())
+                return;
+            ClosePc();
+        }
+
+        private void OpenModal(ModalKind kind, Button opener, Button closeButton)
+        {
+            StopTransition();
+            // Capture room focus once, not the close button of an already visible overlay.
+            if (activeModal == ModalKind.None)
+            {
+                previousSelection = EventSystem.current != null
+                    ? EventSystem.current.currentSelectedGameObject : null;
+                returnButton = opener;
+            }
+            if (activeModal != ModalKind.None && activeModal != kind)
+            {
+                HideGroup(ActiveGroup);
+                if (activeModal == ModalKind.Pc && pcDesktopView != null)
+                    pcDesktopView.ResetDesktop();
+            }
+
+            activeModal = kind;
+            IsRecordOpen = kind == ModalKind.Record;
+            IsPcOpen = kind == ModalKind.Pc;
+            CanvasGroup group = ActiveGroup;
+            group.gameObject.SetActive(true);
+            group.blocksRaycasts = true;
+            group.interactable = true;
+            SetRoomHotspots(false);
+            ApplyVisibility(visibleAmount);
+            if (closeButton != null && EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(closeButton.gameObject);
+            StartTransition(1f);
+        }
+
+        private void CloseModal()
+        {
+            IsRecordOpen = false;
+            IsPcOpen = false;
+            // Both room hotspots stay disabled until the fade-out is completely finished.
+            CanvasGroup group = ActiveGroup;
+            if (group != null)
+            {
+                group.blocksRaycasts = true;
+                group.interactable = false;
+            }
+            StartTransition(0f);
+        }
+
+        private void StartTransition(float target)
+        {
+            StopTransition();
+
+            if (transitionDuration <= 0f)
+            {
+                ApplyVisibility(target);
+                FinishTransition(target);
+                return;
+            }
+
+            transition = StartCoroutine(AnimateVisibility(target));
+        }
+
+        private IEnumerator AnimateVisibility(float target)
+        {
+            float start = visibleAmount;
+            float elapsed = 0f;
+            while (elapsed < transitionDuration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / transitionDuration));
+                ApplyVisibility(Mathf.Lerp(start, target, t));
+                yield return null;
+            }
+
+            ApplyVisibility(target);
+            transition = null;
+            FinishTransition(target);
+        }
+
+        private void ApplyVisibility(float amount)
+        {
+            visibleAmount = amount;
+            CanvasGroup group = ActiveGroup;
+            if (group != null)
+                group.alpha = amount;
+            RectTransform panel = ActivePanel;
+            if (panel != null)
+                panel.localScale = Vector3.one * Mathf.Lerp(0.98f, 1f, amount);
+            if (backgroundBlur != null)
+                backgroundBlur.SetAmount(amount);
+        }
+
+        private void FinishTransition(float target)
+        {
+            if (target > 0f)
+                return;
+
+            HideGroup(modal);
+            HideGroup(pcModal);
+            if (pcDesktopView != null)
+                pcDesktopView.ResetDesktop();
+            activeModal = ModalKind.None;
+            SetRoomHotspots(true);
+
+            if (EventSystem.current == null)
+                return;
+
+            GameObject next = previousSelection;
+            Selectable selectable = next != null ? next.GetComponent<Selectable>() : null;
+            if (next == null || !next.activeInHierarchy || (selectable != null && !selectable.IsInteractable()))
+                next = returnButton != null ? returnButton.gameObject : null;
+            EventSystem.current.SetSelectedGameObject(next);
+            previousSelection = null;
+            returnButton = null;
+        }
+
+        private void ResetClosed()
+        {
+            IsRecordOpen = false;
+            IsPcOpen = false;
+            ApplyVisibility(0f);
+            HideGroup(modal);
+            HideGroup(pcModal);
+            if (pcDesktopView != null)
+                pcDesktopView.ResetDesktop();
+            activeModal = ModalKind.None;
+            previousSelection = null;
+            returnButton = null;
+            SetRoomHotspots(true);
+        }
+
+        private static void HideGroup(CanvasGroup group)
+        {
+            if (group != null)
+            {
+                group.alpha = 0f;
+                group.blocksRaycasts = false;
+                group.interactable = false;
+                group.gameObject.SetActive(false);
+            }
+        }
+
+        private void SetRoomHotspots(bool interactable)
+        {
+            if (openRecordButton != null)
+                openRecordButton.interactable = interactable;
+            if (openPcButton != null)
+                openPcButton.interactable = interactable;
+        }
+
+        private void StopTransition()
+        {
+            if (transition != null)
+            {
+                StopCoroutine(transition);
+                transition = null;
+            }
+        }
+
+        private void OnDisable()
+        {
+            StopTransition();
+            if (initialized)
+                ResetClosed();
+        }
+
+        private void OnDestroy()
+        {
+            if (openRecordButton != null)
+                openRecordButton.onClick.RemoveListener(OpenRecord);
+            if (closeRecordButton != null)
+                closeRecordButton.onClick.RemoveListener(CloseRecord);
+            if (backdropButton != null)
+                backdropButton.onClick.RemoveListener(CloseRecord);
+            if (openPcButton != null)
+                openPcButton.onClick.RemoveListener(OpenPc);
+            if (closePcButton != null)
+                closePcButton.onClick.RemoveListener(ClosePc);
+            if (pcBackdropButton != null)
+                pcBackdropButton.onClick.RemoveListener(ClosePcTopmost);
+        }
+    }
+}

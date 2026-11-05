@@ -1,0 +1,68 @@
+{
+  "canvas": {
+    "width": 1920,
+    "height": 1080
+  },
+  "origin": "top-left",
+  "units": "px",
+  "base": "room-base.png",
+  "draw_order": [
+    "base",
+    "door",
+    "window",
+    "pc",
+    "clipboard"
+  ],
+  "assets": {
+    "door": {
+      "file": "door.png",
+      "x": 151,
+      "y": 103,
+      "width": 430,
+      "height": 644
+    },
+    "window": {
+      "clear": {
+        "file": "window-clear.png",
+        "x": 731,
+        "y": 52,
+        "width": 1011,
+        "height": 534
+      },
+      "cloudy": {
+        "file": "window-cloudy.png",
+        "x": 731,
+        "y": 52,
+        "width": 1011,
+        "height": 534
+      },
+      "rain": {
+        "file": "window-rain.png",
+        "x": 731,
+        "y": 52,
+        "width": 1011,
+        "height": 534
+      }
+    },
+    "pc": {
+      "file": "pc-set.png",
+      "x": 1334,
+      "y": 417,
+      "width": 585,
+      "height": 505
+    },
+    "clipboard": {
+      "file": "clipboard-and-pen.png",
+      "x": 37,
+      "y": 771,
+      "width": 407,
+      "height": 258
+    }
+  },
+  "dialogue_area": {
+    "x": 560,
+    "y": 780,
+    "width": 800,
+    "height": 220
+  }
+}

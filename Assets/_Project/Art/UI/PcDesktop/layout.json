@@ -1,0 +1,157 @@
+{
+  "units": "pixels",
+  "origin": "top-left",
+  "reference_scene": {
+    "width": 1920,
+    "height": 1080
+  },
+  "popup": {
+    "x": 214,
+    "y": 123,
+    "width": 1520,
+    "height": 657
+  },
+  "room_pc_trigger": {
+    "asset": "../room/pc-set.png",
+    "scene_bounds": {
+      "x": 1334,
+      "y": 417,
+      "width": 585,
+      "height": 505
+    },
+    "alpha_hit_test": {
+      "minimum_alpha": 192
+    },
+    "action": "open_popup"
+  },
+  "images": {
+    "combined": "pc-open.png",
+    "window_without_shortcuts": "pc-window.png",
+    "wallpaper": "pc-wallpaper.png",
+    "wallpaper_local": {
+      "x": 7,
+      "y": 46,
+      "width": 1506,
+      "height": 603
+    },
+    "frame": "pc-frame.png"
+  },
+  "shortcuts": [
+    {
+      "id": "profile",
+      "label": "내 프로필",
+      "file": "items/profile.png",
+      "draw_local": {
+        "x": 26,
+        "y": 61,
+        "width": 148,
+        "height": 122
+      },
+      "hit_local": {
+        "x": 26,
+        "y": 61,
+        "width": 148,
+        "height": 122
+      },
+      "hit_scene": {
+        "x": 240,
+        "y": 184,
+        "width": 148,
+        "height": 122
+      },
+      "open_view": "profile"
+    },
+    {
+      "id": "shop",
+      "label": "상점",
+      "file": "items/shop.png",
+      "draw_local": {
+        "x": 26,
+        "y": 201,
+        "width": 148,
+        "height": 122
+      },
+      "hit_local": {
+        "x": 26,
+        "y": 201,
+        "width": 148,
+        "height": 122
+      },
+      "hit_scene": {
+        "x": 240,
+        "y": 324,
+        "width": 148,
+        "height": 122
+      },
+      "open_view": "shop"
+    },
+    {
+      "id": "photos",
+      "label": "사진",
+      "file": "items/photos.png",
+      "draw_local": {
+        "x": 26,
+        "y": 341,
+        "width": 148,
+        "height": 122
+      },
+      "hit_local": {
+        "x": 26,
+        "y": 341,
+        "width": 148,
+        "height": 122
+      },
+      "hit_scene": {
+        "x": 240,
+        "y": 464,
+        "width": 148,
+        "height": 122
+      },
+      "open_view": "photos"
+    },
+    {
+      "id": "settings",
+      "label": "환경설정",
+      "file": "items/settings.png",
+      "draw_local": {
+        "x": 26,
+        "y": 481,
+        "width": 148,
+        "height": 122
+      },
+      "hit_local": {
+        "x": 26,
+        "y": 481,
+        "width": 148,
+        "height": 122
+      },
+      "hit_scene": {
+        "x": 240,
+        "y": 604,
+        "width": 148,
+        "height": 122
+      },
+      "open_view": "settings"
+    }
+  ],
+  "close": {
+    "hit_local": {
+      "x": 1464,
+      "y": 2,
+      "width": 50,
+      "height": 40
+    },
+    "hit_scene": {
+      "x": 1678,
+      "y": 125,
+      "width": 50,
+      "height": 40
+    },
+    "action": "close_popup"
+  },
+  "layered_draw_order": [
+    "wallpaper",
+    "frame",
+    "shortcuts"
+  ]
+}

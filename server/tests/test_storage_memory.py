@@ -7,20 +7,21 @@ from app.client import SaveStore, SessionClient
 from app.core.config import ExperimentError
 from app.schemas.models import CaseState, Metrics, StateResponse, Turn
 from app.services.memory import MemoryManager, recent_records
-from conftest import FakeLLM
+from conftest import FakeLLM, opened_case
 
 
 def test_auto_save_pairs_and_new_case_preserve_history(tmp_path):
-    store, state = SaveStore(tmp_path), CaseState()
+    store, state = SaveStore(tmp_path), opened_case()
     old_path = store.save(state)
     original = old_path.read_bytes()
-    state.current.turns.append(Turn(id="hello", user_text="안녕하세요", patient_text="안녕하세요.", question_delta=0))
+    state.current.turns.append(Turn(id="hello", user_text="안녕하세요", patient_text="안녕하세요."))
     state.revision = 1
     path = store.save(state, expected_revision=0)
     assert old_path.read_bytes() == original
     assert store.load() == state
-    raw = json.loads(path.with_name("transcript.json").read_text())
-    assert raw["revision"] == 1 and raw["records"][0]["text"] == "안녕하세요"
+    raw = json.loads(path.with_name("transcript.json").read_text("utf-8"))
+    assert raw["revision"] == 1 and raw["records"][1]["text"] == "안녕하세요"
+    assert raw["records"][0]["speaker"] == "patient" and raw["records"][0]["id"] == "opening:patient"
     new = CaseState()
     store.save(new)
     assert store.load().case_id == new.case_id
@@ -61,9 +62,9 @@ async def test_late_response_and_duplicate_response_cannot_overwrite_load(tmp_pa
 
 @pytest.mark.asyncio
 async def test_summary_preserves_originals_and_keeps_citations(catalog):
-    case = CaseState()
+    case = opened_case()
     for i in range(20):
-        case.current.turns.append(Turn(id=f"long_{i}", user_text="요즘 어떤 마음인가요? " * 500, patient_text="조금 답답하지만 생각하고 있어요. " * 300, question_delta=0))
+        case.current.turns.append(Turn(id=f"long_{i}", user_text="요즘 어떤 마음인가요? " * 100, patient_text="조금 답답하지만 생각하고 있어요. " * 100))
     before = [t.model_dump() for t in case.current.turns]
     llm = FakeLLM()
     render = lambda: [{"role": "user", "content": json.dumps({"memory": case.memory.model_dump(), "records": recent_records(case)}, ensure_ascii=False)}]
@@ -110,7 +111,7 @@ def test_corrupt_or_future_save_is_not_loaded(tmp_path):
     path.write_text(json.dumps(value), encoding="utf-8")
     with pytest.raises(ValueError):
         store.load()
-    assert state.format_version == 3
+    assert state.format_version == 4
 
 
 def test_memory_cannot_cite_unknown_or_unsummarized_records(catalog):
@@ -124,13 +125,13 @@ def test_memory_cannot_cite_unknown_or_unsummarized_records(catalog):
 @pytest.mark.asyncio
 async def test_response_with_wrong_turn_cannot_commit(tmp_path, settings):
     import httpx
-    state = CaseState()
+    state = opened_case()
     store = SaveStore(tmp_path)
     store.save(state)
     def handle(request):
         body = json.loads(request.content)
         result = state.model_copy(deep=True)
-        result.current.turns.append(Turn(id="wrong", user_text=body["text"], patient_text="반갑습니다.", question_delta=0))
+        result.current.turns.append(Turn(id="wrong", user_text=body["text"], patient_text="반갑습니다."))
         result.revision += 1
         response = StateResponse(case_id=state.case_id, session_id=state.current.id, request_id=body["turn_id"], base_revision=0, state=result)
         return httpx.Response(200, json=response.model_dump())
@@ -193,7 +194,7 @@ def test_legacy_save_is_preserved_and_never_reinterpreted(tmp_path):
         store.load()
     store.save(CaseState())
     assert legacy.read_text() == '{"case_id":"old"}'
-    assert store.load().format_version == 3
+    assert store.load().format_version == 4
 
 
 def test_raw_transcript_corruption_is_rejected(tmp_path):
@@ -222,7 +223,7 @@ async def test_save_retry_reuses_received_response_and_confirmed_facts(tmp_path,
     import httpx
     from app.main import create_app
     from conftest import classification
-    state, store = CaseState(), SaveStore(tmp_path)
+    state, store = opened_case(), SaveStore(tmp_path)
     store.save(state)
     llm = FakeLLM([("Classification", classification(disclose_fact_ids=["cafe_strength"])),
         ("PatientReply", {"text": "카페에서 신입 교육을 맡아요.", "disclosed_fact_ids": ["cafe_strength"]})])
@@ -282,9 +283,9 @@ async def test_resume_above_five_then_explicit_closing_and_evaluated(tmp_path):
     await client.turn("지금 마음은 어떤가요?")
     await client.close()
     client = make_client()
-    assert client.state.current.phase == "active" and client.state.current.questions_used == 5
+    assert client.state.current.phase == "active" and len(client.state.current.turns) == 5
     await client.turn("지금 마음은 어떤가요?")
-    assert client.state.current.phase == "active" and client.state.current.questions_used == 6
+    assert client.state.current.phase == "active" and len(client.state.current.turns) == 6
     client.replace(request_closing(client.state))
     await client.close()
     client = make_client()
@@ -296,7 +297,7 @@ async def test_resume_above_five_then_explicit_closing_and_evaluated(tmp_path):
     await client.evaluate()
     assert client.state.current.phase == "evaluated"
     client.replace(next_session(client.state))
-    assert client.state.current.questions_used == 0 and len(client.state.sessions) == 2
+    assert not client.state.current.turns and len(client.state.sessions) == 2
     previous = client.state.case_id
     client.replace(CaseState())
     assert len(store.load(previous).sessions) == 2
@@ -330,10 +331,10 @@ def test_v2_save_is_preserved_without_automatic_conversion(tmp_path):
     old.write_text('{"format_version":2,"active_case_id":"old","cases":{}}')
     original = old.read_bytes()
     store = SaveStore(tmp_path)
-    with pytest.raises(LegacySaveError, match="형식 3"):
+    with pytest.raises(LegacySaveError, match="형식 4"):
         store.load()
     store.save(CaseState())
-    assert old.read_bytes() == original and store.load().format_version == 3
+    assert old.read_bytes() == original and store.load().format_version == 4
 
 
 @pytest.mark.asyncio

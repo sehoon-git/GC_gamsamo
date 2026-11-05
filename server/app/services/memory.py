@@ -5,11 +5,12 @@ from pydantic import Field, create_model
 
 from app.core.config import ExperimentError, InvalidModelOutput
 from app.llm.client import compact
-from app.schemas.models import CaseState, Memory, MemoryContent, MemoryItem, Metrics, records
+from app.schemas.models import CaseState, Memory, MemoryContent, MemoryItem, Metrics, Turn, records
 
 
 def all_turns(case: CaseState):
-    return [t for s in case.sessions for t in s.turns]
+    # Opening is a one-sided dialogue unit, not a counselor/patient pair.
+    return [t for s in case.sessions for t in ([s.opening] if s.opening else []) + s.turns]
 
 
 def remaining_turns(case: CaseState):
@@ -33,9 +34,15 @@ class MemoryManager:
         # The caller works on a deep copy. A failed summary or dialogue never mutates the saved case.
         while self.llm.count(render(), role) >= self.llm.config["summary_threshold"] or not self.llm.fits(render(), role):
             remaining = remaining_turns(case)
-            if not remaining:
-                raise ExperimentError("현재 입력과 고정 설정이 문맥 한도를 초과합니다. 입력을 줄여주세요.", "context_overflow")
-            count = max(1, len(remaining) - self.llm.config["recent_turns"])
+            # Preserve the most recent counselor/patient pairs. An opening is not a pair.
+            pair_indices = [i for i, item in enumerate(remaining) if isinstance(item, Turn)]
+            keep = self.llm.config["recent_turns"]
+            count = pair_indices[-keep] if len(pair_indices) >= keep else pair_indices[0] if pair_indices else len(remaining)
+            if not count:
+                # The threshold is a compaction hint, not a second context limit.
+                if self.llm.fits(render(), role):
+                    break
+                raise ExperimentError("최근 대화 원문을 유지하면 문맥 한도를 초과합니다. 입력을 줄여주세요.", "context_overflow")
             available = {r.id: r for r in records(case) if r.kind == "dialogue"}
             aliases = {original: f"{'P' if record.speaker == 'patient' else 'C'}{i + 1:04d}"
                        for i, (original, record) in enumerate(available.items())}

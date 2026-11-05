@@ -58,8 +58,8 @@ async def main():
             if index >= 250:
                 raise RuntimeError("Token count did not grow as expected; stop rather than creating an unbounded fixture.")
             turn = originals[index % len(originals)].model_copy(deep=True)
-            turn.id, turn.question_delta = new_id("long"), 0
-            # Insert synthetic context without changing the test conversation's question count.
+            turn.id = new_id("long")
+            # Insert synthetic context; the latest six complete pairs must remain verbatim.
             case.current.turns.insert(-1, turn)
             index += 1
         before = compact([r.model_dump() for r in records(case)])

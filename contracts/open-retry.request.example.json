@@ -1,0 +1,50 @@
+{
+  "state": {
+    "format_version": 4,
+    "content_version": "seoyun-4.0",
+    "case_id": "case_example",
+    "patient_id": "seoyun",
+    "revision": 1,
+    "created_at": "2026-11-06T00:00:00+00:00",
+    "revealed_fact_ids": [],
+    "memory": {
+      "items": [],
+      "through_turn_id": null
+    },
+    "sessions": [
+      {
+        "id": "session_example",
+        "started_at": "2026-11-06T00:00:00+00:00",
+        "closed_at": null,
+        "opening": {
+          "id": "opening_example",
+          "patient_text": "면접 생각을 하면 아직 긴장돼요. 지금은 제 마음을 천천히 이야기하고 싶어요.",
+          "candidate_fact_ids": [],
+          "created_at": "2026-11-06T00:00:00+00:00",
+          "metrics": {
+            "seconds": 0.0,
+            "calls": 1,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "role_seconds": {}
+          }
+        },
+        "phase": "active",
+        "closing_request_id": null,
+        "closing_text": "",
+        "closing_speaker": "counselor",
+        "closing_metrics": {
+          "seconds": 0.0,
+          "calls": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "role_seconds": {}
+        },
+        "turns": [],
+        "evaluation": null
+      }
+    ]
+  },
+  "session_id": "session_example",
+  "request_id": "opening_example"
+}

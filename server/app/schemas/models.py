@@ -4,8 +4,8 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-CONTENT_VERSION = "seoyun-3.0"
-FORMAT_VERSION = 3
+CONTENT_VERSION = "seoyun-4.0"
+FORMAT_VERSION = 4
 CLOSING_TEXT = "상담은 여기까지 하겠습니다. 오늘 수고하셨습니다!"
 Id = Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")]
 Score = Annotated[int, Field(strict=True, ge=0, le=25)]
@@ -41,7 +41,6 @@ class Memory(MemoryContent):
 class Classification(Model):
     reason: str = Field(max_length=240)
     topic_label: str = Field(max_length=200)
-    question_count: Literal["none", "one", "multiple"]
     disclose_fact_ids: list[str] = Field(max_length=3)
 
 
@@ -116,11 +115,19 @@ class Evaluation(Judgment):
     metrics: Metrics = Field(default_factory=Metrics)
 
 
+class Opening(Model):
+    """A patient's first utterance, with no invented counselor message."""
+    id: Id
+    patient_text: str = Field(min_length=1)
+    candidate_fact_ids: list[str] = Field(default_factory=list, max_length=3)
+    created_at: str = Field(default_factory=now)
+    metrics: Metrics = Field(default_factory=Metrics)
+
+
 class Turn(Model):
     id: Id
     user_text: str = Field(min_length=1)
     patient_text: str = Field(min_length=1)
-    question_delta: Literal[0, 1]
     topic_label: str = Field(default="", max_length=200)
     candidate_fact_ids: list[str] = Field(default_factory=list, max_length=3)
     created_at: str = Field(default_factory=now)
@@ -135,7 +142,7 @@ class Session(Model):
     id: Id = Field(default_factory=lambda: new_id("session"))
     started_at: str = Field(default_factory=now)
     closed_at: str | None = None
-    questions_used: int = Field(default=0, strict=True, ge=0)
+    opening: Opening | None = None
     phase: Literal["active", "closing", "pending_evaluation", "evaluated"] = "active"
     closing_request_id: Id | None = None
     closing_text: str = ""
@@ -146,8 +153,8 @@ class Session(Model):
 
 
 class CaseState(Model):
-    format_version: Literal[3] = FORMAT_VERSION
-    content_version: Literal["seoyun-3.0"] = CONTENT_VERSION
+    format_version: Literal[4] = FORMAT_VERSION
+    content_version: Literal["seoyun-4.0"] = CONTENT_VERSION
     case_id: Id = Field(default_factory=lambda: new_id("case"))
     patient_id: Literal["seoyun"] = "seoyun"
     revision: int = Field(default=0, ge=0)
@@ -167,15 +174,14 @@ class CaseState(Model):
     @model_validator(mode="after")
     def consistent(self):
         sessions = [s.id for s in self.sessions]
-        turns = [t.id for s in self.sessions for t in s.turns]
+        turns = [t.id for s in self.sessions for t in ([s.opening] if s.opening else []) + s.turns]
         if len(set(sessions)) != len(sessions) or len(set(turns)) != len(turns):
             raise ValueError("중복 상담/턴 ID입니다.")
         if self.memory.through_turn_id and self.memory.through_turn_id not in turns:
             raise ValueError("기억의 원문 위치가 없습니다.")
         for i, session in enumerate(self.sessions):
-            used = sum(turn.question_delta for turn in session.turns)
-            if session.questions_used != used:
-                raise ValueError("질문 사용량과 확정 대화 기록이 일치하지 않습니다.")
+            if session.turns and session.opening is None:
+                raise ValueError("환자 첫 발화를 먼저 저장해야 합니다.")
             closed = session.phase in {"pending_evaluation", "evaluated"}
             if bool(session.closed_at) != closed or bool(session.closing_request_id) != closed:
                 raise ValueError("마무리 저장 상태와 상담 단계가 일치하지 않습니다.")
@@ -205,6 +211,23 @@ class CloseRequest(EvaluateRequest):
     pass
 
 
+class OpenRequest(EvaluateRequest):
+    pass
+
+
+class StartRequest(Model):
+    patient_id: Id
+    case_id: Id
+    session_id: Id
+    request_id: Id
+    created_at: str = Field(default_factory=now)
+
+
+class RevisitRequest(EvaluateRequest):
+    # session_id is the new visit's ID; prior sessions remain in state.
+    created_at: str = Field(default_factory=now)
+
+
 class StateResponse(Model):
     case_id: Id
     session_id: Id
@@ -226,6 +249,9 @@ class Record(Model):
 def records(state: CaseState) -> list[Record]:
     result = []
     for session in state.sessions:
+        if session.opening:
+            result.append(Record(id=session.opening.id + ":patient", session_id=session.id,
+                                 speaker="patient", text=session.opening.patient_text))
         for turn in session.turns:
             result.extend([
                 Record(id=turn.id + ":user", session_id=session.id, speaker="counselor", text=turn.user_text),

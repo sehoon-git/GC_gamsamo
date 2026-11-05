@@ -1,0 +1,237 @@
+{
+  "state": {
+    "format_version": 4,
+    "content_version": "seoyun-4.0",
+    "case_id": "case_example",
+    "patient_id": "seoyun",
+    "revision": 12,
+    "created_at": "2026-11-06T00:00:00+00:00",
+    "revealed_fact_ids": [],
+    "memory": {
+      "items": [],
+      "through_turn_id": null
+    },
+    "sessions": [
+      {
+        "id": "session_example",
+        "started_at": "2026-11-06T00:00:00+00:00",
+        "closed_at": "2026-11-06T00:00:00+00:00",
+        "opening": {
+          "id": "opening_example",
+          "patient_text": "면접 생각을 하면 아직 긴장돼요. 지금은 제 마음을 천천히 이야기하고 싶어요.",
+          "candidate_fact_ids": [],
+          "created_at": "2026-11-06T00:00:00+00:00",
+          "metrics": {
+            "seconds": 0.0,
+            "calls": 1,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "role_seconds": {}
+          }
+        },
+        "phase": "evaluated",
+        "closing_request_id": "close_example",
+        "closing_text": "상담은 여기까지 하겠습니다. 오늘 수고하셨습니다!",
+        "closing_speaker": "counselor",
+        "closing_metrics": {
+          "seconds": 0.0,
+          "calls": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "role_seconds": {}
+        },
+        "turns": [
+          {
+            "id": "hello_example",
+            "user_text": "안녕하세요. 와주셔서 감사합니다.",
+            "patient_text": "면접 생각을 하면 아직 긴장돼요. 지금은 제 마음을 천천히 이야기하고 싶어요.",
+            "topic_label": "현재 마음",
+            "candidate_fact_ids": [],
+            "created_at": "2026-11-06T00:00:00+00:00",
+            "metrics": {
+              "seconds": 0.0,
+              "calls": 2,
+              "prompt_tokens": 0,
+              "completion_tokens": 0,
+              "role_seconds": {}
+            }
+          },
+          {
+            "id": "compound_example",
+            "user_text": "면접은 어땠나요? 친구와는 어떤가요?",
+            "patient_text": "면접 생각을 하면 아직 긴장돼요. 지금은 제 마음을 천천히 이야기하고 싶어요.",
+            "topic_label": "현재 마음",
+            "candidate_fact_ids": [],
+            "created_at": "2026-11-06T00:00:00+00:00",
+            "metrics": {
+              "seconds": 0.0,
+              "calls": 2,
+              "prompt_tokens": 0,
+              "completion_tokens": 0,
+              "role_seconds": {}
+            }
+          },
+          {
+            "id": "turn_example_1",
+            "user_text": "그때 마음이 궁금해요.",
+            "patient_text": "면접 생각을 하면 아직 긴장돼요. 지금은 제 마음을 천천히 이야기하고 싶어요.",
+            "topic_label": "현재 마음",
+            "candidate_fact_ids": [],
+            "created_at": "2026-11-06T00:00:00+00:00",
+            "metrics": {
+              "seconds": 0.0,
+              "calls": 2,
+              "prompt_tokens": 0,
+              "completion_tokens": 0,
+              "role_seconds": {}
+            }
+          },
+          {
+            "id": "turn_example_2",
+            "user_text": "그때 마음이 궁금해요.",
+            "patient_text": "면접 생각을 하면 아직 긴장돼요. 지금은 제 마음을 천천히 이야기하고 싶어요.",
+            "topic_label": "현재 마음",
+            "candidate_fact_ids": [],
+            "created_at": "2026-11-06T00:00:00+00:00",
+            "metrics": {
+              "seconds": 0.0,
+              "calls": 2,
+              "prompt_tokens": 0,
+              "completion_tokens": 0,
+              "role_seconds": {}
+            }
+          },
+          {
+            "id": "turn_example_3",
+            "user_text": "그때 마음이 궁금해요.",
+            "patient_text": "면접 생각을 하면 아직 긴장돼요. 지금은 제 마음을 천천히 이야기하고 싶어요.",
+            "topic_label": "현재 마음",
+            "candidate_fact_ids": [],
+            "created_at": "2026-11-06T00:00:00+00:00",
+            "metrics": {
+              "seconds": 0.0,
+              "calls": 2,
+              "prompt_tokens": 0,
+              "completion_tokens": 0,
+              "role_seconds": {}
+            }
+          },
+          {
+            "id": "turn_example_4",
+            "user_text": "그때 마음이 궁금해요.",
+            "patient_text": "면접 생각을 하면 아직 긴장돼요. 지금은 제 마음을 천천히 이야기하고 싶어요.",
+            "topic_label": "현재 마음",
+            "candidate_fact_ids": [],
+            "created_at": "2026-11-06T00:00:00+00:00",
+            "metrics": {
+              "seconds": 0.0,
+              "calls": 2,
+              "prompt_tokens": 0,
+              "completion_tokens": 0,
+              "role_seconds": {}
+            }
+          },
+          {
+            "id": "turn_example_5",
+            "user_text": "그때 마음이 궁금해요.",
+            "patient_text": "면접 생각을 하면 아직 긴장돼요. 지금은 제 마음을 천천히 이야기하고 싶어요.",
+            "topic_label": "현재 마음",
+            "candidate_fact_ids": [],
+            "created_at": "2026-11-06T00:00:00+00:00",
+            "metrics": {
+              "seconds": 0.0,
+              "calls": 2,
+              "prompt_tokens": 0,
+              "completion_tokens": 0,
+              "role_seconds": {}
+            }
+          },
+          {
+            "id": "turn_example_6",
+            "user_text": "그때 마음이 궁금해요.",
+            "patient_text": "면접 생각을 하면 아직 긴장돼요. 지금은 제 마음을 천천히 이야기하고 싶어요.",
+            "topic_label": "현재 마음",
+            "candidate_fact_ids": [],
+            "created_at": "2026-11-06T00:00:00+00:00",
+            "metrics": {
+              "seconds": 0.0,
+              "calls": 2,
+              "prompt_tokens": 0,
+              "completion_tokens": 0,
+              "role_seconds": {}
+            }
+          }
+        ],
+        "evaluation": {
+          "scores": [
+            {
+              "criterion_id": "self_worth",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            },
+            {
+              "criterion_id": "accept_emotions",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            },
+            {
+              "criterion_id": "recognize_strength",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            },
+            {
+              "criterion_id": "realistic_choice",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            },
+            {
+              "criterion_id": "empathy",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            },
+            {
+              "criterion_id": "exploration",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            },
+            {
+              "criterion_id": "autonomy",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            },
+            {
+              "criterion_id": "practical_context",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            }
+          ],
+          "patient_score": 0,
+          "counselor_score": 0,
+          "cleared": false,
+          "evaluated_at": "2026-11-06T00:00:00+00:00",
+          "model_revision": "mock-fixture-v4",
+          "prompt_version": "21cfbe9c92d94400",
+          "source_messages": 17,
+          "metrics": {
+            "seconds": 0.0,
+            "calls": 1,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "role_seconds": {}
+          }
+        }
+      }
+    ]
+  },
+  "session_id": "session_revisit",
+  "request_id": "opening_revisit",
+  "created_at": "2026-11-06T00:00:00+00:00"
+}

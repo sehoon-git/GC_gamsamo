@@ -11,7 +11,7 @@ import httpx
 from pydantic import TypeAdapter
 
 from app.core.config import ExperimentError, ROOT, Settings
-from app.schemas.models import FORMAT_VERSION, CaseState, CloseRequest, EvaluateRequest, Id, StateResponse, TurnRequest, new_id, records, request_closing
+from app.schemas.models import FORMAT_VERSION, CaseState, CloseRequest, EvaluateRequest, Id, OpenRequest, StateResponse, TurnRequest, new_id, records, request_closing
 from app.services.catalog import Catalog
 
 
@@ -143,14 +143,14 @@ class SaveStore:
         index = self._index()
         case_id = case_id or index["active_case_id"]
         if case_id is None:
-            if (self.directory / "active.json").exists() or (self.directory / "v2/index.json").exists():
-                raise LegacySaveError("이전 형식의 기록은 보존했습니다. --new로 형식 3의 새 실험을 시작하세요.")
+            if (self.directory / "active.json").exists() or any((self.directory / f"v{version}/index.json").exists() for version in (2, 3)):
+                raise LegacySaveError("이전 형식의 기록은 보존했습니다. --new로 형식 4의 새 실험을 시작하세요.")
             return None
         case_id = TypeAdapter(Id).validate_python(case_id)
         head = index["cases"].get(case_id)
         if head is None:
-            if (self.directory / case_id / "auto.json").exists() or (self.directory / "v2" / case_id).exists():
-                raise LegacySaveError("이전 형식 1·2는 이어하기로 변환하지 않습니다. 이전 기록을 보존하고 새 실험을 시작하세요.")
+            if (self.directory / case_id / "auto.json").exists() or any((self.directory / f"v{version}" / case_id).exists() for version in (2, 3)):
+                raise LegacySaveError("이전 형식 1·2·3은 이어하기로 변환하지 않습니다. 이전 기록을 보존하고 새 실험을 시작하세요.")
             raise ValueError("이 실험의 자동 저장 파일이 없습니다.")
         return self._read(case_id, head)
 
@@ -215,6 +215,8 @@ class SessionClient:
             raise ExperimentError("응답이 이전 회차 원문을 변경했습니다.", "invalid_response", 502)
         if (before.created_at, before.current.started_at) != (after.created_at, after.current.started_at):
             raise ExperimentError("응답이 상담 생성 정보를 변경했습니다.", "invalid_response", 502)
+        if before.current.opening is not None and before.current.opening != after.current.opening:
+            raise ExperimentError("응답이 확정된 환자 첫 발화를 변경했습니다.", "invalid_response", 502)
         old_turns = [t.model_dump() for t in before.current.turns]
         kept_turns = [t.model_dump() for t in after.current.turns[:len(old_turns)]]
         if kept_turns != old_turns or (response.replayed and after != before):
@@ -222,7 +224,9 @@ class SessionClient:
         if response.state.revealed_fact_ids != self.state.revealed_fact_ids:
             raise ExperimentError("서버가 클라이언트의 공개 확정 상태를 변경했습니다.", "invalid_response", 502)
         candidates = set(response.disclosure_candidates)
-        turn_candidates = set(response.state.current.turns[-1].candidate_fact_ids) if response.state.current.turns else set()
+        opening = response.state.current.opening
+        turn_candidates = (set(opening.candidate_fact_ids) if opening and opening.id == response.request_id
+                           else set(response.state.current.turns[-1].candidate_fact_ids) if response.state.current.turns else set())
         if not candidates <= turn_candidates:
             raise ExperimentError("공개 후보가 대화 기록과 일치하지 않습니다.", "invalid_response", 502)
         updated = self.pending_state or response.state.model_copy(deep=True)
@@ -258,19 +262,38 @@ class SessionClient:
                     code, message = body.get("code", "api_error"), body.get("message", "요청 데이터 또는 서버 상태를 확인하세요.")
                 else:
                     code, message = "api_error", "요청 데이터 검증에 실패했습니다."
-                if code == "needs_split":
+                if code in {"invalid_request", "unsupported_save_version", "unsupported_patient", "opening_required"}:
                     self.pending_request = None
                 raise ExperimentError(message, code, response.status_code)
             result = StateResponse.model_validate_json(response.text)
+            before, after = request.state.current, result.state.current
             if isinstance(request, TurnRequest):
                 turns = result.state.current.turns
                 if not turns or (turns[-1].id, turns[-1].user_text) != (request.turn_id, request.text):
                     raise ExperimentError("응답의 마지막 턴이 보낸 발언과 일치하지 않습니다.", "invalid_response", 502)
+                if len(turns) != len(before.turns) + (0 if result.replayed else 1) or after.phase != "active":
+                    raise ExperimentError("대화 응답이 요청하지 않은 턴 또는 종료 상태를 포함합니다.", "invalid_response", 502)
+            elif isinstance(request, OpenRequest):
+                opening = result.state.current.opening
+                if opening is None or opening.id != request.request_id:
+                    raise ExperimentError("응답에 요청한 환자 첫 발화가 없습니다.", "invalid_response", 502)
+                if after.turns != before.turns or after.phase != before.phase:
+                    raise ExperimentError("첫 발화 응답이 상담자 대화 또는 상담 단계를 변경했습니다.", "invalid_response", 502)
             elif isinstance(request, CloseRequest):
                 if result.state.current.phase not in {"pending_evaluation", "evaluated"}:
                     raise ExperimentError("응답에 마무리 결과가 없습니다.", "invalid_response", 502)
+                if after.turns != before.turns or after.evaluation != before.evaluation:
+                    raise ExperimentError("종료 응답이 대화 원문 또는 평가를 변경했습니다.", "invalid_response", 502)
+                if not result.replayed and after.closing_request_id != request.request_id:
+                    raise ExperimentError("종료 안내의 요청 ID가 일치하지 않습니다.", "invalid_response", 502)
             elif result.state.current.evaluation is None:
                 raise ExperimentError("응답에 평가 결과가 없습니다.", "invalid_response", 502)
+            elif after.turns != before.turns:
+                raise ExperimentError("평가 응답이 대화 원문을 변경했습니다.", "invalid_response", 502)
+            if not isinstance(request, CloseRequest):
+                fields = ("closed_at", "closing_request_id", "closing_text", "closing_speaker", "closing_metrics")
+                if any(getattr(before, field) != getattr(after, field) for field in fields):
+                    raise ExperimentError("응답이 요청하지 않은 종료 안내를 변경했습니다.", "invalid_response", 502)
             self.accept(result, token)
             return result
         except httpx.HTTPError as exc:
@@ -289,7 +312,7 @@ class SessionClient:
             self.accept(response, token)
             return self.state
         if self.pending_request is None:
-            raise ExperimentError("재시도할 요청이 없습니다. 복합 질문은 하나씩 나눠 보내세요.", "nothing_to_retry", 409)
+            raise ExperimentError("재시도할 요청이 없습니다.", "nothing_to_retry", 409)
         await self.send(*self.pending_request)
         return self.state
 
@@ -302,6 +325,16 @@ class SessionClient:
         request = TurnRequest(state=self.state, session_id=self.state.current.id, turn_id=new_id("turn"), text=text)
         await self.send("/v1/dialogue/turn", request, request.turn_id)
         return self.state.current.turns[-1]
+
+    async def open(self):
+        if self.state.current.opening is not None:
+            return self.state.current.opening
+        if self.pending_request is not None or self.pending_response is not None or self.active_request is not None:
+            raise ExperimentError("진행 중인 요청·저장을 먼저 완료하세요.", "request_pending", 409)
+        self.ensure_saved()
+        request = OpenRequest(state=self.state, session_id=self.state.current.id, request_id=self.phase_request_id("opening"))
+        await self.send("/v1/dialogue/open", request, request.request_id)
+        return self.state.current.opening
 
     def ensure_saved(self):
         saved = self.store.load(self.state.case_id)

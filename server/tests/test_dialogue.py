@@ -3,19 +3,19 @@ import pytest
 from app.core.config import ExperimentError
 from app.schemas.models import CLOSING_TEXT, CaseState, CloseRequest, TurnRequest, records, request_closing
 from app.services.dialogue import DialogueService
-from conftest import FakeLLM, case_with_questions, classification, reply
+from conftest import FakeLLM, case_with_questions, classification, reply, opened_case
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("text,count", [("안녕하세요", "none"), ("많이 힘드셨겠어요.", "none"),
     ("그때 어떤 마음이었나요?", "one"), ("같은 질문을 다시 해도 될까요?", "one"), ("그때 마음이 궁금해요.", "one")])
-async def test_question_delta_for_neutral_followup_repeated_and_indirect(catalog, text, count):
+async def test_freeform_empathy_followup_repeated_and_indirect(catalog, text, count):
     state = case_with_questions(1)
-    llm = FakeLLM([("Classification", classification(count)), ("PatientReply", reply())])
+    llm = FakeLLM([("Classification", classification()), ("PatientReply", reply())])
     result = await DialogueService(llm, catalog).turn(TurnRequest(state=state, session_id=state.current.id, turn_id="next", text=text))
-    assert result.state.current.questions_used == 1 + (count == "one")
-    assert result.state.current.turns[-1].question_delta == (count == "one")
-    assert state.current.questions_used == 1
+    assert len(result.state.current.turns) == 2
+    assert result.state.current.turns[-1].user_text == text
+    assert len(state.current.turns) == 1
 
 
 @pytest.mark.asyncio
@@ -27,7 +27,7 @@ async def test_fifth_and_sixth_answer_remain_active(catalog):
         result = await service.turn(TurnRequest(state=state, session_id=state.current.id, turn_id=f"question_{i}", text="언제 쉬고 싶으세요?"))
         state = result.state
         assert state.current.phase == "active"
-        assert state.current.questions_used == i and not state.current.closed_at
+        assert len(state.current.turns) == i and not state.current.closed_at
     assert len(llm.calls) == 4
 
 
@@ -44,7 +44,7 @@ async def test_manual_close_at_any_count_is_fixed_and_idempotent_without_inferen
     assert closed.state.current.phase == "pending_evaluation"
     assert closed.state.current.closing_text == CLOSING_TEXT == "상담은 여기까지 하겠습니다. 오늘 수고하셨습니다!"
     assert closed.state.current.closing_speaker == "counselor"
-    assert closed.state.current.questions_used == count
+    assert len(closed.state.current.turns) == count
     assert closed.state.current.turns == state.current.turns
     assert closed.state.revision == state.revision + 1
     assert state.model_dump_json() == original
@@ -58,19 +58,18 @@ async def test_manual_close_at_any_count_is_fixed_and_idempotent_without_inferen
 
 
 @pytest.mark.asyncio
-async def test_compound_rejected_before_answer_without_mutating_input(catalog):
+async def test_compound_is_answered_without_mutating_input(catalog):
     state = case_with_questions(4)
     original = state.model_dump_json()
-    llm = FakeLLM([("Classification", classification("multiple"))])
-    with pytest.raises(ExperimentError) as error:
-        await DialogueService(llm, catalog).turn(TurnRequest(state=state, session_id=state.current.id, turn_id="compound", text="면접은요? 친구는요?"))
-    assert error.value.code == "needs_split"
-    assert state.model_dump_json() == original and len(llm.calls) == 1
+    llm = FakeLLM([("Classification", classification()), ("PatientReply", reply())])
+    result = await DialogueService(llm, catalog).turn(TurnRequest(state=state, session_id=state.current.id, turn_id="compound", text="면접은요? 친구는요?"))
+    assert len(result.state.current.turns) == 5 and result.state.current.phase == "active"
+    assert state.model_dump_json() == original and len(llm.calls) == 2
 
 
 @pytest.mark.asyncio
 async def test_disclosure_is_proposal_only(catalog):
-    state = CaseState()
+    state = opened_case()
     llm = FakeLLM([("Classification", classification(disclose_fact_ids=["cafe_strength"])),
                    ("PatientReply", {"text": "카페에서 신입 교육도 맡고 있어요.", "disclosed_fact_ids": ["cafe_strength"]})])
     result = await DialogueService(llm, catalog).turn(TurnRequest(state=state, session_id=state.current.id, turn_id="fact", text="카페에서 맡은 일이 궁금해요."))
@@ -81,7 +80,7 @@ async def test_disclosure_is_proposal_only(catalog):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("value", [{"text": "비밀을 말할게요.", "disclosed_fact_ids": ["not_a_fact"]}, reply("지금 状況이 어렵네요.")])
 async def test_bad_reveal_or_language_never_commits(catalog, value):
-    state = CaseState()
+    state = opened_case()
     original = state.model_dump_json()
     llm = FakeLLM([("Classification", classification()), ("PatientReply", value)])
     with pytest.raises(ValueError):
@@ -102,8 +101,8 @@ async def test_duplicate_committed_turn_is_replayed_without_inference(catalog):
 
 @pytest.mark.asyncio
 async def test_patient_prompt_never_receives_unapproved_private_details(catalog):
-    state = CaseState()
-    llm = FakeLLM([("Classification", classification("none")), ("PatientReply", reply())])
+    state = opened_case()
+    llm = FakeLLM([("Classification", classification()), ("PatientReply", reply())])
     await DialogueService(llm, catalog).turn(TurnRequest(state=state, session_id=state.current.id, turn_id="hello", text="안녕하세요"))
     prompt = next(c[2][0]["content"] for c in llm.calls if c[1] == "PatientReply")
     assert "친한 친구가 서윤이 지원했다 떨어진 회사에 합격했다" not in prompt
@@ -123,7 +122,7 @@ async def test_saved_end_request_blocks_new_turn_before_close(catalog):
 
 @pytest.mark.asyncio
 async def test_echoing_counselor_question_is_not_committed(catalog):
-    state = CaseState()
+    state = opened_case()
     text = "지금 이야기해도 괜찮다면 가장 부담스러운 점 하나만 말씀해 주세요."
     llm = FakeLLM([("Classification", classification()), ("PatientReply", reply(text))])
     with pytest.raises(ValueError, match="그대로 반복"):

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from app.core.config import Settings
-from app.schemas.models import CLOSING_TEXT, MemoryContent, Metrics, Record, CaseState, Turn, now
+from app.schemas.models import CLOSING_TEXT, MemoryContent, Metrics, Opening, Record, CaseState, Turn, now
 from app.services.catalog import Catalog
 
 
@@ -58,10 +58,17 @@ class FakeLLM:
 
 def case_with_questions(count=5):
     state = CaseState()
+    if count:
+        state.current.opening = Opening(id="opening", patient_text="안녕하세요. 오늘은 제 마음을 이야기하고 싶어요.")
     for i in range(count):
-        state.current.turns.append(Turn(id=f"turn_{i}", user_text=f"질문 {i}: 어떤 마음인가요?", patient_text=f"답변 {i}: 제 마음을 생각해 봤어요.", question_delta=1))
-    state.current.questions_used = count
+        state.current.turns.append(Turn(id=f"turn_{i}", user_text=f"질문 {i}: 어떤 마음인가요?", patient_text=f"답변 {i}: 제 마음을 생각해 봤어요."))
     state.revision = count
+    return state
+
+
+def opened_case():
+    state = CaseState()
+    state.current.opening = Opening(id="opening", patient_text="안녕하세요. 오늘은 제 마음을 이야기하고 싶어요.")
     return state
 
 
@@ -75,8 +82,8 @@ def closed_case(count=5):
     return state
 
 
-def classification(question_count="one", **extra):
-    return {"topic_label": "현재 마음", "disclose_fact_ids": [], "reason": "현재 발언의 질문 분류", "question_count": question_count, **extra}
+def classification(**extra):
+    return {"topic_label": "현재 마음", "disclose_fact_ids": [], "reason": "현재 발언의 맥락", **extra}
 
 
 def reply(text="아직 어렵지만 조금 생각해 볼 수 있을 것 같아요."):

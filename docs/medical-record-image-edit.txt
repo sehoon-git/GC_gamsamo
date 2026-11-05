@@ -1,0 +1,10 @@
+Medical record UI asset edit
+
+Tool: built-in ImageGen (no CLI fallback)
+Input: user-supplied standalone 1024 x 1536 medical record clipboard
+Output: Assets/_Project/Art/UI/MedicalRecord.png
+Transparent background requested: true
+The composite consultation-room reference was not imported or used as an asset.
+
+Final prompt
+Use case: background-extraction and precise-object-edit. Edit target: attached Korean medical record clipboard image. This exact image will be used as a transparent Unity UI sprite. Make ONLY these edits: (1) remove the blurry dark backdrop outside the clipboard, replacing it with genuine alpha transparency, including the circular hole through the metal clip at the top; (2) remove the illustrated man's portrait inside the upper-right photo rectangle, leave the thin double border intact and fill the inside with the same blank warm ivory paper as the form. Keep EVERYTHING else exactly the same: the original complete clipboard silhouette, size and position in the 1024 x 1536 canvas, metal clip, brown backing, paper texture, all printed Korean labels, title, all solid and dotted table lines, all empty writing areas. Do not crop, recompose, restyle or add any content. Korean labels must remain verbatim: 진료기록부, 등록번호, 성명, 성별, 나이, 직업, 작성일, 내원 사유, 과거 병력, 복용 약물, 진료 기록, 특이사항, 담당자. The entire board must fit with the same small padding. No shadow rectangle or opaque background; transparent outside only, opaque paper inside. Output a high-quality PNG with alpha.

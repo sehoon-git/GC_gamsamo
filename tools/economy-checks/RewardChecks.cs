@@ -4,13 +4,10 @@ using Gamsamo.Economy;
 public static class RewardChecks
 {
     private static int checks;
-    // Test fixture only. Neither the weighting nor the 100C bonus is a production default.
-    private static RewardPolicy Example() => new RewardPolicy { approved = true, coinsPerScorePoint = 1f, firstClearBonus = 100 };
-
     private static RewardPlan Eval(EconomyState state, string session, int patient, int counselor, bool cleared = false,
         string patientId = "patient", string caseId = "case")
     {
-        return RewardSettlement.Plan(state, Example(), state.runId, patientId, caseId, session, patient, counselor, cleared, true, true);
+        return RewardSettlement.Plan(state, RewardPolicy.ForRelease(), state.runId, patientId, caseId, session, patient, counselor, cleared, true, true);
     }
 
     private static void Check(bool condition, string message)
@@ -57,14 +54,15 @@ public static class RewardChecks
         // A durable save is B's responsibility; dropping a proposal reproduces retry after failed save.
         Award(Eval(second, "s3", 70, 70, true), 30, 100, 240);
         Check(second.balance == 110 && !second.HasFirstClearBonusFor("patient"), "rejected write leaves first-clear available");
-        NoWrite(RewardSettlement.Plan(fresh, Example(), "run", "p", "c", "s", 70, 70, true, false, true), RewardStatus.EvaluationPending);
-        NoWrite(RewardSettlement.Plan(fresh, Example(), "run", "p", "c", "s", 70, 70, true, true, false), RewardStatus.ProgressionUnconfirmed);
-        NoWrite(RewardSettlement.Plan(fresh, Example(), "wrong-run", "p", "c", "s", 70, 70, true, true, true), RewardStatus.InvalidEvaluation);
+        var release = RewardPolicy.ForRelease();
+        NoWrite(RewardSettlement.Plan(fresh, release, "run", "p", "c", "s", 70, 70, true, false, true), RewardStatus.EvaluationPending);
+        NoWrite(RewardSettlement.Plan(fresh, release, "run", "p", "c", "s", 70, 70, true, true, false), RewardStatus.ProgressionUnconfirmed);
+        NoWrite(RewardSettlement.Plan(fresh, release, "wrong-run", "p", "c", "s", 70, 70, true, true, true), RewardStatus.InvalidEvaluation);
         NoWrite(Eval(fresh, " ", 0, 0), RewardStatus.InvalidEvaluation);
         NoWrite(Eval(fresh, "bad", -1, 0), RewardStatus.InvalidEvaluation);
         NoWrite(Eval(fresh, "bad", 100, 101), RewardStatus.InvalidEvaluation);
         NoWrite(RewardSettlement.Plan(fresh, new RewardPolicy(), "run", "p", "c", "s", 40, 40, false, true, true), RewardStatus.PolicyUnavailable);
-        var policy = Example();
+        var policy = RewardPolicy.ForRelease();
         policy.coinsPerScorePoint = 0.7f;
         Award(RewardSettlement.Plan(fresh, policy, "run", "p", "c", "s", 5, 5, false, true, true), 7, 0, 7);
         policy.coinsPerScorePoint = float.MaxValue;

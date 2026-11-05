@@ -220,8 +220,12 @@ namespace Gamsamo.UI
                 bool previewed = item != null && selectedItem == item && !isEquipped;
                 string price = "";
                 if (item != null)
-                    price = owned ? "보유" : wallet != null && wallet.TryGetApprovedPrice(item.id, out int coins)
-                        ? coins + " C" : "미정";
+                {
+                    int coins = 0;
+                    bool priced = wallet != null ? wallet.TryGetApprovedPrice(item.id, out coins)
+                        : catalog != null && catalog.TryGetApprovedPrice(item.id, out coins);
+                    price = owned ? "보유" : priced ? coins + " C" : "미정";
+                }
                 TMP_Text priceLabel = At(priceLabels, index);
                 if (priceLabel != null)
                 {

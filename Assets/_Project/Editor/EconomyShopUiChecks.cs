@@ -36,14 +36,18 @@ namespace Gamsamo.Editor
         {
             if (mode != PlayModeStateChange.EnteredPlayMode || !SessionState.GetBool(Pending, false)) return;
             SessionState.EraseBool(Pending);
-            EditorApplication.delayCall += () =>
-            {
-                int exitCode = 0;
-                try { Execute(); }
-                catch (Exception ex) { Debug.LogException(ex); exitCode = 1; }
-                if (Application.isBatchMode) EditorApplication.Exit(exitCode);
-                else EditorApplication.isPlaying = false;
-            };
+            EditorApplication.update -= ExecuteOnNextUpdate;
+            EditorApplication.update += ExecuteOnNextUpdate;
+        }
+
+        private static void ExecuteOnNextUpdate()
+        {
+            EditorApplication.update -= ExecuteOnNextUpdate;
+            int exitCode = 0;
+            try { Execute(); }
+            catch (Exception ex) { Debug.LogException(ex); exitCode = 1; }
+            if (Application.isBatchMode) EditorApplication.Exit(exitCode);
+            else EditorApplication.isPlaying = false;
         }
 
         private static void Execute()
@@ -60,6 +64,7 @@ namespace Gamsamo.Editor
                     new CosmeticItem { id = First, target = "wallpaper", artwork = first },
                     new CosmeticItem { id = Second, target = "wallpaper", artwork = second }
                 };
+                catalog.coinPrices = new[] { new CosmeticCoinPrice { itemId = First, approved = true, coins = 3 } };
                 var desktop = root.AddComponent<PcDesktopView>();
                 desktop.wallpaper = Child("Wallpaper", root).AddComponent<Image>();
                 desktop.defaultWallpaper = desktop.wallpaper.sprite = original;
@@ -77,7 +82,16 @@ namespace Gamsamo.Editor
                     Child("B", desktop.shopWindow).AddComponent<Button>() };
                 desktop.balanceText = Child("Balance", desktop.shopWindow).AddComponent<TextMeshProUGUI>();
                 desktop.balanceText.enabled = false; // Validate the displayed value independently of the project's font atlas.
+                var priceLabel = Child("Price", desktop.shopWindow).AddComponent<TextMeshProUGUI>();
+                priceLabel.enabled = false;
+                shop.priceLabels = new TMP_Text[] { priceLabel };
                 root.SetActive(true);
+                desktop.OpenShop();
+                desktop.SelectTab(4);
+                shop.itemButtons[0].onClick.Invoke();
+                Require(priceLabel.text == "3 C" && !shop.ItemActionButton.interactable,
+                    "approved price is visible before a wallet is connected");
+                desktop.CloseShop();
                 var store = new TestStore();
                 var wallet = new EconomyWallet("ui-test", store, store);
                 Require(wallet.Reload() == EconomyStatus.Success, "load committed wallet");

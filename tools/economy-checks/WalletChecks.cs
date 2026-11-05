@@ -118,7 +118,7 @@ public static class WalletChecks
     private static void Exercise(string file)
     {
         const string run = "run-1";
-        var policy = new RewardPolicy { approved = true, coinsPerScorePoint = 1, firstClearBonus = 100 };
+        var policy = RewardPolicy.ForRelease();
         var store = new Store(file);
         var catalog = new Catalog();
         var wallet = new EconomyWallet(run, store, catalog);

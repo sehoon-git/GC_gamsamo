@@ -2,13 +2,20 @@ using System;
 
 namespace Gamsamo.Economy
 {
-    /// <summary>No payable default. B supplies the approved game configuration when available.</summary>
+    /// <summary>B passes ForRelease() for the shipped economy. Draft settings require explicit approval.</summary>
     [Serializable]
     public sealed class RewardPolicy
     {
         public bool approved;
         public float coinsPerScorePoint;
         public int firstClearBonus;
+
+        public static RewardPolicy ForRelease() => new RewardPolicy
+        {
+            approved = true,
+            coinsPerScorePoint = 1f,
+            firstClearBonus = 100
+        };
 
         internal bool CanCalculate =>
             approved && !float.IsNaN(coinsPerScorePoint) && !float.IsInfinity(coinsPerScorePoint) &&

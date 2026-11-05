@@ -115,7 +115,7 @@ namespace Gamsamo.Editor
                 menu.quitButton = menu.menuItems[3].button;
                 VerticalNavigation(new Selectable[] { menu.newGameButton, menu.settingsButton, menu.quitButton });
                 menu.saveStatus = Text("SaveStatus", content, font, 27, 612, 400, 26, 14,
-                    "저장된 진행이 없습니다", new Color32(156, 142, 122, 255));
+                    "", new Color32(156, 142, 122, 255));
                 menu.transitionStatus = Text("TransitionStatus", content, font, 27, 802, 440, 60, 18, "", Cream);
 
                 BuildSettings(menu, canvas, font);

@@ -523,7 +523,7 @@ namespace Gamsamo.Networking
                     case AiServicePhase.Closing: status = "응답 저장 후 상담을 마칠게요"; break;
                     case AiServicePhase.GeneratingReply: status = patientName + "의 응답을 기다리고 있어요"; break;
                     case AiServicePhase.Completed: status = "상담 저장 완료 · 기록부를 확인한 뒤 환자 내보내기를 눌러 주세요"; break;
-                    default: status = networkBusy ? "AI 연결을 확인하고 있어요" : "답변을 자유롭게 적어 주세요"; break;
+                    default: status = networkBusy ? "AI 연결을 확인하고 있어요" : string.Empty; break;
                 }
                 View.SetStatus(status);
             }

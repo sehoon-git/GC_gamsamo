@@ -62,12 +62,16 @@ async def test_start_freeform_unlimited_finish_evaluate_and_revisit_contract():
         assert state["created_at"] == start["created_at"]
         assert "questions_used" not in state["sessions"][0]
         assert len(records(CaseState.model_validate(state))) == 1
-        for index in range(12):
-            text = ["많이 힘드셨겠어요.", "지금은 어떤 마음인가요? 다음에는 무엇을 해보고 싶으세요?", "상담을 끝내자는 말도 먼저 들어볼게요."][index % 3]
+        inputs = ["많이 힘드셨겠어요.", "지금은 어떤 마음인가요? 다음에는 무엇을 해보고 싶으세요?",
+                  "상담 그만", "그만할게요", "오늘 상담을 마칠게요.", "상담 마치기"] * 2
+        for index, text in enumerate(inputs):
             response = await client.post("/v1/dialogue/turn", json={"state": state, "session_id": "session_one", "turn_id": f"reply_{index}", "text": text})
             assert response.status_code == 200, response.text
             state = response.json()["state"]
             assert state["sessions"][0]["phase"] == "active"
+            assert state["sessions"][0]["closed_at"] is None
+            assert not state["sessions"][0]["closing_text"]
+            assert len(state["sessions"][0]["turns"]) == index + 1
             assert state["sessions"][0]["turns"][-1]["user_text"] == text
         for endpoint in ("close", "evaluate"):
             response = await client.post(f"/v1/dialogue/{endpoint}", json={"state": state, "session_id": "session_one", "request_id": endpoint})

@@ -129,6 +129,60 @@ internal static class Program
         Reject(() => AiConnection.FromSettings("https://example.invalid", "bad\nkey"), "invalid auth header accepted");
     }
 
+    private static void RecordPresentationChecks(string root)
+    {
+        Check(AiRecordFormatter.Transcript(null) == "", "null state invented a transcript");
+        Check(AiRecordFormatter.Results(null, null) == "", "null state invented an evaluation");
+        var history = AiProtocol.Object(Read(root, "revisit.response"), "state");
+        var sessions = AiProtocol.Array(history, "sessions");
+        var first = (JObject)sessions[0];
+        var current = (JObject)sessions.Last;
+        const string quotation = "첫 회차의 실제 말 <b>꾸밈 아님</b>\n다음 줄도 그대로";
+        first["opening"]["patient_text"] = quotation;
+        first["turns"][0]["user_text"] = "  공감하는 서술형 원문\n복수 질문도 그대로?  ";
+        current["opening"]["patient_text"] = "재상담의 첫 발화 <color=red>문자 그대로</color>";
+        var evaluation = (JObject)first["evaluation"];
+        var scores = AiProtocol.Array(evaluation, "scores");
+        var labels = new Dictionary<string, string>();
+        int criterionIndex = 0;
+        foreach (JObject score in scores)
+        {
+            string id = AiProtocol.Text(score, "criterion_id");
+            labels[id] = "기준명 " + ++criterionIndex;
+            score["explanation"] = "설명 " + criterionIndex + " <i>원문 표시</i>";
+        }
+        scores[0]["evidence"] = new JArray(
+            new JObject { ["message_id"] = first["opening"]["id"] + ":patient", ["quote"] = quotation, ["counter"] = false },
+            new JObject { ["message_id"] = first["opening"]["id"] + ":patient", ["quote"] = "다음 줄도 그대로", ["counter"] = true });
+        string original = AiProtocol.Encode(history);
+        string transcript = AiRecordFormatter.Transcript(history);
+        int cursor = 0;
+        bool ordered = true;
+        foreach (JObject record in AiProtocol.Records(history))
+        {
+            string source = AiProtocol.Text(record, "text");
+            int position = transcript.IndexOf(source, cursor, StringComparison.Ordinal);
+            if (position < 0) { ordered = false; break; }
+            cursor = position + source.Length;
+        }
+        Check(ordered, "history omitted or reordered committed opening/turn/closing text");
+        Check(transcript.Contains("상담 1") && transcript.Contains("상담 2"), "previous consultation was hidden during a revisit");
+        Check(transcript.Contains("상담자:   공감하는 서술형 원문\n복수 질문도 그대로?  "), "multiline counselor text lost whitespace");
+        Check(transcript.Contains("상담 안내: " + AiProtocol.ClosingText), "fixed closing notice lost its speaker label");
+        Check(transcript.Contains(quotation) && transcript.Contains("<color=red>문자 그대로</color>"), "formatter rewrote literal markup; richText=false belongs to the view");
+        string result = AiRecordFormatter.Results(history, labels);
+        Check(result.Contains("상담 1 · 평가 결과") && !result.Contains("상담 2 · 평가 결과"), "unevaluated revisit hid or fabricated a result");
+        Check(result.Contains("환자 변화 0 / 100") && result.Contains("상담자 대응 0 / 100"), "result omitted either scoring axis");
+        Check(scores.Cast<JObject>().All(score => result.Contains(labels[AiProtocol.Text(score, "criterion_id")] + " · 0 / 25")
+            && result.Contains(AiProtocol.Text(score, "explanation"))), "result omitted an authored criterion, score, or explanation");
+        Check(result.Contains("근거: “" + quotation + "”") && result.Contains("반대 근거: “다음 줄도 그대로”"), "support or counter-evidence quote was rewritten or omitted");
+        Check(AiRecordFormatter.Results(history, null).Contains("self_worth · 0 / 25"), "missing optional labels hid a criterion");
+        Check(AiProtocol.Encode(history) == original, "formatting mutated saved state or original evidence");
+        current["evaluation"] = evaluation.DeepClone();
+        string completed = AiRecordFormatter.Results(history, labels);
+        Check(completed.Contains("상담 1 · 평가 결과") && completed.Contains("상담 2 · 평가 결과"), "result omitted a previous or current completed evaluation");
+    }
+
     private static async Task LiveChecks(string file, string folder)
     {
         var connection = AiConnection.Load(file);
@@ -169,7 +223,7 @@ internal static class Program
         try
         {
             StaticChecks(root); StorageChecks(root, Path.Combine(temp, "save"));
-            RecoveryChecks(root, Path.Combine(temp, "recovery"));
+            RecoveryChecks(root, Path.Combine(temp, "recovery")); RecordPresentationChecks(root);
             if (args.Length > 1) await LiveChecks(args[1], Path.Combine(temp, "live"));
             Console.WriteLine("Passed " + checks + " C# contract/storage checks. Unity Editor UI execution is separate.");
             return 0;

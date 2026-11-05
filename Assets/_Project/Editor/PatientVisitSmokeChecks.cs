@@ -86,7 +86,9 @@ namespace Gamsamo.Editor
             Check(visit.portraitImage.material != null && visit.portraitImage.material.shader.name == "UI/Gamsamo/PatientPortrait", "Portrait material removes the supplied dark backdrop");
             Check(visit.portraitRoot.parent.GetComponent<RectMask2D>() != null, "Portrait is clipped behind the tabletop");
             Check(!view.IsVisible && visit.portraitGroup.alpha == 0, "The room starts without an active patient or dialogue");
-            Check(TextFits(view.statusText), "The initial door status fits its text area");
+            Check(view.transform.parent.Find("VisitStatus") == null, "The old status box beside the door is removed");
+            Check(view.endButton.GetComponentInChildren<TMP_Text>().text == "상담 그만하기", "The explicit end button uses the requested wording");
+            Check(TextFits(view.statusText), "Dialogue connection status fits its text area");
             Check(visit.doorButton.IsInteractable(), "Door accepts the first patient");
             Check(FrontmostIs(visit.doorButton), "The real UI raycaster reaches the door hotspot: " + DescribeRaycast(visit.doorButton));
             room.OpenPc();

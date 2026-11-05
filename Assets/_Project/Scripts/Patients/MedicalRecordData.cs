@@ -17,6 +17,8 @@ namespace Gamsamo.Patients
         [TextArea] public string medicalHistory;
         [TextArea] public string medication;
         [TextArea] public string consultationNotes;
+        [TextArea] public string consultationTranscript;
+        [TextArea] public string consultationResult;
         [TextArea] public string specialNotes;
         public string counselor;
 

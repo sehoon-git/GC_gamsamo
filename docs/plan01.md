@@ -1118,6 +1118,14 @@ PC 내부 네 화면, 기본 방 레이어·날씨, 원본 48종의 동적 카�
 - 새 PNG는 기본 제공 ImageGen으로 제작했고 원래 대화창 이미지는 보존했다. 경로: Assets/_Project/Art/UI/Dialogue/PinkPaperButton.png. 함께 저장한 .asset은 해당 texture를 참조하는 9-slice sprite다. 생성 지시: 기존 좌상단 이름표를 참고해 단일 가로형 salmon-pink 종이 버튼, 은은한 watercolor 질감·갈색 가장자리·짧은 그림자, 수평 3.3:1, 투명 배경, 글자/아이콘/크림 배경 없음. CLI는 사용하지 않았다.
 - BuildPreview는 실제 상담실 UI를 복제한 임시 씬에서 게임 동작을 제거한 Windows 시각 검증 빌드를 만든다. 사용자 요청으로 상단 5인 선택 버튼은 미리보기에서도 제거했다. 실제 게임 씬에도 해당 버튼은 없다. 사용자 저장/서버 상담은 사용하지 않는다.
 
+### PR #42 한이수 프로필 이미지의 실제 화면 연결
+
+- PR #42는 `CounselingPack/profile/han-isu.png`와 `.meta`만 추가했다. 기존 씬/프리팹의 `ProfileView`와 `PcContentBuilder`는 계속 빈 `female.png`를 사용하므로 파일을 pull해도 화면에는 나타나지 않았다.
+- 상담실 씬과 `ConsultationRoomUI.prefab`의 `defaultProfileSprite`에 해당 이미지를 연결한다. `SetDefaultArtwork()`와 `UsesDefaultArtwork`는 이름·소속·소개가 모두 비어 있는 기본 여성 아바타에서 승인된 한이수 카드를 표시한다. 이미지에 이미 그려진 값 위에 `—`나 글자가 중복되지 않도록 3개 TMP 값 표시만 끈다.
+- `SetProfile()`로 값을 전달하거나 남성 아바타를 요청하면 기존의 빈 배경과 TMP 값으로 돌아간다. 카드에 그려진 한이수 이름/소개를 저장 데이터로 쓰지 않는다. 진행별 프로필 저장, 기존 저장 버전/이관 정책과 진행/보상 표시는 변경하지 않는다.
+- `PcContentBuilder.BuildProfile()`도 같은 기본 이미지를 연결한다. 재적용 메뉴는 `Gamsamo > Apply Han Isu Profile`이며 기존 프로필 컴포넌트만 변경한다. 사용자 씬이 미저장 상태이거나 Play 중이면 실행하지 않는다.
+- `HanIsuProfileChecks.Run()`은 기본 카드/중복 글자/사용자 지정 값/남성 아바타/기본 복원/진행 표시를 검사한다. `BuildPreview()`는 실제 상담실에서 AI와 진행 서비스를 제거하고 별도 제품명 `GC_gamsamo_Profile_Preview`의 Windows 빌드를 만든다. 실제 저장이나 서버 상담은 사용하지 않는다.
+
 ## 16. 진료기록부 에셋 편집 기록
 
 - 사용 도구: 기본 제공 ImageGen. CLI 대체 경로는 사용하지 않았음.

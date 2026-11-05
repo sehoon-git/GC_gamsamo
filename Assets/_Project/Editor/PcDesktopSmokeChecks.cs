@@ -265,8 +265,8 @@ namespace Gamsamo.Editor
             {
                 profile.SetProfile(null, null, null, ProfileAvatar.Female);
                 run.Check(profile.nameText.text == "—" && profile.affiliationText.text == "—" && profile.introText.text == "—"
-                    && profile.Avatar == ProfileAvatar.Female && profile.backgroundImage.sprite == profile.femaleSprite,
-                    "Unspecified profile values stay empty with the default female visual avatar");
+                    && profile.Avatar == ProfileAvatar.Female && profile.backgroundImage.sprite == (profile.UsesDefaultArtwork ? profile.defaultProfileSprite : profile.femaleSprite),
+                    "Unspecified profile values stay empty while the approved default card is displayed");
                 CheckText(run, profile.nameText, "profile name");
                 CheckText(run, profile.affiliationText, "profile affiliation");
                 CheckText(run, profile.introText, "profile introduction");
@@ -279,8 +279,8 @@ namespace Gamsamo.Editor
                 run.Check(!profile.nameText.richText && !profile.affiliationText.richText && !profile.introText.richText,
                     "Profile values are literal text");
                 profile.SetProfile(null, null, null, ProfileAvatar.Female);
-                run.Check(profile.nameText.text == "—" && profile.backgroundImage.sprite == profile.femaleSprite,
-                    "Clearing profile data removes sample values and restores the requested visual avatar");
+                run.Check(profile.nameText.text == "—" && profile.backgroundImage.sprite == (profile.UsesDefaultArtwork ? profile.defaultProfileSprite : profile.femaleSprite),
+                    "Clearing profile data restores the approved default card without saving its baked values");
                 run.RestoreProfile();
             }
             CheckButtonRaycast(run, profile.closeButton, "Profile close");

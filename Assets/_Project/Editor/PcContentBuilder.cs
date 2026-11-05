@@ -21,6 +21,7 @@ namespace Gamsamo.Editor
             if (existing != null)
             {
                 FitProfileText(existing);
+                existing.SetDefaultArtwork(LoadSprite(PackPath + "profile/han-isu.png"));
                 return existing;
             }
 
@@ -60,6 +61,7 @@ namespace Gamsamo.Editor
             }
             view.closeButton = HitButton("CloseProfileButton", window, layout.close_hit_rect);
             view.SetProfile(null, null, null, ProfileAvatar.Female);
+            view.SetDefaultArtwork(LoadSprite(directory + "han-isu.png"));
             return view;
         }
 

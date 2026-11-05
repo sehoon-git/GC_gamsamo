@@ -18,6 +18,7 @@ namespace Gamsamo.UI
         public Image backgroundImage;
         public Sprite femaleSprite;
         public Sprite maleSprite;
+        public Sprite defaultProfileSprite;
         public TMP_Text nameText;
         public TMP_Text affiliationText;
         public TMP_Text introText;
@@ -31,6 +32,16 @@ namespace Gamsamo.UI
         [SerializeField] private ProfileAvatar avatar = ProfileAvatar.Female;
 
         public ProfileAvatar Avatar => avatar;
+        public bool UsesDefaultArtwork => defaultProfileSprite != null && avatar == ProfileAvatar.Female
+            && string.IsNullOrWhiteSpace(profileName) && string.IsNullOrWhiteSpace(affiliation)
+            && string.IsNullOrWhiteSpace(introduction);
+
+        /// <summary>The approved card is a display fallback; it never writes identity to a save.</summary>
+        public void SetDefaultArtwork(Sprite sprite)
+        {
+            defaultProfileSprite = sprite;
+            Refresh();
+        }
 
         /// <summary>Displays B's authoritative labels/counts; no promotion or clear rules live here.</summary>
         public void SetProgress(string certification, string currentPatient, string state, int clearedCount, int totalCount)
@@ -75,8 +86,13 @@ namespace Gamsamo.UI
 
         private void Refresh()
         {
+            bool showArtwork = UsesDefaultArtwork;
             if (backgroundImage != null)
-                backgroundImage.sprite = avatar == ProfileAvatar.Male ? maleSprite : femaleSprite;
+                backgroundImage.sprite = showArtwork ? defaultProfileSprite
+                    : avatar == ProfileAvatar.Male ? maleSprite : femaleSprite;
+            // The approved card already contains these three values. Custom values use blank art.
+            foreach (TMP_Text label in new[] { nameText, affiliationText, introText })
+                if (label != null) label.enabled = !showArtwork;
             SetText(nameText, profileName);
             SetText(affiliationText, affiliation);
             SetText(introText, introduction);

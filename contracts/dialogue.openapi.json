@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "서윤 상담 실험",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "paths": {
     "/health": {
@@ -178,15 +178,15 @@
         "properties": {
           "format_version": {
             "type": "integer",
-            "const": 2,
+            "const": 3,
             "title": "Format Version",
-            "default": 2
+            "default": 3
           },
           "content_version": {
             "type": "string",
-            "const": "seoyun-2.0",
+            "const": "seoyun-3.0",
             "title": "Content Version",
-            "default": "seoyun-2.0"
+            "default": "seoyun-3.0"
           },
           "case_id": {
             "type": "string",
@@ -529,7 +529,6 @@
           "closed_at": "2026-11-06T00:00:00+00:00",
           "questions_used": {
             "type": "integer",
-            "maximum": 5.0,
             "minimum": 0.0,
             "title": "Questions Used",
             "default": 0
@@ -556,6 +555,17 @@
               }
             ],
             "title": "Closing Request Id"
+          },
+          "closing_text": {
+            "type": "string",
+            "title": "Closing Text",
+            "default": ""
+          },
+          "closing_speaker": {
+            "type": "string",
+            "const": "counselor",
+            "title": "Closing Speaker",
+            "default": "counselor"
           },
           "closing_metrics": {
             "$ref": "#/components/schemas/Metrics"
@@ -647,11 +657,6 @@
             "type": "string",
             "minLength": 1,
             "title": "Patient Text"
-          },
-          "closing_text": {
-            "type": "string",
-            "title": "Closing Text",
-            "default": ""
           },
           "question_delta": {
             "type": "integer",

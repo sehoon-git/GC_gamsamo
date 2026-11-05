@@ -34,7 +34,7 @@
 |---|---|---|
 | `SEOYUN_VLLM_URL` | `http://127.0.0.1:8000` | API → vLLM 연결. `/v1`을 붙이지 않은 서버 루트 주소 |
 | `SEOYUN_API_URL` | `http://127.0.0.1:8001` | CLI → FastAPI 연결. 서버 루트 주소 |
-| `SEOYUN_API_KEY` | 빈 값: 인증 비활성 | FastAPI의 두 POST API와 CLI의 Bearer 키. 서버·클라이언트에 동일하게 설정 |
+| `SEOYUN_API_KEY` | 빈 값: 인증 비활성 | FastAPI의 세 POST API와 CLI의 Bearer 키. 서버·클라이언트에 동일하게 설정 |
 | `SEOYUN_VLLM_API_KEY` | 빈 값 | vLLM 실행 키와 API → vLLM 요청의 Bearer 키. `serve_model.py`가 `VLLM_API_KEY`로 전달 |
 | `SEOYUN_DATA_DIR` | 아래 저장 경로 규칙 | CLI 저장 디렉토리. 저장소 밖의 절대 경로 권장; 저장소 내부는 코드가 거부 |
 | `XDG_DATA_HOME` | `$HOME/.local/share` | `SEOYUN_DATA_DIR`이 없을 때 사용할 사용자 데이터 루트 |
@@ -57,7 +57,7 @@ set +a
 
 예제의 키는 비어 있다. 키를 사용할 때에는 같은 셸에서 통합 실행하거나, 개별 서버와 CLI를 실행하는 각 셸에 같은 값을 적용한다. `.env`는 Git 제외 대상이다. `VLLM_API_KEY`가 다른 작업 때문에 설정되어 있다면 `SEOYUN_VLLM_API_KEY`와 일치시키거나 미사용 설정을 해제한다. `serve_model.py`는 `SEOYUN_VLLM_API_KEY`가 비어 있다고 기존 `VLLM_API_KEY`를 지우지는 않는다.
 
-**URL 변수는 접속 주소만 바꾼다.** 현재 `serve_model.py`의 bind는 `127.0.0.1:8000`, `serve_api.py`는 `127.0.0.1:8001`로 고정되어 있다. `run_experiment.py`도 이 두 포트를 확인한다. URL을 바꾸어 포트나 공개 범위까지 변경할 수 있는 런처는 아니다. 다른 PC에서는 SSH로 서버 터미널에 접속하는 현재 방식을 사용한다.
+**URL 변수는 접속 주소만 바꾼다.** 현재 `serve_model.py`의 bind는 `127.0.0.1:8000`, `serve_api.py`는 `127.0.0.1:8001`로 고정되어 있다. `run_experiment.py`도 이 두 포트를 확인한다. URL을 바꾸어 포트나 공개 범위까지 변경할 수 있는 런처는 아니다. 다른 PC에서는 아래의 인증된 HTTPS 연결 절차를 사용한다.
 
 ## GPU·라이브러리 환경변수
 
@@ -89,12 +89,12 @@ set +a
 
 | 모델 요청 역할 | Temperature | 출력 상한 | Thinking |
 |---|---:|---:|---|
-| 환자 대사·마무리 | 0.7 | 512 | 끔 |
-| 분류·종료 판단 | 0.1 | 1,024 | 끔 |
+| 환자 대사 | 0.7 | 512 | 끔 |
+| 질문 분류 | 0.1 | 1,024 | 끔 |
 | 기억 요약·평가 근거 추출 | 0.1 | 2,048 | 끔 |
 | 최종 평가 | 0.2 | 4,096 | 켬, thinking 예산 최대 1,024 |
 
-vLLM에는 `--language-model-only`, `--reasoning-parser qwen3`, 기본 `enable_thinking=false`를 전달하고 역할별 요청에서 thinking 설정을 지정한다. `top_p`, `top_k`, 반복 관련 설정은 현재 클라이언트가 명시하지 않는다. 모델을 바꿀 때에는 토크나이저·채팅 템플릿·reasoning parser·JSON Schema 출력 지원도 함께 확인해야 하며 모델 이름만 교체해 호환된다고 간주하지 않는다.
+vLLM에는 `--language-model-only`, `--reasoning-parser qwen3`, 기본 `enable_thinking=false`를 전달하고 역할별 요청에서 thinking 설정을 지정한다. `top_p`, `top_k`, `presence_penalty`, `repetition_penalty`는 모델 프로필에 명시하고 요청에 전달한다. 고정 종료 안내는 추론을 호출하지 않는다. 모델을 바꿀 때에는 토크나이저·채팅 템플릿·reasoning parser·JSON Schema 출력 지원도 함께 확인해야 하며 모델 이름만 교체해 호환된다고 간주하지 않는다.
 
 ## 새 서버에서 준비하는 순서
 
@@ -152,7 +152,7 @@ vLLM에는 `--language-model-only`, `--reasoning-parser qwen3`, 기본 `enable_t
    python ai/evaluation/long_context_smoke.py
    ```
 
-   이 스크립트는 형식 2의 총 질문 5개·자동 저장·마무리·평가를 검사한다. 한국어 자연스러움은 별도 블라인드 검토로 판단한다.
+   이 스크립트는 형식 3의 질문 횟수 제한 없음·수동 종료·자동 저장·평가를 검사한다. 한국어 자연스러움은 별도 블라인드 검토로 판단한다.
 
 ## 홈 아래에만 설치하는 Conda 구성
 
@@ -187,9 +187,9 @@ GPU는 `nvidia-smi`로 사용 가능한 장치를 확인해 선택하고 실제 
 
 코드만 옮기면 기존 상담 기록은 따라오지 않는다. 현재 기본 저장 루트는 `$HOME/.local/share/gc-gamsamo/seoyun/`이며, 사용자 지정 환경변수가 있었다면 그 위치를 사용한다.
 
-- CLI가 종료된 상태에서 저장 루트 전체를 별도 보관·이전한다. `active.json`, `case_.../auto.json`, 존재하는 `manual.json`을 함께 옮겨야 기존 실험 선택과 슬롯을 유지할 수 있다.
+- CLI가 종료된 상태에서 저장 루트 전체를 별도 보관·이전한다. 형식 3의 `v3/index.json`과 모든 실험·revision 하위 폴더를 함께 옮긴다. 이전 형식의 파일·`v2/`는 보관용으로 남긴다.
 - A6000 서버의 저장소 밖 경로에 두고 `SEOYUN_DATA_DIR`로 지정하거나, 그 서버 사용자의 기본 저장 위치에 둔다. 새 서버의 `$HOME`은 기존 서버와 다를 수 있다.
-- 동일 코드·콘텐츠 버전에서 복원부터 확인한다. 이 저장 형식에는 주제 기반 질문 이력이 들어 있으며 새 질문 규칙으로 자동 변환하는 기능은 없다.
+- 동일 코드·콘텐츠 버전에서 복원부터 확인한다. 형식 1의 주제 기반 이력과 형식 2의 5회 자동 종료 이력은 형식 3으로 자동 변환하지 않는다. 새 코드에서는 `--new`로 새 실험을 만든다.
 - 모델을 비교할 때 기존 기록을 남기고 `/new`로 새 실험을 시작한다. 기존 대화 기억이 첫 응답 비교에 섞이지 않게 한다.
 - 개인 원문, 접근 키, `.env`, 모델 가중치와 GPU 로그는 Git에 올리지 않는다.
 
@@ -205,7 +205,7 @@ GPU는 `nvidia-smi`로 사용 가능한 장치를 확인해 선택하고 실제 
 | 환경 파일을 바꿔도 값이 그대로임 | 실행 셸에 다시 export하고 관련 프로세스를 재시작했는지 |
 | CUDA 오류·메모리 부족 | 실제 GPU 선택·다른 작업 점유·드라이버와 PyTorch 빌드. 설정을 바꿨다면 기존 기준과 구분해 기록 |
 
-## 형식 2 프로필·모의 서버·외부 접속
+## 형식 3 프로필·모의 서버·외부 접속
 
 `SEOYUN_MODEL_CONFIG`의 기본값은 `ai/configs/seoyun.json`이다. 후보 비교에는 `ai/configs/qwen38-27b-fp8.json` 또는 조건 확인 후 `ai/configs/exaone45-33b-awq.json`을 설정하고 다운로드·모델·API를 모두 같은 프로필로 실행한다. 예비 후보는 `ai/configs/gemma4-31b-qat.json`이며 앞선 후보가 기준에 미달할 때만 가중치를 준비한다. 가중치는 순차 준비하며 기존 기준 모델은 보존한다.
 

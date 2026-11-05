@@ -76,7 +76,8 @@ async def test_two_invalid_outputs_fail_without_silent_fallback(settings):
 
 
 @pytest.mark.asyncio
-async def test_legacy_version_and_compound_have_stable_error_envelopes():
+@pytest.mark.parametrize("legacy_version", [1, 2])
+async def test_legacy_version_and_compound_have_stable_error_envelopes(legacy_version):
     settings = Settings(mock=True, api_key="test-key")
     async with httpx.AsyncClient(base_url="http://test", transport=httpx.ASGITransport(app=create_app(settings)), headers={"Authorization": "Bearer test-key"}) as client:
         assert (await client.get("/health")).json()["mode"] == "mock"
@@ -84,13 +85,16 @@ async def test_legacy_version_and_compound_have_stable_error_envelopes():
         request = TurnRequest(state=state, session_id=state.current.id, turn_id="multi", text="면접은요? 친구는요?").model_dump()
         result = await client.post("/v1/dialogue/turn", json=request)
         assert result.status_code == 422 and result.json()["detail"]["code"] == "needs_split"
-        request["state"]["format_version"] = 1
+        request["state"]["format_version"] = legacy_version
         result = await client.post("/v1/dialogue/turn", json=request)
         assert result.status_code == 422 and result.json()["detail"]["code"] == "unsupported_save_version"
         for endpoint in ["close", "evaluate"]:
             body = {"state": state.model_dump(), "session_id": state.current.id, "request_id": endpoint}
             response = await client.post(f"/v1/dialogue/{endpoint}", json=body)
-            assert response.status_code == 409 and response.json()["detail"]["code"] == "session_open"
+            if endpoint == "close":
+                assert response.status_code == 200 and response.json()["state"]["sessions"][-1]["phase"] == "pending_evaluation"
+            else:
+                assert response.status_code == 409 and response.json()["detail"]["code"] == "session_open"
             assert (await client.post(f"/v1/dialogue/{endpoint}", json=body, headers={"Authorization": "Bearer wrong"})).status_code == 401
 
 

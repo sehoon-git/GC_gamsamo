@@ -13,7 +13,7 @@ from tempfile import TemporaryDirectory
 from app.client import SaveStore
 from app.core.config import Settings
 from app.llm.client import VllmClient, compact
-from app.schemas.models import CaseState, EvaluateRequest, Metrics, TurnRequest, new_id, now, records
+from app.schemas.models import CLOSING_TEXT, CaseState, EvaluateRequest, Metrics, TurnRequest, new_id, now, records
 from app.services.catalog import Catalog
 from app.services.dialogue import DialogueService
 from app.services.evaluation import EvaluationService, numbered_source
@@ -35,9 +35,8 @@ async def main():
     case.current.evaluation = None
     case.current.closed_at = None
     case.current.closing_request_id = None
-    case.current.phase = "closing"
-    for turn in case.current.turns:
-        turn.closing_text = ""
+    case.current.phase = "active"
+    case.current.closing_text = ""
     case.memory.items = []
     case.memory.through_turn_id = None
     engine = VllmClient(settings)
@@ -59,8 +58,8 @@ async def main():
             if index >= 250:
                 raise RuntimeError("Token count did not grow as expected; stop rather than creating an unbounded fixture.")
             turn = originals[index % len(originals)].model_copy(deep=True)
-            turn.id, turn.question_delta, turn.closing_text = new_id("long"), 0, ""
-            # Insert synthetic neutral context before the final question, preserving the five-question ceiling.
+            turn.id, turn.question_delta = new_id("long"), 0
+            # Insert synthetic context without changing the test conversation's question count.
             case.current.turns.insert(-1, turn)
             index += 1
         before = compact([r.model_dump() for r in records(case)])
@@ -81,7 +80,7 @@ async def main():
             assert store.load().model_dump() == case.model_dump()
         case.current.closed_at = now()
         case.current.closing_request_id = "synthetic_closing"
-        case.current.turns[-1].closing_text = "오늘 한 이야기를 더 생각해 볼게요."
+        case.current.closing_text = CLOSING_TEXT
         case.current.phase = "pending_evaluation"
         result = await evaluator.evaluate(evaluation_request)
         value = result.state.current.evaluation

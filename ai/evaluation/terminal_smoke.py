@@ -1,4 +1,4 @@
-"""Real API: five questions, closing, automatic save, evaluation and resume.
+"""Real API: unlimited questions, user closing, automatic save, evaluation and resume.
 
 Uses a disposable save directory. Output stays in ignored ai/outputs.
 """
@@ -13,7 +13,7 @@ import httpx
 
 from app.client import SaveStore, SessionClient
 from app.core.config import ExperimentError, Settings
-from app.schemas.models import CaseState, now
+from app.schemas.models import CLOSING_TEXT, CaseState, now, records, request_closing
 
 INPUTS = [
     ("안녕하세요. 오늘 와주셔서 감사합니다.", 0),
@@ -23,6 +23,7 @@ INPUTS = [
     ("그때 느낀 마음을 지금은 어떻게 바라보고 계세요?", 1),
     ("카페에서 스스로 잘 해냈다고 느낀 경험이 궁금해요.", 1),
     ("생활비 부담도 고려할 때 지금 감당할 수 있는 작은 계획은 무엇일까요?", 1),
+    ("그 계획에서 가장 먼저 해보고 싶은 일은 무엇인가요?", 1),
 ]
 
 
@@ -52,25 +53,31 @@ async def main():
                 report["turns"].append(entry)
                 assert turn.question_delta == delta, f"Unexpected question count: {text}"
                 assert store.load() == client.state
-                print(f"Question {client.state.current.questions_used}/5 saved", flush=True)
+                assert client.state.current.phase == "active"
+                print(f"Questions {client.state.current.questions_used} saved; active", flush=True)
                 if client.state.current.questions_used == 4:
                     await client.close()
                     client = SessionClient(settings, store, store.load())
-            before = client.state.model_dump_json()
-            for text, code in [("다른 질문도 해도 될까요?", "session_closed")]:
-                try:
-                    await client.turn(text)
-                    raise AssertionError("Sixth turn accepted")
-                except ExperimentError as error:
-                    assert error.code == code
-            assert client.state.model_dump_json() == before
+            assert client.state.current.questions_used == 6
+            client.replace(request_closing(client.state))
             await client.close()
             client = SessionClient(settings, store, store.load())
             assert client.state.current.phase == "closing"
             start = perf_counter()
             report["closing_text"] = await client.finish()
+            assert report["closing_text"] == CLOSING_TEXT
+            assert client.state.current.closing_metrics.calls == 0
             report["closing_seconds"] = perf_counter() - start
             assert store.load().current.phase == "pending_evaluation"
+            notice = records(client.state)[-1]
+            assert notice.speaker == "counselor" and notice.kind == "closing"
+            before = client.state.model_dump_json()
+            try:
+                await client.turn("다른 질문도 해도 될까요?")
+                raise AssertionError("Turn accepted after explicit end")
+            except ExperimentError as error:
+                assert error.code == "session_closed"
+            assert client.state.model_dump_json() == before
             await client.close()
             client = SessionClient(settings, store, store.load())
             start = perf_counter()

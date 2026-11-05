@@ -43,7 +43,7 @@ namespace Gamsamo.Editor.Presentation
             var view = visits.dialogue; visits.portraitGroup.alpha = 1;
             view.root.alpha = 1; view.root.interactable = true; view.root.blocksRaycasts = true;
             view.speakerText.text = "서윤"; view.bodyText.text = "오늘은 제 이야기를 조금 더 나누고 싶어요.";
-            view.bodyText.maxVisibleCharacters = int.MaxValue; view.statusText.text = "답변을 작성해 주세요";
+            view.bodyText.maxVisibleCharacters = int.MaxValue; view.statusText.text = string.Empty;
             view.replyRoot.SetActive(true); view.replyInput.interactable = true; view.confirmationPanel.SetActive(false);
             view.retryButton.gameObject.SetActive(false); if (view.dismissButton != null) view.dismissButton.gameObject.SetActive(false);
             foreach (var behaviour in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<MonoBehaviour>(true)).ToArray())

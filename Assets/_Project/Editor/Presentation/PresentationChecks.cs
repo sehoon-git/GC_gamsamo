@@ -82,7 +82,9 @@ namespace Gamsamo.Editor.Presentation
             {
                 view.SetProcessingState(state);
                 Check(view.DisplayedText == line && view.Draft == draft, state + " preserves dialogue and draft");
-                Check(!view.statusText.richText && view.statusText.text.Length > 0, state + " is separate neutral feedback");
+                Check(!view.statusText.richText && (state == DialogueProcessingState.Ready
+                    ? string.IsNullOrEmpty(view.statusText.text) : view.statusText.text.Length > 0),
+                    state + " keeps idle feedback empty and operation feedback visible");
             }
             view.SetProcessingState(DialogueProcessingState.WaitingForEvaluation);
             Set(view, "processingElapsed", 60f); Call(view, "RefreshProcessingLabel");

@@ -82,7 +82,7 @@ namespace Gamsamo.Editor
             Check(SceneManager.GetActiveScene().name == "StartMenu" && EventSystem.current != null,
                 "Title scene has its event system");
             Check(!menu.loadButton.IsInteractable()
-                && menu.saveStatus.text == "기존 상담 기록은 상담실에서 자동 복원됩니다"
+                && menu.saveStatus.text == ""
                 && menu.newGameButton.GetComponentInChildren<TMP_Text>(true).text == "상담실 입장",
                 "Room entry preserves AI records while full game-progress loading remains disabled");
             Check(menu.menuItems[0].dot.activeSelf && menu.menuItems[0].underline.activeSelf

@@ -204,7 +204,7 @@ namespace Gamsamo.Editor
             inputText.alignment = TextAlignmentOptions.TopLeft;
             inputText.overflowMode = TextOverflowModes.Overflow;
             var placeholder = Text(textArea, "Placeholder", font, 0, 0, 626, 55, 21);
-            placeholder.text = "답변을 자유롭게 적어 주세요";
+            placeholder.text = string.Empty;
             placeholder.color = new Color32(137, 113, 91, 255);
             placeholder.alignment = TextAlignmentOptions.TopLeft;
             view.replyInput = GetOrAdd<TMP_InputField>(inputRect.gameObject);

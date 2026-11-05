@@ -54,7 +54,10 @@ class EvaluationService:
         return [{"role": "system", "content": self.catalog.prompts[prompt]}, {"role": "user", "content": compact({
             "rubric": self.catalog.patient["rubric"],
             "current_session_id": work["request"].session_id,
-            "fixed_story": {**self.catalog.patient, "story_events": self.catalog.active_story_events(work["request"].state)},
+            # Rubric appears exactly once above. Preserve ALL story facts and limits.
+            "fixed_story": {**{key: value for key, value in self.catalog.patient.items()
+                               if key not in {"rubric", "clear_threshold", "content_version", "termination"}},
+                            "story_events": self.catalog.active_story_events(work["request"].state)},
             **payload,
         })}]
 

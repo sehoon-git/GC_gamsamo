@@ -1,6 +1,7 @@
 {
   "detail": {
     "code": "stale_session",
-    "message": "현재 상담 ID가 일치하지 않습니다."
+    "message": "현재 상담 ID가 일치하지 않습니다.",
+    "retryable": false
   }
 }

@@ -222,7 +222,7 @@
           "cleared": false,
           "evaluated_at": "2026-11-06T00:00:00+00:00",
           "model_revision": "mock-fixture-v4",
-          "prompt_version": "e8445168f1a23c20",
+          "prompt_version": "876de93671222a94",
           "source_messages": 17,
           "metrics": {
             "seconds": 0.0,
@@ -239,7 +239,7 @@
         "closed_at": null,
         "opening": {
           "id": "opening_revisit",
-          "patient_text": "면접 생각을 하면 아직 긴장돼요. 지금은 제 마음을 천천히 이야기하고 싶어요.",
+          "patient_text": "지난 상담에서 꺼낸 마음을 조금 더 이야기해 보고 싶어요. 이번이 2번째 방문이네요.",
           "candidate_fact_ids": [],
           "created_at": "2026-11-06T00:00:00+00:00",
           "metrics": {

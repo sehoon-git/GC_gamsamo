@@ -1,0 +1,860 @@
+{
+  "name_ko": "상담센터 치장품",
+  "currency": "KRW",
+  "paths_relative_to": "catalog.json",
+  "themes": [
+    {
+      "id": "oak",
+      "name_ko": "내추럴 오크",
+      "swatch": "#c79c65"
+    },
+    {
+      "id": "walnut",
+      "name_ko": "월넛",
+      "swatch": "#79513d"
+    },
+    {
+      "id": "sage",
+      "name_ko": "세이지",
+      "swatch": "#8a9a79"
+    },
+    {
+      "id": "lavender",
+      "name_ko": "라벤더",
+      "swatch": "#a38db2"
+    },
+    {
+      "id": "terracotta",
+      "name_ko": "테라코타",
+      "swatch": "#b5755c"
+    },
+    {
+      "id": "midnight",
+      "name_ko": "미드나이트",
+      "swatch": "#425575"
+    },
+    {
+      "id": "brass",
+      "name_ko": "빈티지 브라스",
+      "swatch": "#ac8b4b"
+    },
+    {
+      "id": "white",
+      "name_ko": "모던 화이트",
+      "swatch": "#e3ded2"
+    }
+  ],
+  "categories": [
+    {
+      "id": "window",
+      "name_ko": "창문"
+    },
+    {
+      "id": "door",
+      "name_ko": "문"
+    },
+    {
+      "id": "clipboard",
+      "name_ko": "서류철"
+    },
+    {
+      "id": "pc",
+      "name_ko": "PC"
+    },
+    {
+      "id": "wallpaper",
+      "name_ko": "PC 바탕화면"
+    }
+  ],
+  "equip_rects": {
+    "window": {
+      "space": "room",
+      "x": 731,
+      "y": 52,
+      "width": 1011,
+      "height": 534
+    },
+    "door": {
+      "space": "room",
+      "x": 151,
+      "y": 103,
+      "width": 430,
+      "height": 644
+    },
+    "clipboard": {
+      "space": "room",
+      "x": 37,
+      "y": 771,
+      "width": 407,
+      "height": 258
+    },
+    "pc": {
+      "space": "room",
+      "x": 1334,
+      "y": 417,
+      "width": 585,
+      "height": 505
+    },
+    "wallpaper": {
+      "space": "desktop",
+      "x": 7,
+      "y": 46,
+      "width": 1506,
+      "height": 603
+    }
+  },
+  "items": [
+    {
+      "id": "window.oak",
+      "theme": "oak",
+      "category": "window",
+      "name_ko": "내추럴 오크 창문",
+      "card_label": "내추럴 오크",
+      "price_krw": null,
+      "thumbnail": "thumbnails/window/oak.png",
+      "images": {
+        "clear": "window/oak/states/half/clear.png",
+        "cloudy": "window/oak/states/half/cloudy.png",
+        "rain": "window/oak/states/half/rain.png"
+      },
+      "blinds": {
+        "shop_preview_state": "half",
+        "base": {
+          "clear": "window/oak/clear.png",
+          "cloudy": "window/oak/cloudy.png",
+          "rain": "window/oak/rain.png"
+        },
+        "overlays": {
+          "up": "window/oak/blinds/up.png",
+          "half": "window/oak/blinds/half.png",
+          "down": "window/oak/blinds/down.png"
+        },
+        "states": {
+          "up": {
+            "clear": "window/oak/states/up/clear.png",
+            "cloudy": "window/oak/states/up/cloudy.png",
+            "rain": "window/oak/states/up/rain.png"
+          },
+          "half": {
+            "clear": "window/oak/states/half/clear.png",
+            "cloudy": "window/oak/states/half/cloudy.png",
+            "rain": "window/oak/states/half/rain.png"
+          },
+          "down": {
+            "clear": "window/oak/states/down/clear.png",
+            "cloudy": "window/oak/states/down/cloudy.png",
+            "rain": "window/oak/states/down/rain.png"
+          }
+        },
+        "closed_blocks_weather": true
+      }
+    },
+    {
+      "id": "window.walnut",
+      "theme": "walnut",
+      "category": "window",
+      "name_ko": "월넛 창문",
+      "card_label": "월넛",
+      "price_krw": null,
+      "thumbnail": "thumbnails/window/walnut.png",
+      "images": {
+        "clear": "window/walnut/states/half/clear.png",
+        "cloudy": "window/walnut/states/half/cloudy.png",
+        "rain": "window/walnut/states/half/rain.png"
+      },
+      "blinds": {
+        "shop_preview_state": "half",
+        "base": {
+          "clear": "window/walnut/clear.png",
+          "cloudy": "window/walnut/cloudy.png",
+          "rain": "window/walnut/rain.png"
+        },
+        "overlays": {
+          "up": "window/walnut/blinds/up.png",
+          "half": "window/walnut/blinds/half.png",
+          "down": "window/walnut/blinds/down.png"
+        },
+        "states": {
+          "up": {
+            "clear": "window/walnut/states/up/clear.png",
+            "cloudy": "window/walnut/states/up/cloudy.png",
+            "rain": "window/walnut/states/up/rain.png"
+          },
+          "half": {
+            "clear": "window/walnut/states/half/clear.png",
+            "cloudy": "window/walnut/states/half/cloudy.png",
+            "rain": "window/walnut/states/half/rain.png"
+          },
+          "down": {
+            "clear": "window/walnut/states/down/clear.png",
+            "cloudy": "window/walnut/states/down/cloudy.png",
+            "rain": "window/walnut/states/down/rain.png"
+          }
+        },
+        "closed_blocks_weather": true
+      }
+    },
+    {
+      "id": "window.sage",
+      "theme": "sage",
+      "category": "window",
+      "name_ko": "세이지 창문",
+      "card_label": "세이지",
+      "price_krw": null,
+      "thumbnail": "thumbnails/window/sage.png",
+      "images": {
+        "clear": "window/sage/states/half/clear.png",
+        "cloudy": "window/sage/states/half/cloudy.png",
+        "rain": "window/sage/states/half/rain.png"
+      },
+      "blinds": {
+        "shop_preview_state": "half",
+        "base": {
+          "clear": "window/sage/clear.png",
+          "cloudy": "window/sage/cloudy.png",
+          "rain": "window/sage/rain.png"
+        },
+        "overlays": {
+          "up": "window/sage/blinds/up.png",
+          "half": "window/sage/blinds/half.png",
+          "down": "window/sage/blinds/down.png"
+        },
+        "states": {
+          "up": {
+            "clear": "window/sage/states/up/clear.png",
+            "cloudy": "window/sage/states/up/cloudy.png",
+            "rain": "window/sage/states/up/rain.png"
+          },
+          "half": {
+            "clear": "window/sage/states/half/clear.png",
+            "cloudy": "window/sage/states/half/cloudy.png",
+            "rain": "window/sage/states/half/rain.png"
+          },
+          "down": {
+            "clear": "window/sage/states/down/clear.png",
+            "cloudy": "window/sage/states/down/cloudy.png",
+            "rain": "window/sage/states/down/rain.png"
+          }
+        },
+        "closed_blocks_weather": true
+      }
+    },
+    {
+      "id": "window.lavender",
+      "theme": "lavender",
+      "category": "window",
+      "name_ko": "라벤더 창문",
+      "card_label": "라벤더",
+      "price_krw": null,
+      "thumbnail": "thumbnails/window/lavender.png",
+      "images": {
+        "clear": "window/lavender/states/half/clear.png",
+        "cloudy": "window/lavender/states/half/cloudy.png",
+        "rain": "window/lavender/states/half/rain.png"
+      },
+      "blinds": {
+        "shop_preview_state": "half",
+        "base": {
+          "clear": "window/lavender/clear.png",
+          "cloudy": "window/lavender/cloudy.png",
+          "rain": "window/lavender/rain.png"
+        },
+        "overlays": {
+          "up": "window/lavender/blinds/up.png",
+          "half": "window/lavender/blinds/half.png",
+          "down": "window/lavender/blinds/down.png"
+        },
+        "states": {
+          "up": {
+            "clear": "window/lavender/states/up/clear.png",
+            "cloudy": "window/lavender/states/up/cloudy.png",
+            "rain": "window/lavender/states/up/rain.png"
+          },
+          "half": {
+            "clear": "window/lavender/states/half/clear.png",
+            "cloudy": "window/lavender/states/half/cloudy.png",
+            "rain": "window/lavender/states/half/rain.png"
+          },
+          "down": {
+            "clear": "window/lavender/states/down/clear.png",
+            "cloudy": "window/lavender/states/down/cloudy.png",
+            "rain": "window/lavender/states/down/rain.png"
+          }
+        },
+        "closed_blocks_weather": true
+      }
+    },
+    {
+      "id": "window.terracotta",
+      "theme": "terracotta",
+      "category": "window",
+      "name_ko": "테라코타 창문",
+      "card_label": "테라코타",
+      "price_krw": null,
+      "thumbnail": "thumbnails/window/terracotta.png",
+      "images": {
+        "clear": "window/terracotta/states/half/clear.png",
+        "cloudy": "window/terracotta/states/half/cloudy.png",
+        "rain": "window/terracotta/states/half/rain.png"
+      },
+      "blinds": {
+        "shop_preview_state": "half",
+        "base": {
+          "clear": "window/terracotta/clear.png",
+          "cloudy": "window/terracotta/cloudy.png",
+          "rain": "window/terracotta/rain.png"
+        },
+        "overlays": {
+          "up": "window/terracotta/blinds/up.png",
+          "half": "window/terracotta/blinds/half.png",
+          "down": "window/terracotta/blinds/down.png"
+        },
+        "states": {
+          "up": {
+            "clear": "window/terracotta/states/up/clear.png",
+            "cloudy": "window/terracotta/states/up/cloudy.png",
+            "rain": "window/terracotta/states/up/rain.png"
+          },
+          "half": {
+            "clear": "window/terracotta/states/half/clear.png",
+            "cloudy": "window/terracotta/states/half/cloudy.png",
+            "rain": "window/terracotta/states/half/rain.png"
+          },
+          "down": {
+            "clear": "window/terracotta/states/down/clear.png",
+            "cloudy": "window/terracotta/states/down/cloudy.png",
+            "rain": "window/terracotta/states/down/rain.png"
+          }
+        },
+        "closed_blocks_weather": true
+      }
+    },
+    {
+      "id": "window.midnight",
+      "theme": "midnight",
+      "category": "window",
+      "name_ko": "미드나이트 창문",
+      "card_label": "미드나이트",
+      "price_krw": null,
+      "thumbnail": "thumbnails/window/midnight.png",
+      "images": {
+        "clear": "window/midnight/states/half/clear.png",
+        "cloudy": "window/midnight/states/half/cloudy.png",
+        "rain": "window/midnight/states/half/rain.png"
+      },
+      "blinds": {
+        "shop_preview_state": "half",
+        "base": {
+          "clear": "window/midnight/clear.png",
+          "cloudy": "window/midnight/cloudy.png",
+          "rain": "window/midnight/rain.png"
+        },
+        "overlays": {
+          "up": "window/midnight/blinds/up.png",
+          "half": "window/midnight/blinds/half.png",
+          "down": "window/midnight/blinds/down.png"
+        },
+        "states": {
+          "up": {
+            "clear": "window/midnight/states/up/clear.png",
+            "cloudy": "window/midnight/states/up/cloudy.png",
+            "rain": "window/midnight/states/up/rain.png"
+          },
+          "half": {
+            "clear": "window/midnight/states/half/clear.png",
+            "cloudy": "window/midnight/states/half/cloudy.png",
+            "rain": "window/midnight/states/half/rain.png"
+          },
+          "down": {
+            "clear": "window/midnight/states/down/clear.png",
+            "cloudy": "window/midnight/states/down/cloudy.png",
+            "rain": "window/midnight/states/down/rain.png"
+          }
+        },
+        "closed_blocks_weather": true
+      }
+    },
+    {
+      "id": "window.brass",
+      "theme": "brass",
+      "category": "window",
+      "name_ko": "빈티지 브라스 창문",
+      "card_label": "빈티지 브라스",
+      "price_krw": null,
+      "thumbnail": "thumbnails/window/brass.png",
+      "images": {
+        "clear": "window/brass/states/half/clear.png",
+        "cloudy": "window/brass/states/half/cloudy.png",
+        "rain": "window/brass/states/half/rain.png"
+      },
+      "blinds": {
+        "shop_preview_state": "half",
+        "base": {
+          "clear": "window/brass/clear.png",
+          "cloudy": "window/brass/cloudy.png",
+          "rain": "window/brass/rain.png"
+        },
+        "overlays": {
+          "up": "window/brass/blinds/up.png",
+          "half": "window/brass/blinds/half.png",
+          "down": "window/brass/blinds/down.png"
+        },
+        "states": {
+          "up": {
+            "clear": "window/brass/states/up/clear.png",
+            "cloudy": "window/brass/states/up/cloudy.png",
+            "rain": "window/brass/states/up/rain.png"
+          },
+          "half": {
+            "clear": "window/brass/states/half/clear.png",
+            "cloudy": "window/brass/states/half/cloudy.png",
+            "rain": "window/brass/states/half/rain.png"
+          },
+          "down": {
+            "clear": "window/brass/states/down/clear.png",
+            "cloudy": "window/brass/states/down/cloudy.png",
+            "rain": "window/brass/states/down/rain.png"
+          }
+        },
+        "closed_blocks_weather": true
+      }
+    },
+    {
+      "id": "window.white",
+      "theme": "white",
+      "category": "window",
+      "name_ko": "모던 화이트 창문",
+      "card_label": "모던 화이트",
+      "price_krw": null,
+      "thumbnail": "thumbnails/window/white.png",
+      "images": {
+        "clear": "window/white/states/half/clear.png",
+        "cloudy": "window/white/states/half/cloudy.png",
+        "rain": "window/white/states/half/rain.png"
+      },
+      "blinds": {
+        "shop_preview_state": "half",
+        "base": {
+          "clear": "window/white/clear.png",
+          "cloudy": "window/white/cloudy.png",
+          "rain": "window/white/rain.png"
+        },
+        "overlays": {
+          "up": "window/white/blinds/up.png",
+          "half": "window/white/blinds/half.png",
+          "down": "window/white/blinds/down.png"
+        },
+        "states": {
+          "up": {
+            "clear": "window/white/states/up/clear.png",
+            "cloudy": "window/white/states/up/cloudy.png",
+            "rain": "window/white/states/up/rain.png"
+          },
+          "half": {
+            "clear": "window/white/states/half/clear.png",
+            "cloudy": "window/white/states/half/cloudy.png",
+            "rain": "window/white/states/half/rain.png"
+          },
+          "down": {
+            "clear": "window/white/states/down/clear.png",
+            "cloudy": "window/white/states/down/cloudy.png",
+            "rain": "window/white/states/down/rain.png"
+          }
+        },
+        "closed_blocks_weather": true
+      }
+    },
+    {
+      "id": "door.oak",
+      "theme": "oak",
+      "category": "door",
+      "name_ko": "내추럴 오크 문",
+      "card_label": "내추럴 오크",
+      "price_krw": null,
+      "thumbnail": "thumbnails/door/oak.png",
+      "images": {
+        "sprite": "door/oak.png"
+      }
+    },
+    {
+      "id": "door.walnut",
+      "theme": "walnut",
+      "category": "door",
+      "name_ko": "월넛 문",
+      "card_label": "월넛",
+      "price_krw": null,
+      "thumbnail": "thumbnails/door/walnut.png",
+      "images": {
+        "sprite": "door/walnut.png"
+      }
+    },
+    {
+      "id": "door.sage",
+      "theme": "sage",
+      "category": "door",
+      "name_ko": "세이지 문",
+      "card_label": "세이지",
+      "price_krw": null,
+      "thumbnail": "thumbnails/door/sage.png",
+      "images": {
+        "sprite": "door/sage.png"
+      }
+    },
+    {
+      "id": "door.lavender",
+      "theme": "lavender",
+      "category": "door",
+      "name_ko": "라벤더 문",
+      "card_label": "라벤더",
+      "price_krw": null,
+      "thumbnail": "thumbnails/door/lavender.png",
+      "images": {
+        "sprite": "door/lavender.png"
+      }
+    },
+    {
+      "id": "door.terracotta",
+      "theme": "terracotta",
+      "category": "door",
+      "name_ko": "테라코타 문",
+      "card_label": "테라코타",
+      "price_krw": null,
+      "thumbnail": "thumbnails/door/terracotta.png",
+      "images": {
+        "sprite": "door/terracotta.png"
+      }
+    },
+    {
+      "id": "door.midnight",
+      "theme": "midnight",
+      "category": "door",
+      "name_ko": "미드나이트 문",
+      "card_label": "미드나이트",
+      "price_krw": null,
+      "thumbnail": "thumbnails/door/midnight.png",
+      "images": {
+        "sprite": "door/midnight.png"
+      }
+    },
+    {
+      "id": "door.brass",
+      "theme": "brass",
+      "category": "door",
+      "name_ko": "빈티지 브라스 문",
+      "card_label": "빈티지 브라스",
+      "price_krw": null,
+      "thumbnail": "thumbnails/door/brass.png",
+      "images": {
+        "sprite": "door/brass.png"
+      }
+    },
+    {
+      "id": "door.white",
+      "theme": "white",
+      "category": "door",
+      "name_ko": "모던 화이트 문",
+      "card_label": "모던 화이트",
+      "price_krw": null,
+      "thumbnail": "thumbnails/door/white.png",
+      "images": {
+        "sprite": "door/white.png"
+      }
+    },
+    {
+      "id": "clipboard.oak",
+      "theme": "oak",
+      "category": "clipboard",
+      "name_ko": "내추럴 오크 서류철",
+      "card_label": "내추럴 오크",
+      "price_krw": null,
+      "thumbnail": "thumbnails/clipboard/oak.png",
+      "images": {
+        "sprite": "clipboard/oak.png",
+        "detail": "clipboard/detail/oak.png"
+      }
+    },
+    {
+      "id": "clipboard.walnut",
+      "theme": "walnut",
+      "category": "clipboard",
+      "name_ko": "월넛 서류철",
+      "card_label": "월넛",
+      "price_krw": null,
+      "thumbnail": "thumbnails/clipboard/walnut.png",
+      "images": {
+        "sprite": "clipboard/walnut.png",
+        "detail": "clipboard/detail/walnut.png"
+      }
+    },
+    {
+      "id": "clipboard.sage",
+      "theme": "sage",
+      "category": "clipboard",
+      "name_ko": "세이지 서류철",
+      "card_label": "세이지",
+      "price_krw": null,
+      "thumbnail": "thumbnails/clipboard/sage.png",
+      "images": {
+        "sprite": "clipboard/sage.png",
+        "detail": "clipboard/detail/sage.png"
+      }
+    },
+    {
+      "id": "clipboard.lavender",
+      "theme": "lavender",
+      "category": "clipboard",
+      "name_ko": "라벤더 서류철",
+      "card_label": "라벤더",
+      "price_krw": null,
+      "thumbnail": "thumbnails/clipboard/lavender.png",
+      "images": {
+        "sprite": "clipboard/lavender.png",
+        "detail": "clipboard/detail/lavender.png"
+      }
+    },
+    {
+      "id": "clipboard.terracotta",
+      "theme": "terracotta",
+      "category": "clipboard",
+      "name_ko": "테라코타 서류철",
+      "card_label": "테라코타",
+      "price_krw": null,
+      "thumbnail": "thumbnails/clipboard/terracotta.png",
+      "images": {
+        "sprite": "clipboard/terracotta.png",
+        "detail": "clipboard/detail/terracotta.png"
+      }
+    },
+    {
+      "id": "clipboard.midnight",
+      "theme": "midnight",
+      "category": "clipboard",
+      "name_ko": "미드나이트 서류철",
+      "card_label": "미드나이트",
+      "price_krw": null,
+      "thumbnail": "thumbnails/clipboard/midnight.png",
+      "images": {
+        "sprite": "clipboard/midnight.png",
+        "detail": "clipboard/detail/midnight.png"
+      }
+    },
+    {
+      "id": "clipboard.brass",
+      "theme": "brass",
+      "category": "clipboard",
+      "name_ko": "빈티지 브라스 서류철",
+      "card_label": "빈티지 브라스",
+      "price_krw": null,
+      "thumbnail": "thumbnails/clipboard/brass.png",
+      "images": {
+        "sprite": "clipboard/brass.png",
+        "detail": "clipboard/detail/brass.png"
+      }
+    },
+    {
+      "id": "clipboard.white",
+      "theme": "white",
+      "category": "clipboard",
+      "name_ko": "모던 화이트 서류철",
+      "card_label": "모던 화이트",
+      "price_krw": null,
+      "thumbnail": "thumbnails/clipboard/white.png",
+      "images": {
+        "sprite": "clipboard/white.png",
+        "detail": "clipboard/detail/white.png"
+      }
+    },
+    {
+      "id": "pc.oak",
+      "theme": "oak",
+      "category": "pc",
+      "name_ko": "내추럴 오크 PC",
+      "card_label": "내추럴 오크",
+      "price_krw": null,
+      "thumbnail": "thumbnails/pc/oak.png",
+      "images": {
+        "sprite": "pc/oak.png"
+      }
+    },
+    {
+      "id": "pc.walnut",
+      "theme": "walnut",
+      "category": "pc",
+      "name_ko": "월넛 PC",
+      "card_label": "월넛",
+      "price_krw": null,
+      "thumbnail": "thumbnails/pc/walnut.png",
+      "images": {
+        "sprite": "pc/walnut.png"
+      }
+    },
+    {
+      "id": "pc.sage",
+      "theme": "sage",
+      "category": "pc",
+      "name_ko": "세이지 PC",
+      "card_label": "세이지",
+      "price_krw": null,
+      "thumbnail": "thumbnails/pc/sage.png",
+      "images": {
+        "sprite": "pc/sage.png"
+      }
+    },
+    {
+      "id": "pc.lavender",
+      "theme": "lavender",
+      "category": "pc",
+      "name_ko": "라벤더 PC",
+      "card_label": "라벤더",
+      "price_krw": null,
+      "thumbnail": "thumbnails/pc/lavender.png",
+      "images": {
+        "sprite": "pc/lavender.png"
+      }
+    },
+    {
+      "id": "pc.terracotta",
+      "theme": "terracotta",
+      "category": "pc",
+      "name_ko": "테라코타 PC",
+      "card_label": "테라코타",
+      "price_krw": null,
+      "thumbnail": "thumbnails/pc/terracotta.png",
+      "images": {
+        "sprite": "pc/terracotta.png"
+      }
+    },
+    {
+      "id": "pc.midnight",
+      "theme": "midnight",
+      "category": "pc",
+      "name_ko": "미드나이트 PC",
+      "card_label": "미드나이트",
+      "price_krw": null,
+      "thumbnail": "thumbnails/pc/midnight.png",
+      "images": {
+        "sprite": "pc/midnight.png"
+      }
+    },
+    {
+      "id": "pc.brass",
+      "theme": "brass",
+      "category": "pc",
+      "name_ko": "빈티지 브라스 PC",
+      "card_label": "빈티지 브라스",
+      "price_krw": null,
+      "thumbnail": "thumbnails/pc/brass.png",
+      "images": {
+        "sprite": "pc/brass.png"
+      }
+    },
+    {
+      "id": "pc.white",
+      "theme": "white",
+      "category": "pc",
+      "name_ko": "모던 화이트 PC",
+      "card_label": "모던 화이트",
+      "price_krw": null,
+      "thumbnail": "thumbnails/pc/white.png",
+      "images": {
+        "sprite": "pc/white.png"
+      }
+    },
+    {
+      "id": "wallpaper.oak",
+      "theme": "oak",
+      "category": "wallpaper",
+      "name_ko": "내추럴 오크 · 참나무 언덕",
+      "card_label": "참나무 언덕",
+      "price_krw": null,
+      "thumbnail": "thumbnails/wallpaper/oak.png",
+      "images": {
+        "wallpaper": "wallpaper/oak.png"
+      }
+    },
+    {
+      "id": "wallpaper.walnut",
+      "theme": "walnut",
+      "category": "wallpaper",
+      "name_ko": "월넛 · 가을 숲길",
+      "card_label": "가을 숲길",
+      "price_krw": null,
+      "thumbnail": "thumbnails/wallpaper/walnut.png",
+      "images": {
+        "wallpaper": "wallpaper/walnut.png"
+      }
+    },
+    {
+      "id": "wallpaper.sage",
+      "theme": "sage",
+      "category": "wallpaper",
+      "name_ko": "세이지 · 안개 낀 다랑논",
+      "card_label": "안개 낀 다랑논",
+      "price_krw": null,
+      "thumbnail": "thumbnails/wallpaper/sage.png",
+      "images": {
+        "wallpaper": "wallpaper/sage.png"
+      }
+    },
+    {
+      "id": "wallpaper.lavender",
+      "theme": "lavender",
+      "category": "wallpaper",
+      "name_ko": "라벤더 · 라벤더 들녘",
+      "card_label": "라벤더 들녘",
+      "price_krw": null,
+      "thumbnail": "thumbnails/wallpaper/lavender.png",
+      "images": {
+        "wallpaper": "wallpaper/lavender.png"
+      }
+    },
+    {
+      "id": "wallpaper.terracotta",
+      "theme": "terracotta",
+      "category": "wallpaper",
+      "name_ko": "테라코타 · 붉은 지붕 마을",
+      "card_label": "붉은 지붕 마을",
+      "price_krw": null,
+      "thumbnail": "thumbnails/wallpaper/terracotta.png",
+      "images": {
+        "wallpaper": "wallpaper/terracotta.png"
+      }
+    },
+    {
+      "id": "wallpaper.midnight",
+      "theme": "midnight",
+      "category": "wallpaper",
+      "name_ko": "미드나이트 · 달빛 호수",
+      "card_label": "달빛 호수",
+      "price_krw": null,
+      "thumbnail": "thumbnails/wallpaper/midnight.png",
+      "images": {
+        "wallpaper": "wallpaper/midnight.png"
+      }
+    },
+    {
+      "id": "wallpaper.brass",
+      "theme": "brass",
+      "category": "wallpaper",
+      "name_ko": "빈티지 브라스 · 황혼의 천문대",
+      "card_label": "황혼의 천문대",
+      "price_krw": null,
+      "thumbnail": "thumbnails/wallpaper/brass.png",
+      "images": {
+        "wallpaper": "wallpaper/brass.png"
+      }
+    },
+    {
+      "id": "wallpaper.white",
+      "theme": "white",
+      "category": "wallpaper",
+      "name_ko": "모던 화이트 · 겨울 자작나무",
+      "card_label": "겨울 자작나무",
+      "price_krw": null,
+      "thumbnail": "thumbnails/wallpaper/white.png",
+      "images": {
+        "wallpaper": "wallpaper/white.png"
+      }
+    }
+  ]
+}

@@ -36,10 +36,17 @@ namespace Gamsamo.UI
         [SerializeField] private Texture2D windowCosmetic;
         [SerializeField] private Texture2D pcCosmetic;
         [SerializeField] private Texture2D clipboardCosmetic;
+        [SerializeField] private Texture2D[] windowVariantTextures = Array.Empty<Texture2D>();
+        [SerializeField, Range(0, 2)] private int windowBlindState;
 
         public Weather CurrentWeather => weather;
         public RenderTexture CompositeTexture => compositeTexture;
         public int CompositionVersion { get; private set; }
+        public bool HasWindowVariants => CompleteWindowVariants(windowVariantTextures);
+        public bool HasBlindVariants => HasWindowVariants && windowVariantTextures.Length == 9;
+        public int WindowBlindState => HasBlindVariants ? windowBlindState : 0;
+        public Texture2D[] WindowVariantTextures => windowVariantTextures == null
+            ? Array.Empty<Texture2D>() : (Texture2D[])windowVariantTextures.Clone();
 
         private static readonly int LayerTextureId = Shader.PropertyToID("_LayerTex");
         private static readonly int LayerRectId = Shader.PropertyToID("_LayerRect");
@@ -72,12 +79,48 @@ namespace Gamsamo.UI
         {
             switch (layer)
             {
-                case CosmeticLayer.Window: windowCosmetic = texture; break;
+                case CosmeticLayer.Window:
+                    windowCosmetic = texture;
+                    windowVariantTextures = Array.Empty<Texture2D>();
+                    windowBlindState = 0;
+                    break;
                 case CosmeticLayer.Door: doorCosmetic = texture; break;
                 case CosmeticLayer.Clipboard: clipboardCosmetic = texture; break;
                 case CosmeticLayer.Pc: pcCosmetic = texture; break;
                 default: throw new ArgumentOutOfRangeException(nameof(layer));
             }
+            RebuildIfPlaying();
+        }
+
+        /// <summary>
+        /// Sets either three weather variants or nine blind/weather variants.
+        /// Nine entries are up(clear/cloudy/rain), half(clear/cloudy/rain), down(clear/cloudy/rain).
+        /// Subsequent weather changes retain the selected design and blind state.
+        /// </summary>
+        public void SetWindowVariant(Texture2D[] states, int blindState)
+        {
+            if (blindState < 0 || blindState > 2)
+                throw new ArgumentOutOfRangeException(nameof(blindState));
+            if (states == null || states.Length == 0)
+            {
+                RestoreDefault(CosmeticLayer.Window);
+                return;
+            }
+            if (!CompleteWindowVariants(states))
+                throw new ArgumentException("A window design requires three or nine non-null textures.", nameof(states));
+            windowVariantTextures = (Texture2D[])states.Clone();
+            windowCosmetic = null;
+            windowBlindState = states.Length == 9 ? blindState : 0;
+            RebuildIfPlaying();
+        }
+
+        /// <summary>Uses a supplied static blind image. The default window has no blind controls.</summary>
+        public void SetBlindState(int state)
+        {
+            if (state < 0 || state > 2)
+                throw new ArgumentOutOfRangeException(nameof(state));
+            if (!HasBlindVariants || windowBlindState == state) return;
+            windowBlindState = state;
             RebuildIfPlaying();
         }
 
@@ -87,6 +130,8 @@ namespace Gamsamo.UI
         {
             weather = Weather.Clear;
             doorCosmetic = windowCosmetic = pcCosmetic = clipboardCosmetic = null;
+            windowVariantTextures = Array.Empty<Texture2D>();
+            windowBlindState = 0;
             RebuildIfPlaying();
         }
 
@@ -98,6 +143,11 @@ namespace Gamsamo.UI
                 case CosmeticLayer.Pc: return pcCosmetic != null ? pcCosmetic : defaultPc;
                 case CosmeticLayer.Clipboard: return clipboardCosmetic != null ? clipboardCosmetic : defaultClipboard;
                 case CosmeticLayer.Window:
+                    if (HasWindowVariants)
+                    {
+                        int blindOffset = HasBlindVariants ? windowBlindState * 3 : 0;
+                        return windowVariantTextures[blindOffset + (int)weather];
+                    }
                     if (windowCosmetic != null) return windowCosmetic;
                     return weather == Weather.Rain ? rainWindow : weather == Weather.Cloudy ? cloudyWindow : clearWindow;
                 default: throw new ArgumentOutOfRangeException(nameof(layer));
@@ -115,6 +165,9 @@ namespace Gamsamo.UI
             else if (baseTexture == null || defaultDoor == null || clearWindow == null || cloudyWindow == null
                 || rainWindow == null || defaultPc == null || defaultClipboard == null)
                 reason = "One or more default room layer textures are missing.";
+            else if (windowVariantTextures != null && windowVariantTextures.Length > 0
+                && (!CompleteWindowVariants(windowVariantTextures) || windowBlindState < 0 || windowBlindState > 2))
+                reason = "The selected window design has incomplete weather or blind variants.";
             else if (!FitsCanvas(doorRect) || !FitsCanvas(windowRect) || !FitsCanvas(pcRect) || !FitsCanvas(clipboardRect))
                 reason = "A room layer rectangle is empty or outside the room canvas.";
             else
@@ -185,6 +238,14 @@ namespace Gamsamo.UI
         {
             return rect.width > 0 && rect.height > 0 && rect.xMin >= 0 && rect.yMin >= 0
                 && rect.xMax <= canvasSize.x && rect.yMax <= canvasSize.y;
+        }
+
+        private static bool CompleteWindowVariants(Texture2D[] textures)
+        {
+            if (textures == null || (textures.Length != 3 && textures.Length != 9)) return false;
+            for (int index = 0; index < textures.Length; index++)
+                if (textures[index] == null) return false;
+            return true;
         }
 
         private float CurrentBlurAmount()

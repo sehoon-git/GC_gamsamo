@@ -37,13 +37,14 @@ namespace Gamsamo.Editor
             PcDesktopSceneInstaller.Install();
             var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/_Project/Fonts/NotoSansKR SDF.asset");
             if (font == null) throw new InvalidOperationException("The Korean TMP font is missing.");
+            var cosmetics = CosmeticCatalogImporter.Build();
             var room = scene.GetRootGameObjects().SelectMany(root =>
                 root.GetComponentsInChildren<ConsultationRoomController>(true)).Single();
             GameObject prefab = PrefabUtility.LoadPrefabContents(PrefabPath);
             try
             {
-                Upgrade(room, font);
-                Upgrade(prefab.GetComponent<ConsultationRoomController>(), font);
+                Upgrade(room, font, cosmetics);
+                Upgrade(prefab.GetComponent<ConsultationRoomController>(), font, cosmetics);
                 PrefabUtility.SaveAsPrefabAsset(prefab, PrefabPath);
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene);
@@ -51,10 +52,10 @@ namespace Gamsamo.Editor
                 AssetDatabase.SaveAssetIfDirty(font);
             }
             finally { PrefabUtility.UnloadPrefabContents(prefab); }
-            Debug.Log("Counseling asset pack applied to scene and prefab: room layers, record, PC wallpaper, profile, photos and settings.");
+            Debug.Log("Counseling asset pack applied to scene and prefab, including 40 cosmetic previews and window blinds.");
         }
 
-        private static void Upgrade(ConsultationRoomController room, TMP_FontAsset font)
+        private static void Upgrade(ConsultationRoomController room, TMP_FontAsset font, CosmeticCatalog cosmetics)
         {
             if (room == null || room.pcDesktopView == null)
                 throw new InvalidOperationException("The installed consultation PC is required.");
@@ -101,6 +102,15 @@ namespace Gamsamo.Editor
             unitText.color = new Color32(61, 87, 71, 255);
             unitText.raycastTarget = false;
             unitText.richText = false;
+            var appearance = GetOrAdd<CosmeticAppearanceController>(room.gameObject);
+            appearance.catalog = cosmetics;
+            appearance.roomAppearance = view.roomAppearance;
+            appearance.desktop = view;
+            appearance.recordImage = room.recordView.GetComponent<Image>();
+            appearance.defaultRecord = Sprite(Pack + "room/medical-record-front.png");
+            CosmeticShopBuilder.Build(view, cosmetics, appearance, font);
+            view.ResetDesktop();
+            EditorUtility.SetDirty(appearance);
             EditorUtility.SetDirty(view);
             EditorUtility.SetDirty(room);
         }

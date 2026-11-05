@@ -4,7 +4,7 @@ import asyncio
 
 from app.client import SaveStore, SessionClient
 from app.core.config import ExperimentError, Settings
-from app.schemas.models import CaseState, next_session
+from app.schemas.models import PATIENT_IDS, CaseState, next_session
 
 
 HELP = """명령:
@@ -14,7 +14,7 @@ HELP = """명령:
   /finish            지금 상담 종료: 고정 안내 저장 후 평가
   /evaluate          마무리 저장 후 평가만 재시도
   /next              기준 미달 후 기억을 이어 재상담
-  /new               기록을 보존하고 초기 서윤으로 새 실험
+  /new               기록을 보존하고 선택한 환자로 새 실험
   /cases             보관된 실험 ID 목록
   /open 실험_ID      보관된 실험의 자동 저장 불러오기
   x, /quit           프로그램 종료 (확정된 대화는 자동 저장됨)
@@ -27,7 +27,7 @@ def status(client):
 
 
 def show_evaluation(value, catalog):
-    print(f"\n상담 결과: 서윤의 변화 {value.patient_score}/100 · 상담자의 대응 {value.counselor_score}/100")
+    print(f"\n상담 결과: {catalog.patient['name']}의 변화 {value.patient_score}/100 · 상담자의 대응 {value.counselor_score}/100")
     for item in value.scores:
         print(f"- {catalog.rubric[item.criterion_id]['label']}: {item.score}/25 — {item.explanation}")
         for source in item.evidence:
@@ -37,21 +37,22 @@ def show_evaluation(value, catalog):
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="서윤 1인 상담 실험")
+    parser = argparse.ArgumentParser(description="환자별 상담 실험")
+    parser.add_argument("--patient", choices=PATIENT_IDS, default="seoyun", help="상담할 환자 ID")
     parser.add_argument("--case", help="보관된 실험 ID")
     parser.add_argument("--new", action="store_true", help="이전 기록을 보존하고 새 형식으로 시작")
     args = parser.parse_args()
-    settings, store = Settings.from_env(), SaveStore()
-    state = CaseState() if args.new else store.load(case_id=args.case) or CaseState()
+    settings, store = Settings.from_env(), SaveStore(patient_id=args.patient)
+    state = CaseState(patient_id=args.patient) if args.new else store.load(case_id=args.case) or CaseState(patient_id=args.patient)
     client = SessionClient(settings, store, state)
     store.save(state)
-    print("서윤 · 대학 졸업 후 3년째 취업 준비 중. 카페에서 생활비를 벌고 있습니다.")
-    print("면접을 앞두면 잠을 못 자고, 최근 예정된 면접에 가지 않아 상담에 왔습니다.")
+    name = client.catalog.patient["name"]
+    print(f"{name} · {client.catalog.patient['title']}")
     print(f"실험: {state.case_id}\n저장 위치: {store.directory}\n/help로 명령을 볼 수 있습니다. x를 입력하고 Enter를 누르면 종료합니다.")
     if state.current.turns:
-        print(f"\n마지막 서윤 발언: {state.current.turns[-1].complete_reply}")
+        print(f"\n마지막 {name} 발언: {state.current.turns[-1].complete_reply}")
     elif state.current.opening:
-        print(f"\n서윤 > {state.current.opening.patient_text}")
+        print(f"\n{name} > {state.current.opening.patient_text}")
     if state.current.evaluation:
         show_evaluation(state.current.evaluation, client.catalog)
     status(client)
@@ -64,7 +65,7 @@ async def main():
     async def advance():
         if client.state.current.phase == "active" and client.state.current.opening is None:
             opening = await client.open()
-            print("\n서윤 >", opening.patient_text)
+            print(f"\n{name} >", opening.patient_text)
         if client.state.current.phase == "closing":
             await client.finish()
         if client.state.current.phase == "pending_evaluation":
@@ -96,7 +97,7 @@ async def main():
                     await advance()
                     status(client)
                 elif text == "/new":
-                    client.replace(CaseState())
+                    client.replace(CaseState(patient_id=args.patient))
                     print("이전 실험 기록을 보존했습니다. 새 실험:", client.state.case_id)
                     await advance()
                     status(client)
@@ -115,9 +116,9 @@ async def main():
                 elif text == "/retry":
                     await client.retry()
                     if client.state.current.turns:
-                        print("\n서윤 >", client.state.current.turns[-1].complete_reply)
+                        print(f"\n{name} >", client.state.current.turns[-1].complete_reply)
                     elif client.state.current.opening:
-                        print("\n서윤 >", client.state.current.opening.patient_text)
+                        print(f"\n{name} >", client.state.current.opening.patient_text)
                     await advance()
                     status(client)
                 elif text.startswith("/"):
@@ -125,9 +126,9 @@ async def main():
                 else:
                     if client.state.current.phase != "active" or client.state.cleared:
                         raise ValueError("상담이 종료되었습니다. /evaluate, /next 또는 /new를 사용하세요.")
-                    print("서윤의 답변을 기다립니다…")
+                    print(f"{name}의 답변을 기다립니다…")
                     turn = await client.turn(text)
-                    print("\n서윤 >", turn.complete_reply)
+                    print(f"\n{name} >", turn.complete_reply)
                     status(client)
                     print(f"[{turn.metrics.seconds:.1f}초 · 모델 요청 {turn.metrics.calls}회]")
                     await advance()

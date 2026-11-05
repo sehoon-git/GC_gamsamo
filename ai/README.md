@@ -1,6 +1,6 @@
-# 서윤 AI 베타 실행
+# 환자별 AI 베타 실행
 
-서윤 한 명의 환자 첫 발화·한국어 서술형 대화·사용자 종료·기억·자동 저장·두 축 평가 API를 제공한다. Unity 연결 계층과 [텍스트 입력 UI 연결 명세](../contracts/README.md#unity-text-input)는 같은 계약을 사용한다. 기존 입력창·전송 버튼은 `PatientAiInputBridge`로 PR #24의 `PatientAiAdapter`에 연결한다. Enter는 줄바꿈, Ctrl+Enter 또는 전송 버튼은 전송이며 한글 조합 중에는 보내지 않는다. 주질문·후속질문·횟수 제한 없이 대화하다가 `상담 그만하기`를 확정하면 종료하고, 원문·평가는 책상 서류에서 읽는다. `/health`의 `supported_patient_ids`에 있는 환자만 실제 AI 상담 대상이며, 나머지 다섯 명의 임상 설정·평가 데이터는 아직 없다.
+서윤·도현·태준·연우·하린 5명의 환자 첫 발화·한국어 서술형 대화·사용자 종료·기억·자동 저장·두 축 평가 API를 제공한다. Unity 연결 계층과 [텍스트 입력 UI 연결 명세](../contracts/README.md#unity-text-input)는 같은 계약을 사용한다. 기존 입력창·전송 버튼은 `PatientAiInputBridge`로 PR #24의 `PatientAiAdapter`에 연결한다. Enter는 줄바꿈, Ctrl+Enter 또는 전송 버튼은 전송이며 한글 조합 중에는 보내지 않는다. 주질문·후속질문·횟수 제한 없이 대화하다가 `상담 그만하기`를 확정하면 종료하고, 원문·평가는 책상 서류에서 읽는다. `/health`의 `supported_patient_ids`에 있는 환자만 실제 AI 상담 대상이며, 민석은 설정 대기인 로컬 시연이다.
 
 ## Conda 실행
 
@@ -10,7 +10,8 @@
 conda activate game-ai
 python tools/run_experiment.py --server-only
 # 별도 터미널
-python tools/chat.py
+python tools/chat.py --patient seoyun
+# 선택 가능: seoyun, dohyeon, taejun, yeonwoo, harin
 ```
 
 서버 전용 모드는 CLI가 종료되어도 유지된다. 서버 터미널의 Ctrl+C로 자신이 시작한 모델·API를 종료한다. 함께 실행하고 함께 종료하려면 `python tools/run_experiment.py`를 사용한다. 모델 포트 8000과 API 포트 8001은 localhost에만 바인딩한다.
@@ -43,7 +44,7 @@ Python 참조 클라이언트는 `active → closing → pending_evaluation → 
 | `/finish` | 원하는 시점에 종료 안내 저장·평가 (상담자 발언이 없어도 가능) |
 | `/evaluate` | 마무리 저장 이후 평가 재시도 |
 | `/next` | 기준 미달 후 원문·기억을 유지한 새 회차 |
-| `/new` | 이전 기록을 보존한 새 실험 |
+| `/new` | 선택한 환자의 이전 기록을 보존한 새 실험 |
 | `/cases`, `/open 실험_ID` | 보관된 실험 확인·자동 저장 복원 |
 | `/status`, `/help` | 상담 회차·단계·도움말 |
 | `x`, `/quit` | 확정 상태를 보존하고 CLI 종료 |
@@ -81,6 +82,7 @@ python tools/export_contracts.py --check
 python ai/evaluation/terminal_smoke.py --label chosen
 python ai/evaluation/long_context_smoke.py --label chosen
 python ai/evaluation/compare_models.py --label chosen
+python ai/evaluation/patient_smoke.py --label characters
 ```
 
 Unity와 공유하는 C# 계약·저장 코드는 .NET 8 개발 환경에서 다음과 같이 검사한다. 두 번째 명령은 지정한 API에 합성 상담을 생성해 종료·평가·재상담까지 확인한다. 실제 설정 파일은 Git에 넣지 않는다.
@@ -92,7 +94,7 @@ dotnet run --project tools/unity-client-checks/UnityClientChecks.csproj -- . <�
 
 선택적으로 `dotnet build tools/unity-client-checks/AdapterCompileChecks.csproj`로 Unity 대체 타입을 사용하는 어댑터 구문·타입 검사를 할 수 있다. C# 검사는 Unity Editor의 정식 컴파일·실행이나 입력 UI 검사가 아니다. 현재 입력·서류 UI의 실제 외부 서버 연결·한글 IME·복원 검증은 [입력 UI 명세](../contracts/README.md#unity-text-input)와 PR 체크리스트를 따른다.
 
-첫 두 검사는 모델 없이 규칙·장애·계약을 확인한다. 나머지는 실제 모델을 하나씩 실행하며 사용자 저장을 건드리지 않는다. `terminal_smoke`는 환자 첫 발화·공감과 복수 질문을 포함한 8턴 대화·명시적 종료·단계 복원·평가 재시도, `long_context_smoke`는 합성 긴 원문·요약·근거 검사를 수행한다. `compare_models`는 같은 20개 상황×2를 측정한다. 결과는 Git 제외 영역에 보존한다.
+첫 두 검사는 모델 없이 규칙·장애·계약을 확인한다. 나머지는 실제 모델을 하나씩 실행하며 사용자 저장을 건드리지 않는다. `terminal_smoke`는 환자 첫 발화·공감과 복수 질문을 포함한 8턴 대화·명시적 종료·단계 복원·평가 재시도, `long_context_smoke`는 합성 긴 원문·요약·근거 검사를 수행한다. `compare_models`는 기존 서윤의 같은 20개 상황×2를 측정한다. `patient_smoke`는 추가 네 명의 실제 첫 발화·대화·복원·종료·평가를 확인하고 미클리어 사례만 재상담한다. 결과는 Git 제외 영역에 보존한다.
 
 [공용 계약과 예제](../contracts/README.md), [현재 진행·한계](progress.md), [통합 기획서](../docs/plan01.md)를 함께 확인한다. 자동 기능 검사는 한국어 자연스러움이나 팀원 데스크톱의 Unity 통합 검증을 대신하지 않는다.
 

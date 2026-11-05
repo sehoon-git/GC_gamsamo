@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "서윤 상담 실험",
-    "version": "0.4.0"
+    "title": "상담 게임 AI",
+    "version": "0.4.1"
   },
   "paths": {
     "/health": {
@@ -334,7 +334,6 @@
           },
           "content_version": {
             "type": "string",
-            "const": "seoyun-4.0",
             "title": "Content Version",
             "default": "seoyun-4.0"
           },
@@ -345,7 +344,7 @@
           },
           "patient_id": {
             "type": "string",
-            "const": "seoyun",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
             "title": "Patient Id",
             "default": "seoyun"
           },

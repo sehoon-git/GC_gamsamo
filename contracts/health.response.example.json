@@ -6,17 +6,42 @@
   },
   "content_version": "seoyun-4.0",
   "model_revision": "mock-fixture-v4",
-  "prompt_version": "21cfbe9c92d94400",
+  "prompt_version": "7b0f7098d64d0d70",
   "busy": false,
   "format_version": 4,
   "mode": "mock",
   "supported_patient_ids": [
-    "seoyun"
+    "seoyun",
+    "dohyeon",
+    "taejun",
+    "yeonwoo",
+    "harin"
   ],
   "supported_patients": [
     {
       "id": "seoyun",
-      "display_name": "서윤"
+      "display_name": "서윤",
+      "content_version": "seoyun-4.0"
+    },
+    {
+      "id": "dohyeon",
+      "display_name": "도현",
+      "content_version": "dohyeon-4.0"
+    },
+    {
+      "id": "taejun",
+      "display_name": "태준",
+      "content_version": "taejun-4.0"
+    },
+    {
+      "id": "yeonwoo",
+      "display_name": "연우",
+      "content_version": "yeonwoo-4.0"
+    },
+    {
+      "id": "harin",
+      "display_name": "하린",
+      "content_version": "harin-4.0"
     }
   ]
 }

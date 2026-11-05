@@ -8,6 +8,7 @@ namespace Gamsamo.Networking
     public sealed class AiSession
     {
         private readonly AiSaveStore store;
+        private readonly string patientId;
         private JObject snapshot;
         private JObject pendingSave;
         public JObject State => AiProtocol.Copy(AiProtocol.Object(snapshot, "state"));
@@ -33,13 +34,15 @@ namespace Gamsamo.Networking
         }
         public JObject Snapshot => AiProtocol.Copy(snapshot);
 
-        public AiSession(AiSaveStore store)
+        public AiSession(AiSaveStore store, string patientId = "seoyun")
         {
             this.store = store;
+            this.patientId = patientId;
             snapshot = store.Load();
+            AiProtocol.Require(snapshot == null || AiProtocol.Id(AiProtocol.Object(snapshot, "state"), "patient_id") == patientId, "다른 환자의 저장 파일입니다.");
             if (snapshot == null)
             {
-                snapshot = AiSaveStore.NewSnapshot();
+                snapshot = AiSaveStore.NewSnapshot(patientId);
                 store.Save(snapshot, -1);
             }
         }
@@ -125,7 +128,7 @@ namespace Gamsamo.Networking
         public void NewExperiment()
         {
             AiProtocol.Require(pendingSave == null && PendingRequest == null, "이전 요청·저장을 먼저 완료하세요.");
-            var next = AiSaveStore.NewSnapshot();
+            var next = AiSaveStore.NewSnapshot(patientId);
             next["local_revision"] = AiProtocol.Number(snapshot, "local_revision") + 1;
             Save(next);
         }

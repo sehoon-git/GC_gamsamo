@@ -69,6 +69,12 @@ async def documents():
         state = result["initial-state.example.json"]
         state = (await send("empty-close", "/v1/dialogue/close", step("empty_close_example")))["state"]
         await send("empty-evaluate", "/v1/dialogue/evaluate", step("empty_evaluation_example"))
+        for patient_id in ("dohyeon", "taejun", "yeonwoo", "harin"):
+            await send(patient_id + "-start", "/v1/dialogue/start", {
+                "patient_id": patient_id, "case_id": "case_" + patient_id,
+                "session_id": "session_" + patient_id, "request_id": "opening_" + patient_id,
+                "created_at": FIXED_TIME,
+            })
     result["unauthorized.error.example.json"] = {"detail": {"code": "unauthorized", "message": "접근 키를 확인하세요."}}
     result["legacy.error.example.json"] = {"detail": {"code": "unsupported_save_version", "message": "이전 기록은 보존하고 형식 4의 새 실험을 시작하세요."}}
     return {name: json.dumps(normalized(value), ensure_ascii=False, indent=2) + "\n" for name, value in result.items()}

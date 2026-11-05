@@ -27,6 +27,8 @@ namespace Gamsamo.Editor
         public static void Run()
         {
             if (Application.isPlaying) throw new InvalidOperationException("Run isolated input checks outside Play mode.");
+            foreach (string file in Directory.GetFiles(Path.Combine(Application.streamingAssetsPath, "GameData", "Patients"), "*.json"))
+                AiProtocol.RegisterPatient(AiProtocol.Parse(File.ReadAllText(file)));
             int passed = 0;
             var report = new StringBuilder();
             void Check(bool value, string label)
@@ -69,6 +71,8 @@ namespace Gamsamo.Editor
                 Field(adapter, "session", session);
                 Field(adapter, "committedState", session.State);
                 Field(adapter, "localVisitId", "local_check");
+                Field(adapter, "activePatientId", "seoyun");
+                Field(adapter, "patientName", "서윤");
                 Field(adapter, "healthReady", true);
                 // Hold a scheduled operation before ContinueFlow, so no transport is created by this test.
                 adapter.StateChanged += () => { if (session.PendingRequest != null) Field(adapter, "networkBusy", true); };
@@ -118,6 +122,31 @@ namespace Gamsamo.Editor
                 Check(new AiSession(resultStore).VisitCompleted && !string.IsNullOrWhiteSpace(room.record.consultationResult),
                     "Completing the saved visit retains its desk record");
                 CheckRecordPages(host.transform, Check);
+                foreach (string id in new[] { "seoyun", "dohyeon", "taejun", "yeonwoo", "harin" })
+                {
+                    string name = AiProtocol.Text(AiProtocol.Patient(id), "name");
+                    Property(visits, "CurrentPatient", new PatientVisitDefinition { patientId = id, displayName = name });
+                    var patientSnapshot = AiSaveStore.NewSnapshot(id);
+                    patientSnapshot["state"] = Example(id == "seoyun" ? "start.response" : id + "-start.response")["state"].DeepClone();
+                    var patientStore = new AiSaveStore(Path.Combine(temporary, id));
+                    patientStore.Save(patientSnapshot, -1);
+                    session = new AiSession(patientStore, id);
+                    Field(adapter, "session", session);
+                    Field(adapter, "committedState", session.State);
+                    Field(adapter, "activePatientId", id);
+                    Field(adapter, "patientName", name);
+                    Field(adapter, "draftDirty", false);
+                    Field(adapter, "networkBusy", false);
+                    Call(bridge, "Refresh");
+                    Check(adapter.IsAiVisit && view.replyRoot.activeSelf && adapter.CanSubmit, id + " has a usable input panel");
+                    Check(adapter.IsSeoyunVisit == (id == "seoyun"), id + " preserves the legacy Seoyun flag");
+                    view.replyInput.text = name + "에게 보내는 초안";
+                    Check(adapter.Draft == view.replyInput.text, id + " has its own draft");
+                    Call(adapter, "FlushDraft");
+                }
+                Property(visits, "CurrentPatient", new PatientVisitDefinition { patientId = "minseok", displayName = "민석" });
+                Call(bridge, "Refresh");
+                Check(!adapter.IsAiVisit && !view.replyRoot.activeSelf, "Minseok keeps the local demo without an AI input panel");
             }
             finally
             {

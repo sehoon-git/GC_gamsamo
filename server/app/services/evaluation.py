@@ -54,7 +54,7 @@ class EvaluationService:
         return [{"role": "system", "content": self.catalog.prompts[prompt]}, {"role": "user", "content": compact({
             "rubric": self.catalog.patient["rubric"],
             "current_session_id": work["request"].session_id,
-            "fixed_story": self.catalog.patient,
+            "fixed_story": {**self.catalog.patient, "story_events": self.catalog.active_story_events(work["request"].state)},
             **payload,
         })}]
 

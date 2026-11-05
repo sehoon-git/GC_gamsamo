@@ -15,6 +15,7 @@ namespace UnityEngine
     {
         public GameObject gameObject = new GameObject();
         public T GetComponent<T>() => default(T);
+        public T GetComponentInChildren<T>() => default(T);
     }
     public class Behaviour : Component { public bool enabled; public bool isActiveAndEnabled = true; }
     public class MonoBehaviour : Behaviour
@@ -41,13 +42,20 @@ namespace UnityEngine
         public static float SmoothStep(float a, float b, float t) => t;
         public static float Clamp01(float value) => value;
         public static float Max(float a, float b) => a;
+        public static int Max(int a, int b) => a;
+        public static int Clamp(int value, int min, int max) => value;
         public static int Min(int a, int b) => a;
         public static int FloorToInt(float value) => (int)value;
         public static float Lerp(float a, float b, float t) => a;
     }
     public static class Time { public static float unscaledDeltaTime; public static float unscaledTime; }
-    public enum KeyCode { Escape }
-    public static class Input { public static bool GetKeyDown(KeyCode key) => false; }
+    public enum KeyCode { Escape, LeftControl, RightControl, Return, KeypadEnter }
+    public static class Input
+    {
+        public static string compositionString => "";
+        public static bool GetKeyDown(KeyCode key) => false;
+        public static bool GetKey(KeyCode key) => false;
+    }
     public static class Application { public static string persistentDataPath; public static string streamingAssetsPath; public static bool isPlaying; }
     public static class Debug { public static void Log(object value) { } public static void LogError(object value, Object context = null) { } }
     public class DisallowMultipleComponent : Attribute { }
@@ -68,6 +76,13 @@ namespace UnityEngine.UI
 }
 namespace TMPro
 {
+    public class TMP_InputField : UnityEngine.Behaviour
+    {
+        public string text; public bool isFocused; public bool interactable;
+        public ChangeEvent onValueChanged = new ChangeEvent();
+        public void SetTextWithoutNotify(string value) { text = value; }
+        public class ChangeEvent { public void AddListener(Action<string> action) { } public void RemoveListener(Action<string> action) { } }
+    }
     public enum TextOverflowModes { Page }
     public class TMP_Text : UnityEngine.Behaviour
     {
@@ -107,6 +122,7 @@ namespace Gamsamo.UI
     {
         public bool IsOverlayBlocking; public Gamsamo.Patients.MedicalRecordData record;
         public void SetRecord(Gamsamo.Patients.MedicalRecordData data) { record = data; }
+        public void OpenRecord() { }
     }
 }
 namespace UnityEditor

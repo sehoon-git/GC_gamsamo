@@ -4,7 +4,12 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-CONTENT_VERSION = "seoyun-4.0"
+CONTENT_VERSION = "seoyun-4.0"  # Existing Seoyun saves remain compatible.
+PATIENT_IDS = ("seoyun", "dohyeon", "taejun", "yeonwoo", "harin")
+
+
+def content_version(patient_id: str) -> str:
+    return patient_id + "-4.0"
 FORMAT_VERSION = 4
 CLOSING_TEXT = "상담은 여기까지 하겠습니다. 오늘 수고하셨습니다!"
 Id = Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")]
@@ -154,14 +159,21 @@ class Session(Model):
 
 class CaseState(Model):
     format_version: Literal[4] = FORMAT_VERSION
-    content_version: Literal["seoyun-4.0"] = CONTENT_VERSION
+    content_version: str = CONTENT_VERSION
     case_id: Id = Field(default_factory=lambda: new_id("case"))
-    patient_id: Literal["seoyun"] = "seoyun"
+    patient_id: Id = "seoyun"
     revision: int = Field(default=0, ge=0)
     created_at: str = Field(default_factory=now)
     revealed_fact_ids: list[str] = Field(default_factory=list)
     memory: Memory = Field(default_factory=Memory)
     sessions: list[Session] = Field(default_factory=lambda: [Session()], min_length=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def default_content_version(cls, value):
+        if isinstance(value, dict) and "content_version" not in value and isinstance(value.get("patient_id", "seoyun"), str):
+            value = {**value, "content_version": content_version(value.get("patient_id", "seoyun"))}
+        return value
 
     @property
     def current(self) -> Session:
@@ -173,6 +185,8 @@ class CaseState(Model):
 
     @model_validator(mode="after")
     def consistent(self):
+        if self.content_version != content_version(self.patient_id):
+            raise ValueError("환자와 콘텐츠 버전이 일치하지 않습니다.")
         sessions = [s.id for s in self.sessions]
         turns = [t.id for s in self.sessions for t in ([s.opening] if s.opening else []) + s.turns]
         if len(set(sessions)) != len(sessions) or len(set(turns)) != len(turns):

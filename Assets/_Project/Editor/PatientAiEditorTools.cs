@@ -44,8 +44,8 @@ namespace Gamsamo.Editor
                 throw new InvalidOperationException("Dialogue body/speaker references are missing.");
             if (visits[0].dialogue.replyInput == null || visits[0].dialogue.sendButton == null || visits[0].dialogue.retryButton == null)
                 throw new InvalidOperationException("Run Install Patient Visits to bind the reply input, send and retry controls.");
-            var patient = AiProtocol.Parse(File.ReadAllText(Path.Combine(Application.streamingAssetsPath, "GameData", "Patients", "seoyun.json")));
-            AiProtocol.Require(AiProtocol.Text(patient, "content_version") == AiProtocol.ContentVersion, "Patient data version mismatch.");
+            foreach (string file in Directory.GetFiles(Path.Combine(Application.streamingAssetsPath, "GameData", "Patients"), "*.json"))
+                AiProtocol.RegisterPatient(AiProtocol.Parse(File.ReadAllText(file)));
             if (Application.isPlaying && visits[0].GetComponent<PatientAiAdapter>() == null)
                 throw new InvalidOperationException("Runtime AI adapter is not attached.");
             if (Application.isPlaying && visits[0].GetComponent<PatientAiInputBridge>() == null)
@@ -57,7 +57,7 @@ namespace Gamsamo.Editor
         {
             if (!Application.isPlaying || EditorApplication.isPaused) throw new InvalidOperationException("Use unpaused Play mode.");
             var adapter = UnityEngine.Object.FindFirstObjectByType<PatientAiAdapter>();
-            if (adapter == null) throw new InvalidOperationException("Open the consultation scene and admit Seoyun first.");
+            if (adapter == null) throw new InvalidOperationException("Open the consultation scene and admit a supported AI patient first.");
             return adapter;
         }
         private static void Result(bool accepted)
@@ -66,7 +66,7 @@ namespace Gamsamo.Editor
                 : "AI command was not accepted in the current state. Read the adapter state in the Inspector; no duplicate request was created.");
         }
         [MenuItem("Gamsamo/AI/Submit Sample Utterance (Play)")]
-        public static void SubmitSample() => Result(Current().SubmitText("카페에서 일하실 때는 어떠세요? 잘 해냈다고 느낀 경험도 궁금해요."));
+        public static void SubmitSample() => Result(Current().SubmitText("오늘 이야기하고 싶은 마음은 어떤 건가요? 천천히 말씀해 주셔도 괜찮아요."));
         [MenuItem("Gamsamo/AI/Retry Pending Operation (Play)")]
         public static void Retry() => Result(Current().Retry());
         [MenuItem("Gamsamo/AI/Request End (Play)")]
@@ -82,7 +82,7 @@ namespace Gamsamo.Editor
         [MenuItem("Gamsamo/AI/New Experiment (Play)")]
         public static void NewExperiment()
         {
-            if (EditorUtility.DisplayDialog("새 실험", "현재 결과와 이전 원문은 보존하고 별도의 서윤 실험을 시작할까요?", "새 실험", "취소"))
+            if (EditorUtility.DisplayDialog("새 실험", "현재 결과와 이전 원문은 보존하고 이 환자의 새 실험을 시작할까요?", "새 실험", "취소"))
                 Result(Current().NewExperiment());
         }
     }

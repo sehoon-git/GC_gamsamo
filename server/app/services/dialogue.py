@@ -41,7 +41,7 @@ class DialogueService:
     def management_messages(self, work):
         case = work["case"]
         payload = {
-            "patient": self.catalog.patient,
+            "patient": {**self.catalog.patient, "story_events": self.catalog.active_story_events(case)},
             "previously_revealed_fact_ids": case.revealed_fact_ids,
             "memory": case.memory.model_dump(),
             "recent_records": recent_records(case),
@@ -70,6 +70,9 @@ class DialogueService:
         case = work["case"]
         visible = set(case.revealed_fact_ids) | set(work["allowed"])
         character = {key: self.catalog.patient[key] for key in ["name", "speech", "public_facts", "direction", "unspecified"]}
+        character["boundaries"] = self.catalog.patient.get("boundaries", [])
+        character["story_events"] = self.catalog.active_story_events(case)
+        character["possible_change"] = self.catalog.patient.get("possible_change", "")
         character["private_facts"] = [fact for fact in self.catalog.patient["private_facts"] if fact["id"] in visible]
         policy = {
             "fixed_character": character, "memory": case.memory.model_dump(),
@@ -83,18 +86,31 @@ class DialogueService:
         if isinstance(work["request"], OpenRequest):
             # This is a system-directed opening, never a fabricated counselor record.
             messages[0]["content"] += ("\n새 상담을 시작했습니다. 상담자의 선행 발언은 없습니다. "
-                "서윤이 먼저 인사하고 지금 이야기하고 싶은 마음을 자연스럽게 2~4문장으로 말하세요. "
+                f"{self.catalog.patient['name']}이 먼저 인사하고 지금 이야기하고 싶은 마음을 자연스럽게 2~4문장으로 말하세요. "
                 "이전 회차가 있으면 확인된 기억만 이어가고 미공개 정보를 새로 노출하지 마세요.")
+            new_events = [event for event in self.catalog.active_story_events(case)
+                          if event["min_session"] == len(case.sessions)]
+            if new_events:
+                messages[0]["content"] += ("\n이번 회차에 새로 열린 story_events는 사전 작성된 실제 이야기 사건입니다. "
+                    "이번 첫 발화에서 그 사건을 먼저 꺼내세요. 이전 회차에 이미 말했다고 하지 말고, "
+                    "그에 대한 감정은 기쁨·서운함 등이 함께 남을 수 있도록 표현하세요. 사건을 상담자의 공로나 완치로 돌리지 마세요.")
             # Qwen's chat template requires a user query, including for a patient-first
             # opening. This provider-only cue is never appended to the transcript.
-            messages.append({"role": "user", "content": "[대화 시작 제어 신호 — 상담자 발언 아님] 위 지침에 따라 환자의 첫 발화만 생성하세요."})
+            cue = (f"[대화 시작 제어 신호 — 상담자 발언 아님] 지금은 {len(case.sessions)}번째 상담의 시작입니다. "
+                   "위 지침에 따라 환자의 첫 발화만 생성하세요.")
+            if len(case.sessions) > 1:
+                cue += " 이전 첫 인사를 그대로 반복하지 말고, 기억과 현재 상황을 이어 말하세요."
+            if new_events:
+                cue += " 이번 방문에서 먼저 이야기할 새 사건: " + compact(new_events)
+                cue += " 이 사건의 구체적인 장면을 자신의 말로 꺼내되 감정이나 선택이 해결되었다고 단정하지 마세요."
+            messages.append({"role": "user", "content": cue})
         else:
             messages.append({"role": "user", "content": work["request"].text})
         return messages
 
     def validate_reply(self, work, value):
         if isinstance(work["request"], TurnRequest) and re.sub(r"\s+", "", value.text) == re.sub(r"\s+", "", work["request"].text):
-            raise InvalidModelOutput("상담자의 질문을 그대로 반복하지 말고 서윤의 입장에서 답하세요.")
+            raise InvalidModelOutput("상담자의 질문을 그대로 반복하지 말고 설정된 내담자의 입장에서 답하세요.")
         if not value.text.strip() or "<think>" in value.text or "</think>" in value.text:
             raise InvalidModelOutput("비어 있지 않은 한국어 발언만 반환하세요.")
         if not re.search(r"[가-힣]", value.text) or re.search(r"[\u4e00-\u9fff\u3040-\u30ff]", value.text):
@@ -121,7 +137,8 @@ class DialogueService:
     async def start(self, request: StartRequest) -> StateResponse:
         if request.patient_id != self.catalog.patient["id"]:
             raise ExperimentError("이 환자의 AI 상담 콘텐츠는 아직 준비되지 않았습니다.", "unsupported_patient", 404)
-        state = CaseState(case_id=request.case_id, created_at=request.created_at,
+        state = CaseState(patient_id=self.catalog.patient["id"], content_version=self.catalog.patient["content_version"],
+                          case_id=request.case_id, created_at=request.created_at,
                           sessions=[Session(id=request.session_id, started_at=request.created_at)])
         return await self.open_session(OpenRequest(state=state, session_id=request.session_id, request_id=request.request_id))
 

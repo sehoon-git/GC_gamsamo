@@ -12,6 +12,7 @@ namespace Gamsamo.Networking
         {
             if (state == null) return "";
             var text = new StringBuilder();
+            string patientName = AiProtocol.Text(AiProtocol.Patient(AiProtocol.Text(state, "patient_id")), "name");
             int index = 0;
             string currentSession = "";
             foreach (JObject record in AiProtocol.Records(state))
@@ -24,7 +25,7 @@ namespace Gamsamo.Networking
                     text.Append("상담 ").Append(++index).AppendLine();
                 }
                 bool closing = AiProtocol.Text(record, "kind") == "closing";
-                text.Append(closing ? "상담 안내" : AiProtocol.Text(record, "speaker") == "patient" ? "서윤" : "상담자")
+                text.Append(closing ? "상담 안내" : AiProtocol.Text(record, "speaker") == "patient" ? patientName : "상담자")
                     .Append(": ").AppendLine(AiProtocol.Text(record, "text")).AppendLine();
             }
             return text.ToString().TrimEnd();

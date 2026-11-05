@@ -46,9 +46,9 @@ namespace Gamsamo.Networking
         private void Refresh()
         {
             if (view == null || adapter == null || visits == null) return;
-            bool supported = visits.CurrentPatientId == "seoyun" && visits.IsConsultationActive;
+            bool supported = adapter.IsAiVisit && visits.IsConsultationActive;
             view.SetApiMode(supported);
-            view.SetConnectionLabel(supported ? (adapter.IsMock ? "모의 AI · 연결 시연" : "서윤 AI 상담") : "임시 대화 시연 · AI 미연결");
+            view.SetConnectionLabel(supported ? (adapter.IsMock ? "모의 AI · 연결 시연" : visits.CurrentPatient.displayName + " AI 상담") : "임시 대화 시연 · AI 미연결");
             if (!supported) return;
             view.SetComposeState(adapter.CanEditDraft, adapter.CanSubmit,
                 adapter.CurrentPhase == "active" && !adapter.EndRequested,
@@ -82,7 +82,7 @@ namespace Gamsamo.Networking
 
         private void OpenRecord()
         {
-            if (visits != null && visits.room != null && adapter != null && adapter.IsSeoyunVisit)
+            if (visits != null && visits.room != null && adapter != null && adapter.IsAiVisit)
                 visits.room.OpenRecord();
         }
 

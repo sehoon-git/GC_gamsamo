@@ -15,9 +15,9 @@ namespace Gamsamo.Networking
         public string DirectoryPath => directory;
         internal Action<string> BeforeWrite { private get; set; }
 
-        public static JObject NewSnapshot() => new JObject
+        public static JObject NewSnapshot(string patientId = "seoyun") => new JObject
         {
-            ["local_revision"] = 0, ["state"] = AiProtocol.EmptyState(), ["pending_request"] = null,
+            ["local_revision"] = 0, ["state"] = AiProtocol.EmptyState(patientId), ["pending_request"] = null,
             ["end_requested"] = false, ["draft"] = "", ["visit_completed"] = false
         };
 
@@ -46,6 +46,8 @@ namespace Gamsamo.Networking
             {
                 JObject previous = Load();
                 if (JToken.DeepEquals(previous, snapshot)) return;
+                AiProtocol.Require(previous == null || AiProtocol.Id(AiProtocol.Object(previous, "state"), "patient_id")
+                    == AiProtocol.Id(AiProtocol.Object(snapshot, "state"), "patient_id"), "다른 환자의 자동 저장을 덮어쓸 수 없습니다.");
                 int actual = previous == null ? -1 : AiProtocol.Number(previous, "local_revision");
                 AiProtocol.Require(actual == expectedRevision && AiProtocol.Number(snapshot, "local_revision") == actual + 1,
                     "다른 실행이 자동 저장을 변경했습니다. 게임을 다시 열어 저장을 확인하세요.");

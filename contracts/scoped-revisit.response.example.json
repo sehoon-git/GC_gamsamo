@@ -1,0 +1,167 @@
+{
+  "case_id": "case_scoped",
+  "session_id": "session_two",
+  "request_id": "opening_two",
+  "base_revision": 4,
+  "state": {
+    "format_version": 4,
+    "content_version": "harin-4.0",
+    "case_id": "case_scoped",
+    "patient_id": "harin",
+    "game_progress_id": "game_example",
+    "revision": 5,
+    "created_at": "2026-11-06T00:00:00+00:00",
+    "revealed_fact_ids": [],
+    "memory": {
+      "items": [],
+      "through_turn_id": null
+    },
+    "sessions": [
+      {
+        "id": "session_one",
+        "started_at": "2026-11-06T00:00:00+00:00",
+        "closed_at": "2026-11-06T00:00:00+00:00",
+        "opening": {
+          "id": "opening_one",
+          "patient_text": "하린입니다. 제 이야기를 천천히 해 보고 싶어요.",
+          "candidate_fact_ids": [],
+          "created_at": "2026-11-06T00:00:00+00:00",
+          "metrics": {
+            "seconds": 0.0,
+            "calls": 1,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "role_seconds": {}
+          }
+        },
+        "phase": "evaluated",
+        "closing_request_id": "close_scoped",
+        "closing_text": "상담은 여기까지 하겠습니다. 오늘 수고하셨습니다!",
+        "closing_speaker": "counselor",
+        "closing_metrics": {
+          "seconds": 0.0,
+          "calls": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "role_seconds": {}
+        },
+        "turns": [
+          {
+            "id": "turn_scoped",
+            "user_text": "가족을 돕는 마음과 부담을 함께 이야기해도 괜찮아요.",
+            "patient_text": "하린입니다. 제 이야기를 천천히 해 보고 싶어요.",
+            "topic_label": "현재 마음",
+            "candidate_fact_ids": [],
+            "created_at": "2026-11-06T00:00:00+00:00",
+            "metrics": {
+              "seconds": 0.0,
+              "calls": 2,
+              "prompt_tokens": 0,
+              "completion_tokens": 0,
+              "role_seconds": {}
+            }
+          }
+        ],
+        "evaluation": {
+          "scores": [
+            {
+              "criterion_id": "harin_mixed_feelings",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            },
+            {
+              "criterion_id": "harin_self_compassion",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            },
+            {
+              "criterion_id": "harin_boundaries",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            },
+            {
+              "criterion_id": "harin_identity_choice",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            },
+            {
+              "criterion_id": "empathy",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            },
+            {
+              "criterion_id": "exploration",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            },
+            {
+              "criterion_id": "autonomy",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            },
+            {
+              "criterion_id": "practical_context",
+              "score": 0,
+              "explanation": "모의 연결 결과입니다. 실제 상담 품질을 평가한 점수가 아닙니다.",
+              "evidence": []
+            }
+          ],
+          "patient_score": 0,
+          "counselor_score": 0,
+          "cleared": false,
+          "evaluated_at": "2026-11-06T00:00:00+00:00",
+          "model_revision": "mock-fixture-v4",
+          "prompt_version": "e8445168f1a23c20",
+          "source_messages": 3,
+          "metrics": {
+            "seconds": 0.0,
+            "calls": 1,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "role_seconds": {}
+          }
+        }
+      },
+      {
+        "id": "session_two",
+        "started_at": "2026-11-06T00:00:00+00:00",
+        "closed_at": null,
+        "opening": {
+          "id": "opening_two",
+          "patient_text": "하린입니다. 제 이야기를 천천히 해 보고 싶어요.",
+          "candidate_fact_ids": [],
+          "created_at": "2026-11-06T00:00:00+00:00",
+          "metrics": {
+            "seconds": 0.0,
+            "calls": 1,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "role_seconds": {}
+          }
+        },
+        "phase": "active",
+        "closing_request_id": null,
+        "closing_text": "",
+        "closing_speaker": "counselor",
+        "closing_metrics": {
+          "seconds": 0.0,
+          "calls": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "role_seconds": {}
+        },
+        "turns": [],
+        "evaluation": null
+      }
+    ]
+  },
+  "replayed": false,
+  "disclosure_candidates": []
+}

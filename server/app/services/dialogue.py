@@ -100,6 +100,7 @@ class DialogueService:
                    "위 지침에 따라 환자의 첫 발화만 생성하세요.")
             if len(case.sessions) > 1:
                 cue += " 이전 첫 인사를 그대로 반복하지 말고, 기억과 현재 상황을 이어 말하세요."
+                cue += " 설정에만 있고 이전 원문에서 말하지 않은 일은 이번에 처음 꺼내는 이야기입니다. 이전에 함께 나눴던 말로 취급하지 마세요."
             if new_events:
                 cue += " 이번 방문에서 먼저 이야기할 새 사건: " + compact(new_events)
                 cue += " 이 사건의 구체적인 장면을 자신의 말로 꺼내되 감정이나 선택이 해결되었다고 단정하지 마세요."
@@ -138,7 +139,7 @@ class DialogueService:
         if request.patient_id != self.catalog.patient["id"]:
             raise ExperimentError("이 환자의 AI 상담 콘텐츠는 아직 준비되지 않았습니다.", "unsupported_patient", 404)
         state = CaseState(patient_id=self.catalog.patient["id"], content_version=self.catalog.patient["content_version"],
-                          case_id=request.case_id, created_at=request.created_at,
+                          case_id=request.case_id, game_progress_id=request.game_progress_id, created_at=request.created_at,
                           sessions=[Session(id=request.session_id, started_at=request.created_at)])
         return await self.open_session(OpenRequest(state=state, session_id=request.session_id, request_id=request.request_id))
 

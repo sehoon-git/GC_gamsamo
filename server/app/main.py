@@ -19,6 +19,8 @@ from app.services.catalog import Catalog
 from app.schemas.models import PATIENT_IDS, content_version
 from app.services.dialogue import DialogueService
 from app.services.evaluation import EvaluationService
+from app.patient_registry import patient_catalog
+from app.schemas.models import PatientCatalogResponse
 
 
 def create_app(settings: Settings | None = None, llm=None):
@@ -28,9 +30,12 @@ def create_app(settings: Settings | None = None, llm=None):
     dialogues = {key: DialogueService(engine, catalog) for key, catalog in catalogs.items()}
     evaluators = {key: EvaluationService(engine, catalog) for key, catalog in catalogs.items()}
     catalog = catalogs["seoyun"]  # Preserve the legacy health fields for existing clients.
+    roster = patient_catalog(settings.root)
 
     def service(services, patient_id):
         if patient_id not in services:
+            if any(p["id"] == patient_id and not p["ready"] for p in roster["patients"]):
+                raise ExperimentError("정식 사연과 평가 기준이 준비되지 않은 환자입니다.", "content_not_ready", 409)
             raise ExperimentError("이 환자의 AI 상담 콘텐츠는 아직 준비되지 않았습니다.", "unsupported_patient", 404)
         return services[patient_id]
     gate = asyncio.Lock()
@@ -40,7 +45,7 @@ def create_app(settings: Settings | None = None, llm=None):
         yield
         await engine.close()
 
-    app = FastAPI(title="상담 게임 AI", version="0.4.1", lifespan=lifespan)
+    app = FastAPI(title="상담 게임 AI", version="0.4.2", lifespan=lifespan)
 
     @app.exception_handler(ExperimentError)
     async def experiment_error(request, exc):
@@ -69,10 +74,16 @@ def create_app(settings: Settings | None = None, llm=None):
             "api": "ok", "inference": status, "content_version": catalog.patient["content_version"],
             "model_revision": engine.config["revision"], "prompt_version": catalog.prompt_version, "busy": gate.locked(),
             "format_version": FORMAT_VERSION, "mode": "mock" if settings.mock else "model",
+            "capabilities": ["game_progress_scope", "patient_catalog_v1"],
             "supported_patient_ids": list(catalogs),
             "supported_patients": [{"id": c.patient["id"], "display_name": c.patient["name"],
                                      "content_version": c.patient["content_version"]} for c in catalogs.values()],
         })
+
+    @app.get("/v1/patients", response_model=PatientCatalogResponse, dependencies=[Depends(authorize)])
+    async def patients():
+        # No private facts, rubric content or original conversation is exposed here.
+        return roster
 
     @app.post("/v1/dialogue/start", response_model=StateResponse, dependencies=[Depends(authorize)])
     async def start(request: StartRequest):

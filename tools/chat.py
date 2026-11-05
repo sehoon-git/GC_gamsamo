@@ -39,11 +39,12 @@ def show_evaluation(value, catalog):
 async def main():
     parser = argparse.ArgumentParser(description="환자별 상담 실험")
     parser.add_argument("--patient", choices=PATIENT_IDS, default="seoyun", help="상담할 환자 ID")
+    parser.add_argument("--game-progress-id", default="legacy", help="게임 진행별 격리 ID; 생략 시 기존 독립 실험 저장")
     parser.add_argument("--case", help="보관된 실험 ID")
     parser.add_argument("--new", action="store_true", help="이전 기록을 보존하고 새 형식으로 시작")
     args = parser.parse_args()
-    settings, store = Settings.from_env(), SaveStore(patient_id=args.patient)
-    state = CaseState(patient_id=args.patient) if args.new else store.load(case_id=args.case) or CaseState(patient_id=args.patient)
+    settings, store = Settings.from_env(), SaveStore(patient_id=args.patient, game_progress_id=args.game_progress_id)
+    state = CaseState(patient_id=args.patient, game_progress_id=args.game_progress_id) if args.new else store.load(case_id=args.case) or CaseState(patient_id=args.patient, game_progress_id=args.game_progress_id)
     client = SessionClient(settings, store, state)
     store.save(state)
     name = client.catalog.patient["name"]
@@ -97,7 +98,7 @@ async def main():
                     await advance()
                     status(client)
                 elif text == "/new":
-                    client.replace(CaseState(patient_id=args.patient))
+                    client.replace(CaseState(patient_id=args.patient, game_progress_id=args.game_progress_id))
                     print("이전 실험 기록을 보존했습니다. 새 실험:", client.state.case_id)
                     await advance()
                     status(client)

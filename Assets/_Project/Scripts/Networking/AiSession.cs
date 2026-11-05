@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace Gamsamo.Networking
@@ -11,9 +12,13 @@ namespace Gamsamo.Networking
         private readonly string patientId;
         private JObject snapshot;
         private JObject pendingSave;
+        public event Action PersistenceChanged;
+        public bool IsWriting { get; private set; }
         public JObject State => AiProtocol.Copy(AiProtocol.Object(snapshot, "state"));
         public JObject PendingRequest => snapshot["pending_request"] is JObject value ? AiProtocol.Copy(value) : null;
         public bool HasPendingSave => pendingSave != null;
+        public bool SavingEvaluation => pendingSave != null && AiProtocol.Phase(AiProtocol.Object(pendingSave, "state")) == "evaluated"
+            && Phase != "evaluated";
         public bool EndRequested => AiProtocol.Flag(pendingSave ?? snapshot, "end_requested");
         public bool VisitCompleted => AiProtocol.Flag(snapshot, "visit_completed");
         public string Draft => AiProtocol.Text(pendingSave ?? snapshot, "draft");
@@ -34,7 +39,7 @@ namespace Gamsamo.Networking
         }
         public JObject Snapshot => AiProtocol.Copy(snapshot);
 
-        public AiSession(AiSaveStore store, string patientId = "seoyun")
+        public AiSession(AiSaveStore store, string patientId = "seoyun", AiConversationKey key = null, bool requireExisting = false)
         {
             this.store = store;
             this.patientId = patientId;
@@ -42,7 +47,8 @@ namespace Gamsamo.Networking
             AiProtocol.Require(snapshot == null || AiProtocol.Id(AiProtocol.Object(snapshot, "state"), "patient_id") == patientId, "다른 환자의 저장 파일입니다.");
             if (snapshot == null)
             {
-                snapshot = AiSaveStore.NewSnapshot(patientId);
+                AiProtocol.Require(!requireExisting, "이어갈 상담 저장이 없습니다. 새 사례 시작을 따로 요청하세요.");
+                snapshot = AiSaveStore.NewSnapshot(patientId, key);
                 store.Save(snapshot, -1);
             }
         }
@@ -55,17 +61,29 @@ namespace Gamsamo.Networking
         }
         private void Save(JObject candidate)
         {
+            AiProtocol.Require(!IsWriting, "자동 저장 콜백에서 다시 쓰기를 시작할 수 없습니다.");
             pendingSave = candidate;
-            store.Save(candidate, AiProtocol.Number(snapshot, "local_revision"));
-            snapshot = candidate;
-            pendingSave = null;
+            IsWriting = true; NotifyPersistence();
+            try
+            {
+                store.Save(candidate, AiProtocol.Number(snapshot, "local_revision"));
+                snapshot = candidate;
+                pendingSave = null;
+            }
+            finally { IsWriting = false; NotifyPersistence(); }
+        }
+        private void NotifyPersistence()
+        {
+            if (PersistenceChanged == null) return;
+            foreach (Action listener in PersistenceChanged.GetInvocationList())
+                try { listener(); } catch (Exception) { /* Observers cannot roll back durable storage. */ }
         }
         public void RetrySave()
         {
             if (pendingSave != null) Save(pendingSave);
         }
 
-        public void Schedule(string action, string text = null)
+        public void Schedule(string action, string text = null, string revisitSessionId = null)
         {
             AiProtocol.Require(pendingSave == null && PendingRequest == null, "이전 요청·자동 저장을 먼저 완료하세요.");
             var state = State;
@@ -77,21 +95,33 @@ namespace Gamsamo.Networking
             if (action == "start" || action == "open") AiProtocol.Require(phase == "active" && !(AiProtocol.Current(state)["opening"] is JObject), "이미 첫 발화가 있습니다.");
             if (action == "revisit") AiProtocol.Require(phase == "evaluated" && !AiProtocol.Flag(AiProtocol.Object(AiProtocol.Current(state), "evaluation"), "cleared"), "기준 미달 상담만 재상담할 수 있습니다.");
             var next = Next();
-            next["pending_request"] = AiProtocol.Request(state, action, text);
+            if (action == "revisit" && revisitSessionId != null)
+                AiProtocol.Require(!AiProtocol.Array(state, "sessions").Any(s => (string)s["id"] == revisitSessionId), "이미 사용한 회차 ID입니다.");
+            next["pending_request"] = AiProtocol.Request(state, action, text, revisitSessionId);
             if (action == "turn") next["draft"] = text;
             if (action == "revisit") { next["end_requested"] = false; next["visit_completed"] = false; }
             Save(next);
         }
 
-        public void Receive(JObject request, JObject response)
+        public void Receive(JObject request, JObject response, string inferenceMode = "unknown")
         {
+            AiProtocol.Require(pendingSave == null || pendingSave["pending_request"] is JObject,
+                "이미 받은 응답 또는 입력 복원 내용을 먼저 저장하세요.");
             AiProtocol.Require(PendingRequest != null && JToken.DeepEquals(PendingRequest, request), "이미 처리했거나 오래된 요청의 응답입니다.");
             var updated = AiProtocol.Accept(State, request, response);
             // Preserve an end request made while this network request was in flight, even if its disk write failed.
             var next = Next();
             next["state"] = updated;
+            if (inferenceMode != "model") next["model_only"] = false;
             next["pending_request"] = null;
             if (AiProtocol.Text(request, "action") == "turn") next["draft"] = "";
+            if (AiProtocol.Text(request, "action") == "evaluate")
+            {
+                AiProtocol.Require(inferenceMode == "model" || inferenceMode == "mock" || inferenceMode == "unknown", "알 수 없는 평가 출처입니다.");
+                var sources = next["evaluation_sources"] as JObject ?? new JObject();
+                sources[AiProtocol.Id(AiProtocol.Current(updated), "id")] = inferenceMode;
+                next["evaluation_sources"] = sources;
+            }
             Save(next);
         }
 
@@ -127,10 +157,18 @@ namespace Gamsamo.Networking
 
         public void NewExperiment()
         {
+            AiProtocol.Require(AiProtocol.ProgressId(State) == "legacy", "진행별 새 사례는 StartNewCase로 별도 ID를 지정하세요.");
             AiProtocol.Require(pendingSave == null && PendingRequest == null, "이전 요청·저장을 먼저 완료하세요.");
             var next = AiSaveStore.NewSnapshot(patientId);
             next["local_revision"] = AiProtocol.Number(snapshot, "local_revision") + 1;
             Save(next);
+        }
+
+        public bool TryGetSavedEvaluation(out AiSavedEvaluation result)
+        {
+            result = null;
+            if (HasPendingSave || PendingRequest != null) return false;
+            return AiSavedEvaluation.TryRead(snapshot, AiProtocol.Id(AiProtocol.Current(State), "id"), out result);
         }
     }
 }

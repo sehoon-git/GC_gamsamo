@@ -20,7 +20,7 @@ namespace Gamsamo.Networking
         public static void RegisterPatient(JObject patient)
         {
             string id = Id(patient, "id");
-            Require(Text(patient, "content_version") == id + "-4.0" && Number(patient, "clear_threshold") == 70, "환자 콘텐츠 버전·평가 기준 오류입니다.");
+            Require(Text(patient, "content_version").StartsWith(id + "-", StringComparison.Ordinal) && Number(patient, "clear_threshold") == 70, "환자 콘텐츠 버전·평가 기준 오류입니다.");
             Text(patient, "name");
             var facts = Array(patient, "private_facts").Cast<JObject>().Select(f => Id(f, "id")).ToList();
             Require(facts.Distinct().Count() == facts.Count, "공개 정보 ID가 중복되었습니다.");
@@ -97,10 +97,12 @@ namespace Gamsamo.Networking
         private static bool Empty(JToken value) => value == null || value.Type == JTokenType.Null;
         private static void Same(JToken a, JToken b, string message) => Require(JToken.DeepEquals(a, b), message);
 
-        public static JObject EmptyState(string patientId = "seoyun")
+        public static string ProgressId(JObject state) => state["game_progress_id"] == null ? "legacy" : Id(state, "game_progress_id");
+
+        public static JObject EmptyState(string patientId = "seoyun", AiConversationKey key = null)
         {
             string time = Timestamp();
-            return new JObject
+            var state = new JObject
             {
                 ["format_version"] = FormatVersion, ["content_version"] = Text(Patient(patientId), "content_version"),
                 ["case_id"] = NewId("case"), ["patient_id"] = patientId, ["revision"] = 0,
@@ -115,6 +117,14 @@ namespace Gamsamo.Networking
                     ["opening"] = null, ["turns"] = new JArray(), ["evaluation"] = null
                 })
             };
+            if (key != null)
+            {
+                Require(patientId == key.PatientId, "환자 ID가 다릅니다.");
+                state["game_progress_id"] = key.GameProgressId;
+                state["case_id"] = key.CaseId;
+                Current(state)["id"] = key.SessionId;
+            }
+            return state;
         }
 
         public static JArray Records(JObject state)
@@ -145,6 +155,7 @@ namespace Gamsamo.Networking
             Require(Number(state, "format_version") == FormatVersion && Text(state, "content_version") == Text(patient, "content_version"),
                 "지원하지 않는 저장 형식입니다. 이전 기록은 보존됩니다.");
             Id(state, "case_id");
+            ProgressId(state);
             Require(Number(state, "revision") >= 0, "지원하지 않는 환자 또는 상태입니다.");
             Text(state, "created_at");
             var sessions = Array(state, "sessions");
@@ -240,9 +251,10 @@ namespace Gamsamo.Networking
                 && Flag(evaluation, "cleared") == (patient >= 70 && counselor >= 70), "평가 합산·클리어 판정이 일치하지 않습니다.");
         }
 
-        public static JObject Request(JObject state, string action, string text = null)
+        public static JObject Request(JObject state, string action, string text = null, string revisitSessionId = null)
         {
             ValidateState(state);
+            Require(new[] { "start", "open", "revisit", "turn", "close", "evaluate" }.Contains(action), "알 수 없는 요청입니다.");
             string requestId = NewId(action), sessionId = Id(Current(state), "id");
             JObject body;
             if (action == "start")
@@ -250,12 +262,14 @@ namespace Gamsamo.Networking
                     ["request_id"] = requestId, ["created_at"] = Text(state, "created_at") };
             else
             {
-                if (action == "revisit") sessionId = NewId("session");
+                if (action == "revisit") sessionId = revisitSessionId ?? NewId("session");
                 body = new JObject { ["state"] = state.DeepClone(), ["session_id"] = sessionId };
                 body[action == "turn" ? "turn_id" : "request_id"] = requestId;
                 if (action == "turn") body["text"] = text;
                 if (action == "revisit") body["created_at"] = Timestamp();
             }
+            if (action == "start" && ProgressId(state) != "legacy") body["game_progress_id"] = ProgressId(state);
+            Id(body, "session_id");
             return new JObject { ["action"] = action, ["body"] = body };
         }
 
@@ -267,6 +281,7 @@ namespace Gamsamo.Networking
             JObject body = Object(request, "body"), after = Object(response, "state");
             ValidateState(after);
             Same(before["patient_id"], after["patient_id"], "응답이 다른 환자로 변경되었습니다.");
+            Require(ProgressId(before) == ProgressId(after), "응답이 다른 게임 진행으로 변경되었습니다.");
             Same(before["content_version"], after["content_version"], "응답의 콘텐츠 버전이 변경되었습니다.");
             string requestId = Id(body, action == "turn" ? "turn_id" : "request_id");
             Require(Id(response, "case_id") == Id(before, "case_id") && Id(after, "case_id") == Id(before, "case_id")

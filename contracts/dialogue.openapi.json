@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "상담 게임 AI",
-    "version": "0.4.1"
+    "version": "0.4.2"
   },
   "paths": {
     "/health": {
@@ -15,6 +15,46 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/patients": {
+      "get": {
+        "summary": "Patients",
+        "operationId": "patients_v1_patients_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientCatalogResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -348,13 +388,22 @@
             "title": "Patient Id",
             "default": "seoyun"
           },
+          "game_progress_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Game Progress Id",
+            "default": "legacy"
+          },
           "revision": {
             "type": "integer",
             "minimum": 0.0,
             "title": "Revision",
             "default": 0
           },
-          "created_at": "2026-11-06T00:00:00+00:00",
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
           "revealed_fact_ids": {
             "items": {
               "type": "string"
@@ -492,7 +541,10 @@
             "type": "boolean",
             "title": "Cleared"
           },
-          "evaluated_at": "2026-11-06T00:00:00+00:00",
+          "evaluated_at": {
+            "type": "string",
+            "title": "Evaluated At"
+          },
           "model_revision": {
             "type": "string",
             "title": "Model Revision"
@@ -639,7 +691,11 @@
       },
       "Metrics": {
         "properties": {
-          "seconds": 0.0,
+          "seconds": {
+            "type": "number",
+            "title": "Seconds",
+            "default": 0
+          },
           "calls": {
             "type": "integer",
             "title": "Calls",
@@ -712,7 +768,10 @@
             "maxItems": 3,
             "title": "Candidate Fact Ids"
           },
-          "created_at": "2026-11-06T00:00:00+00:00",
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
           "metrics": {
             "$ref": "#/components/schemas/Metrics"
           }
@@ -725,6 +784,80 @@
         ],
         "title": "Opening",
         "description": "A patient's first utterance, with no invented counselor message."
+      },
+      "PatientCatalogResponse": {
+        "properties": {
+          "catalog_version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Catalog Version",
+            "default": 1
+          },
+          "patients": {
+            "items": {
+              "$ref": "#/components/schemas/PatientInfo"
+            },
+            "type": "array",
+            "title": "Patients"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "patients"
+        ],
+        "title": "PatientCatalogResponse"
+      },
+      "PatientInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "aliases": {
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,80}$"
+            },
+            "type": "array",
+            "title": "Aliases"
+          },
+          "ready": {
+            "type": "boolean",
+            "title": "Ready"
+          },
+          "content_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Version"
+          },
+          "unavailable_reason": {
+            "type": "string",
+            "title": "Unavailable Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "aliases",
+          "ready",
+          "content_version",
+          "unavailable_reason"
+        ],
+        "title": "PatientInfo"
       },
       "RevisitRequest": {
         "properties": {
@@ -741,7 +874,10 @@
             "pattern": "^[A-Za-z0-9_-]{1,80}$",
             "title": "Request Id"
           },
-          "created_at": "2026-11-06T00:00:00+00:00"
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
         },
         "additionalProperties": false,
         "type": "object",
@@ -759,8 +895,21 @@
             "pattern": "^[A-Za-z0-9_-]{1,80}$",
             "title": "Id"
           },
-          "started_at": "2026-11-06T00:00:00+00:00",
-          "closed_at": "2026-11-06T00:00:00+00:00",
+          "started_at": {
+            "type": "string",
+            "title": "Started At"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
           "opening": {
             "anyOf": [
               {
@@ -837,6 +986,12 @@
             "pattern": "^[A-Za-z0-9_-]{1,80}$",
             "title": "Patient Id"
           },
+          "game_progress_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Game Progress Id",
+            "default": "legacy"
+          },
           "case_id": {
             "type": "string",
             "pattern": "^[A-Za-z0-9_-]{1,80}$",
@@ -852,7 +1007,10 @@
             "pattern": "^[A-Za-z0-9_-]{1,80}$",
             "title": "Request Id"
           },
-          "created_at": "2026-11-06T00:00:00+00:00"
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
         },
         "additionalProperties": false,
         "type": "object",
@@ -944,7 +1102,10 @@
             "maxItems": 3,
             "title": "Candidate Fact Ids"
           },
-          "created_at": "2026-11-06T00:00:00+00:00",
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
           "metrics": {
             "$ref": "#/components/schemas/Metrics"
           }

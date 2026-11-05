@@ -10,6 +10,7 @@
 - 구현·인수인계 로컬 커밋: `0e9eacc736e6100188036c78b5f79825234644ff` (`feat: add consultation room record UI and handoff workflow`). 아래 푸시 실패 상태는 후속 문서 커밋으로 남긴다.
 - `git push origin main`은 `Invalid username or token` 인증 오류로 실패했다.
 - 연결된 GitHub 앱으로도 쓰기를 시도했으나 `403 Resource not accessible by integration`이 반환되었다. 원격 반영은 완료되지 않았다.
+- 푸시 대기 중 원격 `main`에 추가된 `11a16ae`(기획서 0.2, 자격증과 관계없는 비슷한 환자 난이도)를 가져와 충돌 없이 병합했다. 다음 구현은 갱신된 `docs/plan01.md`를 기준으로 한다. 원격의 기존 작업은 보존했다.
 - 사용자가 로컬 Git 인증을 갱신하거나 연결된 GitHub 앱에 이 저장소의 쓰기 권한을 부여해야 한다. 인증 복구 후 원격 변경을 먼저 확인하고, 로컬 커밋을 보존한 상태로 일반 푸시를 수행한다. 강제 푸시는 사용하지 않는다.
 - 남은 단계: GitHub 반영 및 원격 커밋 확인. **이번 사이클은 로컬 커밋까지 완료되었으며 원격 푸시가 남아 있다.**
 

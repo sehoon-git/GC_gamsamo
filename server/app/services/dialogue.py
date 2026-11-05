@@ -85,6 +85,9 @@ class DialogueService:
             messages[0]["content"] += ("\n새 상담을 시작했습니다. 상담자의 선행 발언은 없습니다. "
                 "서윤이 먼저 인사하고 지금 이야기하고 싶은 마음을 자연스럽게 2~4문장으로 말하세요. "
                 "이전 회차가 있으면 확인된 기억만 이어가고 미공개 정보를 새로 노출하지 마세요.")
+            # Qwen's chat template requires a user query, including for a patient-first
+            # opening. This provider-only cue is never appended to the transcript.
+            messages.append({"role": "user", "content": "[대화 시작 제어 신호 — 상담자 발언 아님] 위 지침에 따라 환자의 첫 발화만 생성하세요."})
         else:
             messages.append({"role": "user", "content": work["request"].text})
         return messages

@@ -31,11 +31,13 @@ namespace Gamsamo.Dialogue
         public bool IsVisible => visible && !suspended;
         public bool IsConfirming { get; private set; }
         public string DisplayedText => bodyText != null ? bodyText.text : string.Empty;
+        public bool HasMorePages => bodyText != null && bodyText.pageToDisplay < bodyText.textInfo.pageCount;
 
         private Coroutine typing;
         private bool visible;
         private bool suspended;
         private bool allowNext;
+        private bool allowEnd = true;
         private bool bound;
 
         private void Awake() => BindButtons();
@@ -54,6 +56,8 @@ namespace Gamsamo.Dialogue
             if (bodyText != null)
             {
                 bodyText.richText = false;
+                bodyText.overflowMode = TextOverflowModes.Page;
+                bodyText.pageToDisplay = 1;
                 bodyText.text = text ?? string.Empty;
                 bodyText.maxVisibleCharacters = 0;
                 bodyText.ForceMeshUpdate();
@@ -78,6 +82,29 @@ namespace Gamsamo.Dialogue
             RefreshVisibility();
         }
 
+        public void SetEndAvailable(bool available)
+        {
+            allowEnd = available;
+            RefreshVisibility();
+        }
+
+        /// <summary>Shows every page of long model replies using the existing Next button.</summary>
+        public bool AdvancePage()
+        {
+            if (IsTyping || !HasMorePages) return false;
+            bodyText.pageToDisplay++;
+            bodyText.maxVisibleCharacters = PageStart;
+            if (isActiveAndEnabled) typing = StartCoroutine(TypeLine());
+            else bodyText.maxVisibleCharacters = PageEnd;
+            RefreshVisibility();
+            return true;
+        }
+
+        private int PageStart => bodyText != null && bodyText.textInfo.pageCount > 0
+            ? bodyText.textInfo.pageInfo[bodyText.pageToDisplay - 1].firstCharacterIndex : 0;
+        private int PageEnd => bodyText != null && bodyText.textInfo.pageCount > 0
+            ? bodyText.textInfo.pageInfo[bodyText.pageToDisplay - 1].lastCharacterIndex + 1 : 0;
+
         public void SetSuspended(bool value)
         {
             if (suspended == value) return;
@@ -94,7 +121,7 @@ namespace Gamsamo.Dialogue
         public void RevealAll()
         {
             StopTyping();
-            if (bodyText != null) bodyText.maxVisibleCharacters = int.MaxValue;
+            if (bodyText != null) bodyText.maxVisibleCharacters = PageEnd;
             RefreshVisibility();
         }
 
@@ -108,8 +135,8 @@ namespace Gamsamo.Dialogue
 
         private IEnumerator TypeLine()
         {
-            int total = bodyText.textInfo.characterCount;
-            float shown = 0f;
+            int total = PageEnd;
+            float shown = PageStart;
             // Defer once so the Coroutine handle is always assigned before completion.
             yield return null;
             while (shown < total)
@@ -121,7 +148,7 @@ namespace Gamsamo.Dialogue
                 }
                 yield return null;
             }
-            bodyText.maxVisibleCharacters = int.MaxValue;
+            bodyText.maxVisibleCharacters = total;
             typing = null;
             RefreshVisibility();
         }
@@ -137,8 +164,8 @@ namespace Gamsamo.Dialogue
             }
             if (confirmationPanel != null)
                 confirmationPanel.SetActive(shown && IsConfirming);
-            if (nextButton != null) nextButton.interactable = shown && !IsConfirming && (allowNext || IsTyping);
-            if (endButton != null) endButton.interactable = shown && !IsConfirming;
+            if (nextButton != null) nextButton.interactable = shown && !IsConfirming && (allowNext || IsTyping || HasMorePages);
+            if (endButton != null) endButton.interactable = shown && !IsConfirming && allowEnd;
         }
 
         private void BindButtons()

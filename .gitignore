@@ -130,3 +130,8 @@ InitTestScene*.unity*
 !/ai/models/.gitkeep
 /ai/outputs/*
 !/ai/outputs/.gitkeep
+
+# Standalone contract checks for the Unity AI integration (generated outputs stay local).
+!/tools/unity-client-checks/*.csproj
+/tools/unity-client-checks/bin/
+/tools/unity-client-checks/obj/

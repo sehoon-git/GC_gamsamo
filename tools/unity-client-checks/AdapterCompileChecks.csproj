@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+    <Compile Include="../../Assets/_Project/Scripts/Networking/Ai*.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Networking/PatientAiAdapter.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Dialogue/PatientVisitController.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Dialogue/PatientDialogueView.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Patients/PatientVisitDefinition.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Patients/MedicalRecordData.cs" />
+    <Compile Include="../../Assets/_Project/Editor/PatientAiEditorTools.cs" />
+    <Compile Include="UnityApiStubs.cs" />
+  </ItemGroup>
+</Project>

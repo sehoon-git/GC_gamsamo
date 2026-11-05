@@ -406,3 +406,27 @@ async def test_evaluation_cannot_replace_pending_close_request(tmp_path, setting
         await client.evaluate()
     assert client.pending_request == pending and store.load().current.phase == "closing"
     await client.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("payload", ["Internal Server Error", "<html>upstream unavailable</html>", "[]"])
+async def test_non_json_or_unexpected_http_error_retains_request_for_retry(tmp_path, settings, payload):
+    import httpx
+    from conftest import opened_case
+    state, store = opened_case(), SaveStore(tmp_path)
+    store.save(state)
+    requests = []
+    def unavailable(request):
+        requests.append(request.content)
+        return httpx.Response(502, text=payload)
+    client = SessionClient(settings, store, state, http=httpx.AsyncClient(base_url="http://test", transport=httpx.MockTransport(unavailable)))
+    try:
+        for action in [lambda: client.turn("지금 마음은 어떤가요?"), client.retry]:
+            with pytest.raises(ExperimentError) as exc:
+                await action()
+            assert exc.value.code == "api_error" and exc.value.status == 502
+            assert payload not in str(exc.value)
+        assert requests[0] == requests[1]
+        assert store.load() == state and client.state == state
+    finally:
+        await client.close()

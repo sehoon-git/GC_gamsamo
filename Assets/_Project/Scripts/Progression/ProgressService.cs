@@ -16,6 +16,8 @@ namespace Gamsamo.Progression
             if (state != null) throw new InvalidOperationException("A new progress requires a new store.");
             var next = new GameProgress { ProgressId = Guid.NewGuid().ToString("N"), Phase = ProgressPhase.Waiting,
                 Patients = roster.Select(id => new PatientProgress { PatientId = id }).ToList() };
+            next.Economy.Ledger = Gamsamo.Economy.EconomyState.NewGame(next.ProgressId);
+            next.Economy.Balance = next.Economy.Ledger.balance;
             next.Validate(); store.Save(next, -1); state = next;
         }
         private void Commit(GameProgress next)

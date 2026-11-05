@@ -113,7 +113,7 @@ POST 요청은 서버에서 전달받은 `Authorization: Bearer <키>`를 사용
 | `retry`, `close-retry`, `evaluate-retry` | 확정된 요청 재전달 |
 | `stale-session`, `unauthorized`, `legacy` | 회차·인증·저장 형식 오류 |
 
-Unity는 `PatientVisitController.PatientArrived(visitId, patientId)`에서 지원 환자와 저장 상태를 확인한다. API 상담에서는 `useDemoDialogue=false`로 두고 확정 응답을 `PresentPatientLine(visitId, text)`에 전달한다. `PatientAiInputBridge`가 기존 입력창·전송 버튼을 PR #24의 `PatientAiAdapter`에 연결한다. 종료 확인 시 즉시 퇴장시키지 않고 원문·고정 안내·평가를 저장한 뒤 `CompleteConsultation(visitId)`로 해당 방문을 마친다. 평가는 책상 기록부에 보관하며 결과 대화창을 따로 띄우지 않는다. 이 함수는 그 자체로 클리어·보상·게임 완료를 부여하지 않는다.
+Unity는 `PatientVisitController.PatientArrived(visitId, patientId)`에서 지원 환자와 저장 상태를 확인한다. API 상담에서는 `useDemoDialogue=false`로 두고 확정 응답을 `PresentPatientLine(visitId, text)`에 전달한다. `PatientAiInputBridge`가 기존 입력창·전송 버튼을 PR #24의 `PatientAiAdapter`에 연결한다. 종료 확인 시 즉시 퇴장시키지 않고 원문·고정 안내·평가를 저장한 뒤 `MarkConsultationEnded(visitId)`로 체류한다. 사용자 `환자 내보내기` → `DismissPatient()` → `ExternalFinishVisit` → 완료 저장 뒤 `CompleteConsultation(visitId)`로 퇴장한다. 평가는 책상 기록부에 보관하며 결과 대화창을 따로 띄우지 않는다. 이 함수는 그 자체로 클리어·보상·게임 완료를 부여하지 않는다.
 
 진료 기록은 공개가 확정된 정보와 실제 원문만 반영하며 미제공 나이·성별·진단·약물·새 사건을 추측해서 채우지 않는다. 환자별 임상 콘텐츠, 단계별 해금, 승급, 코인 정산, 치장 구매, 최종 엔딩은 각 게임 시스템의 별도 구현 범위다. AI API가 이를 대신 완료한 것으로 취급하지 않는다.
 
@@ -137,11 +137,11 @@ Unity는 `PatientVisitController.PatientArrived(visitId, patientId)`에서 지�
 2. `Gamsamo > AI > Import Connection JSON`에서 별도 전달받은 설정 파일을 가져온다. 파일은 프로젝트 밖의 기본 연결 경로에 저장된다. 주소가 바뀌면 다시 가져오고 `Retry Pending Operation (Play)`을 실행한다.
 3. `ConsultationRoom.unity`를 열고 `Gamsamo > AI > Validate Current Scene`으로 참조·콘텐츠 버전을 확인한다. 이 메뉴는 네트워크를 호출하지 않는다. Play 시작 시 `PatientAiBootstrap`이 기존 방문 컨트롤러에 어댑터를 자동 장착하며 씬·프리팹은 다시 생성하지 않는다.
 4. 문을 눌러 지원 환자가 착석한 뒤 첫 발화를 읽고 입력창에 자유롭게 답변한다. Ctrl+Enter 또는 전송 버튼으로 보낸다. API 연결만 별도로 점검하려면 `Gamsamo > AI > Submit Sample Utterance (Play)`을 사용한다. 이 메뉴는 고정 합성 발언으로 `SubmitText`를 호출하는 **Editor 검증 도구**이며 게임 입력 UI가 아니다.
-5. 같은 메뉴의 `Request End`, `Confirm End`, `Cancel End`, `Retry Pending Operation`, `Revisit`, `Finish Visit`, `New Experiment`(모두 `Play` 표기)로 해당 공개 함수를 확인한다. `New Experiment`는 별도 실험 생성 확인을 거친다. 게임에서는 `상담 그만하기` 확인 후 원문·고정 안내·평가가 저장되면 방문을 마친다. 책상 서류의 `대화 원문 / 상담 결과` 탭에서 내용을 읽으며 별도의 결과 대화창은 띄우지 않는다. 기록부가 열려 있으면 닫힌 뒤 퇴장을 진행한다.
+5. 같은 메뉴의 `Request End`, `Confirm End`, `Cancel End`, `Retry Pending Operation`, `Revisit`, `Finish Visit`, `New Experiment`(모두 `Play` 표기)로 해당 공개 함수를 확인한다. `New Experiment`는 별도 실험 생성 확인을 거친다. 게임에서는 종료 확인 후 원문·고정 안내·평가가 저장되면 환자가 머물고 `환자 내보내기`를 기다린다. 책상 서류의 `대화 원문 / 상담 결과` 탭에서 내용을 읽으며 별도의 결과 대화창은 띄우지 않는다. 기록부를 닫아도 머물며 내보내기를 직접 눌러야 퇴장한다.
 
-런타임 어댑터의 Inspector에는 단계·입력 가능·대기·오류만 표시하고 주소·키·원문은 출력하지 않는다. 이전 `Run Patient Visit Checks`는 AI 어댑터가 붙어 있으면 사용자 저장과 외부 API 요청을 보호하기 위해 실행을 차단한다. 이번 AI 검증은 위 메뉴와 아래 수동 체크리스트를 사용한다. 이 도구를 추가했다는 사실은 Unity Editor에서 실제 실행한 결과가 아니다. `Revisit`는 평가된 활성 방문이 있을 때만 가능하며 현재 자동 퇴장 흐름 뒤 재상담 선택 UI는 아직 없다.
+런타임 어댑터의 Inspector에는 단계·입력 가능·대기·오류만 표시하고 주소·키·원문은 출력하지 않는다. 이전 `Run Patient Visit Checks`는 AI 어댑터가 붙어 있으면 사용자 저장과 외부 API 요청을 보호하기 위해 실행을 차단한다. 이번 AI 검증은 위 메뉴와 아래 수동 체크리스트를 사용한다. 이 도구를 추가했다는 사실은 Unity Editor에서 실제 실행한 결과가 아니다. `Revisit`는 평가된 활성 방문이 있을 때만 가능하며 재상담 선택 UI는 아직 없고 새 회차를 자동 시작하지 않는다.
 
-PR #28에서 서윤을 대상으로 Unity Editor의 입력 브리지·저장/기록부 검사 28개와 실제 서버 CUA의 첫 발화·서술형 2턴·종료·원문/평가 열람을 확인했다. 상세 범위는 plan01 17.25절을 따른다. 완료 사례의 다음 Play 방문은 자동 퇴장하며 재상담/새 실험 게임 UI는 없다. 기록부의 실행 중 색인은 해당 환자 입장 시 저장 AI 상태로 재구성한다. 추가 4명의 Unity 화면 조작은 이번 PR의 체크리스트로 별도 확인한다.
+PR #28에서 서윤을 대상으로 Unity Editor의 입력 브리지·저장/기록부 검사 28개와 실제 서버 CUA의 첫 발화·서술형 2턴·종료·원문/평가 열람을 확인했다. 상세 범위는 plan01 17.25절을 따른다. 완료 사례의 다음 Play 방문도 마지막 대사·기록을 표시한 채 내보내기를 기다리며 재상담/새 실험 게임 UI는 없다. 기록부의 실행 중 색인은 해당 환자 입장 시 저장 AI 상태로 재구성한다. 추가 4명의 Unity 화면 조작은 이번 PR의 체크리스트로 별도 확인한다.
 
 ### 공개 연결면
 
@@ -156,8 +156,12 @@ PR #28에서 서윤을 대상으로 Unity Editor의 입력 브리지·저장/기
 | `CanRetry`, `Retry()` | 오류 후 재시도 버튼. 네트워크 실패는 같은 ID/본문, 받은 응답의 저장 실패는 저장만 재시도 |
 | `RequestEnd()`, `ConfirmEnd()`, `CancelEnd()` | 종료 확인 열기·확정·취소. 기존 상담 종료 버튼도 같은 흐름을 사용 |
 | `Evaluate()` | 종료 안내가 저장된 상태에서 평가 요청. 일반 흐름은 자동 진행하며 실패 재시도는 `Retry()` 사용. 오류를 0점으로 대신 표시하지 않음 |
-| `CanRevisit`, `Revisit()` | 평가 미달 후 같은 환자 기억·원문을 잇는 새 회차 API. 현재 게임은 저장 후 자동 퇴장하므로 퇴장 뒤 재상담 선택 UI는 후속 구현 |
-| `CanFinishVisit`, `FinishVisit()` | 평가·책상 기록 저장 후 방문 종료. 종료 확정에 따라 자동 진행하며 호출 자체는 클리어·보상 지급이 아님 |
+| `CanRevisit`, `Revisit()` | 평가 미달 후 기억·원문을 잇는 명시적 새 회차 API. 이전 퇴장 권한 해제. 게임 내 재상담 선택 UI는 후속 구현 |
+| `CanFinishVisit`, `FinishVisit()` | 평가·기록 저장 후 사용자 내보내기로만 진행. 활성 방문·퇴장 대기·요청/오류 없음·팝업 해제를 요구하며 완료 저장 실패는 체류·재시도. 클리어·보상 부여 없음 |
+| `PatientVisitController.MarkConsultationEnded/ClearConsultationEnded`, `IsAwaitingDeparture` | 동일 방문의 종료 후 체류 설정/해제. 완료 사례 복원도 체류하며 새 상담 자동 시작 없음 |
+| `PatientVisitController.DismissPatient`, `ExternalFinishVisit` | 명시적 내보내기 진입점과 AI 완료 저장 처리기. 외부 실패·누락을 로컬 퇴장으로 대신하지 않음 |
+| `PatientVisitController.CompleteConsultation(visitId)` | 동일 활성 방문·퇴장 대기·팝업 해제를 확인하고 ID 무효화 후 퇴장. 중복·오래된 ID 거절 |
+| `PatientDialogueView.SetDepartureAvailable/EnsureDepartureControl`, `DismissRequested` | 기존 종료 버튼 위치에 내보내기 준비·표시. 복제 리스너 제거·중복 구독 방지. 표시·퇴장 가능·확인 없음·일시정지 아님일 때만 이벤트 전달 |
 | `NewExperiment()` | 사용자가 별도 새 실험을 선택한 경우에만 호출. 연결 오류·씬 재시작에서 자동 호출하지 않음 |
 | `PatientId`, `CaseId`, `SessionId`, `Revision` | 별도 대화 로그 UI의 중복 표시 방지 기준. 복원 시 마지막 확정 이벤트가 다시 올 수 있으므로 같은 기록을 재삽입하지 않음 |
 | `LastPatientText`, `EvaluationJson`, `LastError` | 화면 재연결 시 마지막 확정 대사·결과·오류 조회. 오류와 상담 원문을 공개 로그로 남기지 않음 |
@@ -177,6 +181,8 @@ PR #28에서 서윤을 대상으로 Unity Editor의 입력 브리지·저장/기
 6. 복원 시 마지막 확정 대사·평가 이벤트가 다시 발생할 수 있다. 별도 로그 UI는 `PatientId`·`CaseId`·`SessionId`·`Revision`으로 중복 삽입을 막거나 `LastPatientText`·`EvaluationJson`으로 화면을 교체한다. 표시용 타이핑·페이지 이동은 원문을 바꾸지 않는다. 출력은 리치 텍스트 해석을 끄고 원문을 그대로 표시한다. 표시 중 PC·기록부를 열어도 상담 상태·입력 초안은 유지한다.
 7. 종료 확인 **취소**는 상담을 계속한다. 종료 **확정**은 새 입력을 막고 현재 응답/저장을 먼저 끝낸 뒤 고정 안내 → 저장 → 평가로 진행한다. 사용자가 채팅에 “종료”라고 쓴 것만으로 종료 요청을 만들지 않는다.
 8. `pending_evaluation`에서는 “평가 중” 또는 평가 오류·재시도를 표시한다. 두 축의 점수는 저장된 평가에서 읽으며 서버 오류를 임의의 0점·클리어로 바꾸지 않는다.
+
+9. 평가 저장 완료는 퇴장 허용이며 자동 퇴장이 아니다. 완료 사례도 착석 상태에서 기다린다. PC·기록부·확인창, 요청·저장·오류 중에는 내보내기를 거부한다. 서류 닫기·페이지 넘김·다음 프레임은 퇴장 의사가 아니다. 명시적 새 회차는 이전 권한을 해제한다. 저장된 평가 열람·퇴장에 새 서버 응답은 필요 없다.
 
 아래는 `PatientAiInputBridge`의 연결 원리를 줄인 예시다. 실제 브리지는 구독 해제·키 입력·초안 복원·재시도·기록부 열기와 미지원 환자 입력 숨김도 처리한다.
 
@@ -203,6 +209,8 @@ void RefreshInput()
 
 ### 팀원 실행 검증
 
+명시적 퇴장 수정은 Runtime 29개·Editor 18개 C# 소스 컴파일, Unity 입력 브리지 56개 검사를 통과했다. CUA에서 완료 서윤 복원·체류·문 차단·기록부 열기/닫기·명시적 퇴장·도현 입장·이전 평가 보존을 확인했다. Console 오류·경고는 0개다. 사용자 요청으로 새 대화부터 평가까지의 추가 검증은 중단했으며 자세한 범위는 plan01 17.30절을 따른다.
+
 아래는 Unity Editor와 실제 시연 데스크톱의 확인 기준이다. 서윤 UI의 기존 결과는 plan01 17.25절, 이번 5인 연결 결과는 17.28절을 따르며, 표의 항목을 작성했다는 사실은 검증 통과를 뜻하지 않는다. 이 저장소의 C# 계약 검사와 Unity 대체 타입을 사용하는 어댑터 컴파일 검사는 Unity Editor의 정식 컴파일·실행·한글 IME·화면 배치 검사를 대신하지 않는다. 실제 접속 설정은 별도로 전달하며 결과를 공유할 때 키·주소·개인 상담 원문은 제거한다.
 
 | 방문·종료·기록부 확인 | 기대 결과 |
@@ -211,7 +219,7 @@ void RefreshInput()
 | PC·기록부 열기/닫기 | 뒤 입력 차단, 같은 방문·회차·대사 유지 |
 | 종료 확인 취소/확정 | 취소는 상담 유지. 확정은 고정 상담자 안내를 저장한 뒤 평가, 이후 방문 종료 가능 |
 | 첫 발화만 듣고 종료 | 상담자 근거가 없어 상담자 점수 0, 실제 오류와 구분 |
-| 평가 미달 후 재상담 API | 이전 원문·공개 정보·기억 유지, 새 회차의 첫 발화. 현재 자동 퇴장 뒤 게임 내 선택 화면은 미구현 |
+| 평가 미달 후 재상담 API | 이전 원문·공개 정보·기억 유지, 새 회차의 첫 발화. 이전 퇴장 권한 해제. 게임 내 선택 화면은 미구현 |
 | 다음 환자 | 지원 5명은 각자의 입력·이름·기록·평가를 사용. 민석만 로컬 시연이며 다른 환자의 요청·기억을 재사용하지 않음 |
 
 | 입력·복구 확인 | 기대 결과 |

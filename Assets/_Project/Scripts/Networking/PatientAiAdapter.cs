@@ -55,7 +55,8 @@ namespace Gamsamo.Networking
             && CurrentPhase == "active" && string.IsNullOrEmpty(LastError)
             && AiProtocol.Current(committedState)["opening"] is JObject;
         public bool CanSubmit => CanEditDraft && !View.IsTyping && !View.HasMorePages;
-        public bool CanFinishVisit => CanInteract && !IsBusy && CurrentPhase == "evaluated" && string.IsNullOrEmpty(LastError);
+        public bool CanFinishVisit => CanInteract && visits.IsAwaitingDeparture && !IsBusy
+            && CurrentPhase == "evaluated" && string.IsNullOrEmpty(LastError);
         public bool CanRevisit => CanFinishVisit && !AiProtocol.Flag(AiProtocol.Object(AiProtocol.Current(committedState), "evaluation"), "cleared");
         public IReadOnlyList<string> ConfirmedFacts => committedState == null ? new string[0]
             : AiProtocol.Array(committedState, "revealed_fact_ids").Select(v => (string)v)
@@ -96,7 +97,7 @@ namespace Gamsamo.Networking
             if (visits == null) { enabled = false; return; }
             visits.UsesExternalDialogue = UsesPatient;
             visits.ExternalConfirmEnd = ConfirmFromView;
-            visits.ExternalNextRequested += AdvanceCommittedView;
+            visits.ExternalFinishVisit = FinishVisit;
             visits.PatientArrived += Arrived;
             visits.StateChanged += VisitChanged;
         }
@@ -161,16 +162,15 @@ namespace Gamsamo.Networking
         private void Update()
         {
             if (draftDirty && Time.unscaledTime >= draftSaveAt && !IsBusy) FlushDraft();
-            // End was already explicitly confirmed. Once evaluation and the desk record are saved, leave without a result popup.
-            // A room overlay can delay departure, preserving the document the player is currently reading.
-            if (CanFinishVisit && FinishVisit()) return;
+            // Evaluation (including a restored result) only enables an explicit departure action.
+            // Neither a frame update nor paging through dialogue may dismiss the patient.
             bool canSubmit = CanSubmit, canEdit = CanEditDraft;
             bool canFinish = CanFinishVisit, canRevisit = CanRevisit;
             if (canSubmit != previousCanSubmit || canEdit != previousCanEdit || canFinish != previousCanFinish || canRevisit != previousCanRevisit)
             {
                 previousCanSubmit = canSubmit; previousCanEdit = canEdit;
                 previousCanFinish = canFinish; previousCanRevisit = canRevisit;
-                Emit(StateChanged);
+                Publish();
             }
         }
 
@@ -244,7 +244,7 @@ namespace Gamsamo.Networking
         {
             if (visitId != localVisitId) return true;
             ConfirmEnd();
-            return true; // AI visits may only leave after evaluation has been saved.
+            return true; // Saving an evaluation and explicitly dismissing its patient are separate actions.
         }
         public bool Evaluate()
         {
@@ -391,6 +391,7 @@ namespace Gamsamo.Networking
             LastPatientText = speech == null ? "" : AiProtocol.Text(speech, "patient_text");
             if (CurrentPhase == "active" || CurrentPhase == "closing")
             {
+                if (CurrentPhase == "active" && visits.IsAwaitingDeparture) visits.ClearConsultationEnded(localVisitId);
                 bool confirming = View.IsConfirming && !EndRequested;
                 View.ShowLine(patientName, LastPatientText);
                 if (confirming) View.ShowConfirmation(true);
@@ -403,15 +404,15 @@ namespace Gamsamo.Networking
             }
             else if (CurrentPhase == "evaluated")
             {
-                Emit(EvaluationCommitted, EvaluationJson);
+                // A restored evaluation must not leave an empty speech bubble or invent new dialogue.
+                if (string.IsNullOrEmpty(View.DisplayedText)) View.ShowLine(patientName, LastPatientText);
             }
             UpdateRecord();
-            Publish();
-        }
-        private void AdvanceCommittedView()
-        {
-            if (!CanInteract || CurrentPhase != "evaluated" || IsBusy) return;
-            FinishVisit();
+            if (CurrentPhase == "evaluated")
+            {
+                visits.MarkConsultationEnded(localVisitId);
+                Emit(EvaluationCommitted, EvaluationJson);
+            }
             Publish();
         }
         private void UpdateRecord()
@@ -445,10 +446,11 @@ namespace Gamsamo.Networking
             {
                 View.SetEndAvailable(session != null && CurrentPhase == "active" && !EndRequested);
                 View.SetNextAvailable(false);
+                View.SetDepartureAvailable(CanFinishVisit);
                 string status;
                 if (!string.IsNullOrEmpty(LastError)) status = "연결·자동 저장 확인 필요 · 재시도";
                 else if (session != null && session.HasPendingSave) status = "자동 저장을 기다리고 있어요";
-                else if (CurrentPhase == "evaluated") status = "상담 저장 완료 · 책상 기록부에서 확인해 주세요";
+                else if (CurrentPhase == "evaluated") status = "상담 저장 완료 · 기록부를 확인한 뒤 환자 내보내기를 눌러 주세요";
                 else if (CurrentPhase == "pending_evaluation") status = "상담을 마쳤어요 · 평가 중";
                 else if (EndRequested) status = "응답 저장 후 상담을 마칠게요";
                 else if (networkBusy) status = patientName + "의 응답을 기다리고 있어요";
@@ -490,7 +492,7 @@ namespace Gamsamo.Networking
             if (visits == null) return;
             if (visits.UsesExternalDialogue == UsesPatient) visits.UsesExternalDialogue = null;
             if (visits.ExternalConfirmEnd == ConfirmFromView) visits.ExternalConfirmEnd = null;
-            visits.ExternalNextRequested -= AdvanceCommittedView;
+            if (visits.ExternalFinishVisit == FinishVisit) visits.ExternalFinishVisit = null;
             visits.PatientArrived -= Arrived;
             visits.StateChanged -= VisitChanged;
         }

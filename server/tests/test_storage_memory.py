@@ -295,3 +295,23 @@ async def test_resume_four_five_closing_and_evaluated(tmp_path):
     client.replace(CaseState())
     assert len(store.load(previous).sessions) == 2
     await client.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('action', ['finish','evaluate'])
+async def test_phase_retry_id_survives_process_restart(tmp_path, settings, action):
+    import httpx
+    from conftest import case_with_questions, closed_case
+    state=closed_case() if action=='evaluate' else case_with_questions()
+    store=SaveStore(tmp_path);store.save(state)
+    requests=[]
+    def handle(request):
+        requests.append(request.content)
+        return httpx.Response(503,json={'detail':{'code':'model_unavailable','message':'retry'}})
+    for _ in range(2):
+        http=httpx.AsyncClient(base_url='http://test',transport=httpx.MockTransport(handle))
+        client=SessionClient(settings,store,store.load(),http=http)
+        with pytest.raises(ExperimentError):
+            await getattr(client,action)()
+        await client.close()
+    assert requests[0]==requests[1]

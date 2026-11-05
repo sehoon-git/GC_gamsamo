@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 import json
+import hashlib
 import os
 import tempfile
 
@@ -303,15 +304,20 @@ class SessionClient:
 
     async def finish(self):
         self.ensure_saved()
-        request = CloseRequest(state=self.state, session_id=self.state.current.id, request_id=new_id("closing"))
+        request = CloseRequest(state=self.state, session_id=self.state.current.id, request_id=self.phase_request_id("closing"))
         await self.send("/v1/dialogue/close", request, request.request_id)
         return self.state.current.turns[-1].closing_text
 
     async def evaluate(self):
         self.ensure_saved()
-        request = EvaluateRequest(state=self.state, session_id=self.state.current.id, request_id=new_id("evaluation"))
+        request = EvaluateRequest(state=self.state, session_id=self.state.current.id, request_id=self.phase_request_id("evaluation"))
         await self.send("/v1/dialogue/evaluate", request, request.request_id)
         return self.state.current.evaluation
+
+    def phase_request_id(self, phase):
+        # A saved phase produces the same request ID even after restarting the CLI.
+        source = f"{self.state.case_id}/{self.state.current.id}/{self.state.revision}/{phase}"
+        return phase + "_" + hashlib.sha256(source.encode()).hexdigest()[:32]
 
     async def close(self):
         await self.http.aclose()

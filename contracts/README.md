@@ -71,3 +71,22 @@ API 요청 제한시간은 추론과 검증 재호출을 포함해 충분히 둔
 | `stale-session`, `unauthorized`, `legacy` | 회차·인증·버전 오류 |
 
 평가는 각 축 4항목×25점이다. 환자 변화는 누적 원문, 상담자 대응은 현재 회차를 사용한다. 근거 ID는 `턴_ID:user` 또는 `턴_ID:patient`이며 인용은 실제 원문의 연속 구절이어야 한다. 마지막 환자 기록에는 마무리 대사가 덧붙는다. 원래 답변은 `patient_text`에 보존한다. 기억 요약은 평가 원문을 대체하지 않는다. 보상·자격증·게임 완료 상태는 Unity에서 결정한다.
+
+## 현재 main의 Unity 대화창 연결 위치
+
+PR #18의 방문 UI는 로컬 시연이며 다음 함수를 통해 연결한다. 이번 API의 `patient_id`는 `seoyun`만 지원한다.
+
+| Unity 연결 지점 | AI 연결 시 처리 |
+|---|---|
+| `PatientVisitController.PatientArrived(visitId, patientId)` | 서윤 방문에서 상태를 새로 만들거나 자동 저장을 복원하고 현재 방문 ID를 보관 |
+| `useDemoDialogue=false` | API 모드의 대사를 클라이언트 연결 코드에서 공급 |
+| `PresentPatientLine(visitId, text)` | 확정 응답의 `patient_text`, 이어서 `closing_text` 표시. 호출 결과 false이면 화면 방문이 바뀐 것인지 확인 |
+| `PatientDialogueView.SetStatus(text)` | 질문 사용량과 응답·저장·평가 대기 표시 |
+| `PatientDialogueView.IsTyping` | 이전 대사가 표시를 마친 뒤 다음 대사·마무리·평가 화면으로 전환 |
+| `CompleteConsultation(visitId)` | 평가·자동 저장과 게임 완료 정책을 확인한 뒤 방문 종료. 팝업 차단 중에는 보류 |
+
+Unity의 방문 ID와 API의 상담 회차 ID는 별도로 보관한다. 요청에 넣는 `session_id`는 반드시 `state.sessions[-1].id`이며, 대사를 표시할 때는 요청 당시의 **Unity 방문 ID**를 사용한다. 재상담으로 API 회차가 바뀌어도 같은 방문 화면을 유지할 수 있다. 응답을 적용하기 전에 방문 ID·실험 ID·회차 ID·revision을 함께 검사한다.
+
+현 UI의 `상담 마치기`·확인 버튼은 임시 방문 종료 기능이다. AI 모드에서는 질문 5회와 단계별 저장·평가 흐름에 맞춰 버튼 활성화와 종료 호출을 연결해야 한다. 대사 표시를 건너뛰어도 원문을 삭제하거나 질문 수를 되돌리지 않는다. 긴 대사의 페이지·스크롤 처리는 원문 상태와 분리한다. 나머지 환자의 API·해금·보상·진행 저장은 이번 서윤 범위 밖이다.
+
+서버는 요청을 직렬 처리한다. 팀원 PC 검증은 한 회차씩 진행하고 `/health.busy`를 개발 상태 확인에 사용할 수 있다.

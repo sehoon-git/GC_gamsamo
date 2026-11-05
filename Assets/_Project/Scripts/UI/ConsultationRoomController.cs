@@ -33,6 +33,8 @@ namespace Gamsamo.UI
 
         public bool IsRecordOpen { get; private set; }
         public bool IsPcOpen { get; private set; }
+        // Keep other room interactions blocked until the overlay has completely faded out.
+        public bool IsOverlayBlocking => activeModal != ModalKind.None;
 
         private enum ModalKind { None, Record, Pc }
 

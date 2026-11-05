@@ -1,0 +1,713 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "서윤 상담 실험",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/dialogue/turn": {
+      "post": {
+        "summary": "Turn",
+        "operationId": "turn_v1_dialogue_turn_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TurnRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/dialogue/evaluate": {
+      "post": {
+        "summary": "Evaluate",
+        "operationId": "evaluate_v1_dialogue_evaluate_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CaseState": {
+        "properties": {
+          "format_version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Format Version",
+            "default": 1
+          },
+          "content_version": {
+            "type": "string",
+            "const": "seoyun-1.0",
+            "title": "Content Version",
+            "default": "seoyun-1.0"
+          },
+          "case_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Case Id"
+          },
+          "patient_id": {
+            "type": "string",
+            "const": "seoyun",
+            "title": "Patient Id",
+            "default": "seoyun"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision",
+            "default": 0
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "revealed_fact_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Revealed Fact Ids"
+          },
+          "deferred_topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Deferred Topics"
+          },
+          "memory": {
+            "$ref": "#/components/schemas/Memory"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/Session"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Sessions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CaseState"
+      },
+      "CriterionScore": {
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "title": "Criterion Id"
+          },
+          "score": {
+            "type": "integer",
+            "maximum": 25.0,
+            "minimum": 0.0,
+            "title": "Score"
+          },
+          "explanation": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Explanation"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Evidence"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "criterion_id",
+          "score",
+          "explanation",
+          "evidence"
+        ],
+        "title": "CriterionScore"
+      },
+      "EvaluateRequest": {
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/CaseState"
+          },
+          "session_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Session Id"
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Request Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "state",
+          "session_id",
+          "request_id"
+        ],
+        "title": "EvaluateRequest"
+      },
+      "Evaluation": {
+        "properties": {
+          "scores": {
+            "items": {
+              "$ref": "#/components/schemas/CriterionScore"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "minItems": 8,
+            "title": "Scores"
+          },
+          "patient_score": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Patient Score"
+          },
+          "counselor_score": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Counselor Score"
+          },
+          "cleared": {
+            "type": "boolean",
+            "title": "Cleared"
+          },
+          "evaluated_at": {
+            "type": "string",
+            "title": "Evaluated At"
+          },
+          "model_revision": {
+            "type": "string",
+            "title": "Model Revision"
+          },
+          "prompt_version": {
+            "type": "string",
+            "title": "Prompt Version"
+          },
+          "source_messages": {
+            "type": "integer",
+            "title": "Source Messages"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/Metrics"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "scores",
+          "patient_score",
+          "counselor_score",
+          "cleared",
+          "evaluated_at",
+          "model_revision",
+          "prompt_version",
+          "source_messages"
+        ],
+        "title": "Evaluation"
+      },
+      "Evidence": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "quote": {
+            "type": "string",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Quote"
+          },
+          "counter": {
+            "type": "boolean",
+            "title": "Counter",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "message_id",
+          "quote"
+        ],
+        "title": "Evidence"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Memory": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryItem"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Items"
+          },
+          "through_turn_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,80}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Through Turn Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Memory"
+      },
+      "MemoryItem": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "fact",
+              "emotion",
+              "plan",
+              "unresolved",
+              "deferred"
+            ],
+            "title": "Category"
+          },
+          "speaker": {
+            "type": "string",
+            "enum": [
+              "patient",
+              "counselor",
+              "both"
+            ],
+            "title": "Speaker"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 320,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Source Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "category",
+          "speaker",
+          "text",
+          "source_ids"
+        ],
+        "title": "MemoryItem"
+      },
+      "Metrics": {
+        "properties": {
+          "seconds": {
+            "type": "number",
+            "title": "Seconds",
+            "default": 0
+          },
+          "calls": {
+            "type": "integer",
+            "title": "Calls",
+            "default": 0
+          },
+          "prompt_tokens": {
+            "type": "integer",
+            "title": "Prompt Tokens",
+            "default": 0
+          },
+          "completion_tokens": {
+            "type": "integer",
+            "title": "Completion Tokens",
+            "default": 0
+          },
+          "role_seconds": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Role Seconds"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Metrics"
+      },
+      "Session": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Id"
+          },
+          "started_at": {
+            "type": "string",
+            "title": "Started At"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/Topic"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Topics"
+          },
+          "post_budget_turns": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Post Budget Turns",
+            "default": 0
+          },
+          "unresolved_questions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unresolved Questions"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/Turn"
+            },
+            "type": "array",
+            "title": "Turns"
+          },
+          "evaluation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Evaluation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Session"
+      },
+      "StateResponse": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Case Id"
+          },
+          "session_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Session Id"
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Request Id"
+          },
+          "base_revision": {
+            "type": "integer",
+            "title": "Base Revision"
+          },
+          "state": {
+            "$ref": "#/components/schemas/CaseState"
+          },
+          "replayed": {
+            "type": "boolean",
+            "title": "Replayed",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "case_id",
+          "session_id",
+          "request_id",
+          "base_revision",
+          "state"
+        ],
+        "title": "StateResponse"
+      },
+      "Topic": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "label"
+        ],
+        "title": "Topic"
+      },
+      "Turn": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Id"
+          },
+          "user_text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "User Text"
+          },
+          "patient_text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Patient Text"
+          },
+          "closing_text": {
+            "type": "string",
+            "title": "Closing Text",
+            "default": ""
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "neutral",
+              "followup",
+              "new_topic",
+              "deferred"
+            ],
+            "title": "Kind"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/Metrics"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "user_text",
+          "patient_text",
+          "kind"
+        ],
+        "title": "Turn"
+      },
+      "TurnRequest": {
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/CaseState"
+          },
+          "session_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Session Id"
+          },
+          "turn_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Turn Id"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "state",
+          "session_id",
+          "turn_id",
+          "text"
+        ],
+        "title": "TurnRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

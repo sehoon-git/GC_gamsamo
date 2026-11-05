@@ -5465,7 +5465,7 @@ MonoBehaviour:
   baseTexture: {fileID: 2800000, guid: 9d57e96a01e554d429851748e370dcdb, type: 3}
   defaultRoomWallpaper: {fileID: 2800000, guid: 6fbc7f02bb81d491790ef67bdc89c82d, type: 3}
   defaultDoor: {fileID: 2800000, guid: f9ea61e8ef5664841a71d315c1719d14, type: 3}
-  clearWindow: {fileID: 2800000, guid: fcb38a952155b4be39a45e87afb3882b, type: 3}
+  clearWindow: {fileID: 2800000, guid: 91879db2d81a51dd8155692d79ce482d, type: 3}
   cloudyWindow: {fileID: 2800000, guid: 052e5fd22086d473197c741999c9bedc, type: 3}
   rainWindow: {fileID: 2800000, guid: 9efdb0443e8c145af838ec23a407e971, type: 3}
   defaultPc: {fileID: 2800000, guid: 98b8f4d462e344f5583f2d2cbf2cb719, type: 3}
@@ -10783,7 +10783,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 2800000, guid: fcb38a952155b4be39a45e87afb3882b, type: 3}
+  m_Texture: {fileID: 2800000, guid: 91879db2d81a51dd8155692d79ce482d, type: 3}
   m_UVRect:
     serializedVersion: 2
     x: 0

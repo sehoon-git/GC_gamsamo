@@ -110,6 +110,20 @@ namespace Gamsamo.UI.Presentation
             IsReplay = true; creditElapsed = 0;
             Render(); // No save, grant, evaluation or economy callbacks on replay.
         }
+        /// <summary>Read-only replay on a dedicated player. The caller supplies B's saved unlock grant.</summary>
+        public bool TryOpenApprovedReplay(string game, string patient, bool unlocked, bool unlockedPhoto, EndingContentCatalog catalog)
+        {
+            var entry = catalog != null ? catalog.FindApproved(patient) : null;
+            if (string.IsNullOrWhiteSpace(game) || string.IsNullOrWhiteSpace(patient) || !unlocked || entry == null
+                || string.IsNullOrWhiteSpace(entry.description) || IsOpen || AwaitingSave) return false;
+            if (!OpenModal()) return false;
+            content = catalog;
+            StoreContext(game, patient, "", "", false);
+            photoUnlocked = unlockedPhoto; displayName = ""; awardedCoins = 0;
+            Stage = "completed"; IsReplay = true; Render();
+            return true;
+        }
+        public void CloseReplay() { if (IsOpen && IsReplay) FinishPresentation(); }
         private void Request(string target)
         {
             if (PlaybackSaveRequested == null) return;

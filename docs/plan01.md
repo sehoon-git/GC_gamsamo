@@ -1100,6 +1100,35 @@ PC 내부 네 화면, 기본 방 레이어·날씨, 원본 48종의 동적 카�
 
 <a id="asset-edit"></a>
 
+### 병렬 후속 개발 — UI
+
+기준: `origin/main bc81589`, 작업 브랜치 `codex/ui-next-release`. 기존 상담·순차 재상담·보상·구매·장착·자동 저장 서비스는 변경하지 않았다. 정식 대상은 서윤·도현·태준·연우·하린 5명이다.
+
+- **프로필**: PC의 `프로필 편집`으로 이름/소개 초안을 수정한다. 이름 24자, 소개 240자(한글 조합 자수 기준), 공백 이름·제어 문자 검증. 저장 중 입력/저장/취소 잠금, 실패 시 원문 초안 유지, 요청 ID가 일치하는 성공 응답의 확정 스냅샷만 표시한다. 취소는 저장하지 않는다. 긴 소개는 스크롤, 진행/승급은 제공받은 표시값만 사용한다.
+- **후일담**: PC 하단 `후일담 다시 보기` → 5인 목록. 조회 전/잠김/해금됨·콘텐츠 준비 중/해금됨·다시 보기를 구분한다. 해금·승인·콘텐츠 준비 확인과 통합 담당의 재생 승인을 모두 통과해야 전용 인스턴스의 기존 `EndingPresentationView`를 연다. 건너뛰기/계속하기/Esc는 PC 목록으로 복귀하며 정산·사진 지급·재생 단계 저장을 호출하지 않는다. 최초 클리어 재생기와 분리해 미완료 클리어 상태를 덮어쓰지 않는다.
+- **기록부**: 현재 사례 합본/회차별 보관본, 환자 이름·제공된 회차·날짜 제목, 메모/원문/평가/정산 탭. 긴 원문·평가는 페이지로 읽는다. 정산 탭에는 기존 확정 영수증만 표시하고 평가 탭의 정산 표시도 유지한다. 없는 회차는 추정하지 않고 `회차 정보 확인 전`, 빈 임상 필드는 `미확인`으로 표시한다. 사진 칸은 계속 비운다.
+- **상태**: A의 `ServiceStatus.Phase`를 읽어 첫 발화/응답/기록 저장/평가/평가 저장/완료를 구분한다. B 결과 저장 실패는 명확히 `저장 실패`로 표시한다. 긴 상태/오류는 `상태 자세히` 모달의 스크롤로 확인한다. 문구·남은 시간으로 오류 종류를 추측하지 않으며 기존 서비스가 허용한 재시도만 사용한다.
+- **입력 보호**: 공용 방 컨트롤러의 입력 lease와 전체 화면 raycast 차단을 함께 사용한다. 중첩 모달이 닫힌 프레임에는 같은 Escape가 PC까지 닫지 않는다. 상태창·프로필·재생 화면은 대화/초안을 수정하거나 AI 요청을 다시 보내지 않는다.
+
+**통합 담당 연결점** (`Gamsamo.UI.UiNext.UiFeaturePorts`, 씬의 `ConsultationRoomUI/UiNext`, `room.uiFeaturePorts`):
+
+| 연결 | 통합 담당 호출/구독 | 규칙 |
+| --- | --- | --- |
+| 실행 컨텍스트 | `SetContext(gameProgressId)` | 새 게임/불러오기 시 먼저 호출. 이전 실행의 대기 요청·표시를 폐기한다. UI는 ID를 생성하지 않는다. |
+| 프로필 조회 | `ProfileQueryRequested(context)` → `PublishProfile(context, ProfileDisplay)` | 최신 확정 스냅샷만 제공. 최초 조회 전 저장 비활성. 이름·소개·소속은 표시 데이터이며 저장 DTO가 아니다. |
+| 프로필 저장 | `ProfileSaveRequested(ProfileSaveRequest)` → `CompleteProfileSave(requestId, saved, committed, safeError)` | 저장소 성공 후 `saved=true`와 확정 스냅샷 제공. 실패/응답 누락을 성공으로 간주하지 않는다. 중복·이전 요청 응답 무시. 실패 시 안전한 사용자 문구만 전달. |
+| 진행·승급 | `PublishProgress(context, ProgressDisplay)` | 현재 환자/진행/승급 문구, 완료 수/총원은 B가 계산. 승인되지 않은 승급 기준은 준비 중으로 제공. 기존 `ProfileView.SetProgress`도 유지. |
+| 후일담 목록 | `EndingListRequested(context)` → `PublishEndings(context, items)` | `EndingListItem(patientId,name,unlocked,approved,contentReady)`. 5인 정식 ID 사용. 해금 상태는 저장에서, 승인/준비 상태는 콘텐츠에서 제공. |
+| 다시 보기 | `EndingReplayRequested(request)` → `CompleteReplay(requestId, grant, safeError)` | 현재 실행/환자에 대한 저장된 해금과 승인된 `EndingContentCatalog`를 재확인한 grant 제공. `TryOpenApprovedReplay`는 본문이 없는 콘텐츠도 거절. 목록 닫기/실행 전환 후 늦은 응답 무시. |
+| 선택 서류 | `RecordInformationRequested(RecordSelection)` → `PublishRecordInformation(selection, fields)` | 진행+환자+사례+회차+합본/보관본 범위 일치 시만 반영. B가 확정 회차 번호 `Round`를 채울 수 있다. `RecordFieldDisplay`는 미공개 payload를 즉시 버린다. 필드: gender/age/occupation/visitReason/medicalHistory/medication/specialNotes. |
+| AI 오류 종류 | `DialogueProcessingBinding.SetAiFailureKind(key, UiFailureKind.Connection/Save)` | A의 현재 Error와 동일한 4개 ID의 실제 오류 메타데이터가 있을 때만 호출. 다음 A 상태 이벤트에서 분류를 초기화. A의 현 API는 네트워크/파일 오류를 단일 Error로 제공하므로 미연결 시 `연결·저장 확인 필요`를 유지한다. |
+
+**현재 비활성/남은 연결**: 프로필 영속 저장 및 위 ports 구독, 후일담 저장 해금 조회/재생 승인, 서류 회차 번호·정보 상태 투영, AI의 정확한 오류 종류는 통합 담당이 연결해야 한다. 출시 씬에 모의 저장/가짜 AI/임의 해금을 넣지 않았다. 미연결 프로필 저장과 후일담 재생은 활성화하지 않는다. 기존 진행/자격증 표시 연결은 유지한다. 정식 후일담·사진·음원·승급 기준은 이번 작업이 만들거나 승인하지 않으며 미준비 콘텐츠가 상담 진행을 막지 않는다.
+
+**에셋/배치**: 기존 프로필 초상화·PC 창·상담실 배경을 유지한다. 실제 기존 화면과 `profile/female.png`를 참조한 builtin imagegen으로 빈 크림 종이 패널 1종만 채택했다. 원본은 생성 작업 공간, 최종 사용 PNG와 importer는 `Assets/_Project/Art/UI/UiNext/PaperPanel.png(.meta)`다. 원본 1536×1024 RGBA, 투명 외곽. Unity sprite rect `(24,90,1488,844)`, border `(72,70,72,70)`으로 투명 여백을 제외한 9-slice를 사용한다. 글자/환자/점수/버튼 문구는 모두 TMP다. 생성 방향: 기존 게임 질감의 soft cream parchment, muted peach, thin walnut-brown outline, flat front-facing blank panel, subtle paper grain, no text/characters/background, transparent outside. 사용하지 않는 후보/생성 캐시는 포함하지 않는다.
+
+공용 `ConsultationRoomUI.prefab`과 `ConsultationRoom.unity`에는 동일한 UI만 추가했다. `UiNextBindings`가 방 입력 잠금을 연결한다. `UiNextInstaller.Install`은 **저장된 Edit 모드에서만** UI를 덧붙이는 전용 도구이며 기존 공용 씬 생성기를 호출하지 않는다. 배치 완료 상태이므로 통합 담당이 다시 실행할 필요는 없다. 기존 GUID/fileID를 보존한다. 코드·회귀/실제 화면 검사 결과와 재현 절차는 아래 UI 작업 기록을 따른다.
+
 ## 16. 진료기록부 에셋 편집 기록
 
 - 사용 도구: 기본 제공 ImageGen. CLI 대체 경로는 사용하지 않았음.
@@ -1636,3 +1665,16 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - 추가 화면 검증: 안내서 페이지 이동/닫기와 배경 입력 차단, 잔액 0 C 구매 거절, 미리보기 취소, 구매 확정 단계, 사진 준비 중 안내, 프로필 0/5와 현재 환자, 서류의 원문/평가/정산 페이지를 확인했다. 기록부에는 현재 사례의 합본과 회차별 보관본이 함께 있으므로 같은 환자의 서류가 여러 장 보인다. 사용자에게 두 종류를 구분하는 제목을 개선할 여지가 있다.
 - 검증 한계: 실제 모델로 5명 전원을 70/70 이상 달성해 최종 크레딧까지 수동 완주한 결과는 아니다. 다음 환자/5명 완료/엔딩 영속성은 자동 통합 검사, 실제 AI 경로는 위 서윤 종료/재방문 E2E로 구분한다. 정식 미디어가 비어 있어 실제 이미지/후일담/음원 재생 품질은 확인할 수 없다. 서버 pytest는 이 PC의 Python에 pytest가 없어 이번 환경에서는 실행하지 못했다. 과거 A 서버 테스트 결과를 이번 실행 결과로 합산하지 않는다. 실제 평가 응답에는 긴 대기가 있었고 최종 성공했지만 지연 목표 충족을 주장하지 않는다. 대규모 모델 품질/실제 전체 환자 클리어/네트워크 장애 전수 검증은 남아 있다.
 - 다음 작업 우선순위: (1) 5명 실제 모델 클리어 시나리오와 지연 계측, (2) 정식 사진·후일담·크레딧·음원 납품/검수, (3) 승급 기준과 구 6인/구 경제 저장 이관 정책 확정, (4) 프로필 편집·엔딩 다시 보기 진입 UI, (5) 기록부 합본/회차 구분과 정보 상태 표시의 일관성 개선. 비호환 과거 저장은 삭제/임의 변환하지 않는다. 정식 사진 ID 변경 시 이미 저장된 권리도 함께 이관해야 한다.
+
+### 병렬 후속 개발 — UI 작업 기록
+
+- 구현·검증 완료 시각: **2026-11-06 06:25:54 KST (UTC+09:00)**. 기준 `bc81589`, 별도 worktree `GC_gamsamo-ui-next`, 브랜치 `codex/ui-next-release`, PR 대상 `main`. 원래 작업 공간의 미커밋/미추적 파일을 보존했다. main 직접 push/병합/자동 병합은 수행하지 않는다. 커밋·게시·PR 결과는 Git 이력과 최종 보고로 확인한다.
+- 구현: 프로필 편집 및 확정 응답 처리, 진행 표시 ports, 5인 후일담 목록과 읽기 전용 재생, 합본/보관본 제목과 정산 탭, 정보 상태 차단, typed 처리 상태와 긴 오류 상세, 중첩 모달 입력/포커스 복원. 주요 파일은 `Scripts/UI/UiNext/` 5개, ProfileView/MedicalRecordView/PcDesktopView/ConsultationRoomController, Presentation의 모달/엔딩/상태 binding, 공용 씬/프리팹, `Art/UI/UiNext/PaperPanel`이다. 기존 서비스·오디오·카탈로그·환자 JSON·Packages/ProjectSettings를 수정하지 않았다.
+- UI 에셋 검수: 기존 실제 Unity 캡처와 기존 프로필 이미지를 레퍼런스로 첨부해 생성한 종이 패널 1종을 화면에 배치했다. 모서리/내부 여백/긴 텍스트를 확인하고 Unity sprite rect와 9-slice, 줄바꿈/스크롤을 보완했다. 전후 캡처는 `docs/images/ui-next/`에 보관한다. 모의 데이터 캡처에는 UI 검사·실제 저장 없음 표기를 넣었다.
+- 정적 검사: `git diff --check`, 변경 소유 범위, .meta/GUID와 기존 씬 객체 참조 유지 확인. Unity 6000.3.28f1 컴파일 성공. Unity가 만든 동적 폰트 캐시는 제외한다.
+- 신규 Play UI 검사 **44개 통과**: 실제 공용 씬의 서비스 제거 복사본에서 프로필 미연결/중복/실패/성공/취소/한글 경계/이전 요청 무시, 실제 raycast 배경 차단, 후일담 잠김/미승인/미준비 차단, 다시 보기·건너뛰기의 저장 콜백 0회, PC 복귀, 서류 4가지 상태/미공개 정보 폐기/이전 회차 응답 거절, 긴 평가 페이지, 대기 중 대화·초안 유지, 긴 오류 스크롤 모달을 검사했다. 저장/후일담 승인은 **Editor 전용 모의 콜백**이며 실제 영속 저장 검사 결과가 아니다.
+- 기존 관련 검사: D 표시 **77개 통과**, AI 입력 **56개 통과**. 기존 PC smoke는 배치 실행에서 **116 통과 / 13 실패**: 11개는 batchmode에서 기존 ScreenCapture 파일 미생성, 2개는 현재 main과 오래된 검사 기대값 불일치(미준비 사진의 제목을 비워야 한다는 기대, 상점 초기화 후 잔액이 `—`여야 한다는 기대)다. 현재 main의 PhotoGalleryView는 미준비 사진 제목을 유지하고 상점은 잔액 0을 표시한다. 공용 테스트를 임의로 고치거나 전체 통과로 기록하지 않았다. 후속 UI 테스트 소유자가 최신 명세로 정리해야 한다.
+- 렌더 검증: Unity RenderTexture **1280×720 / 1920×1080**에서 프로필·편집·기록부를 캡처하고 읽기 영역/배치를 확인했다. 같은 16:9 기준 비율을 유지한다. 후일담 목록·긴 상태 상세 HD도 캡처했다. 이는 실제 OS 해상도 전환/물리 키 입력 시험과 구분한다.
+- 직접 조작 한계: computer-use가 기존 `GC_gamsamo/StartMenu` Unity 인스턴스만 선택하여 별도 `GC_gamsamo-ui-next` 인스턴스를 대상으로 조작하지 못했다. 기존 사용자 창은 변경/종료하지 않았다. 새 입력창의 실제 OS 한글 IME·키보드 Escape 수동 시험은 남아 있다. Editor SearchDatabase 초기화의 기존 IndexOutOfRange 로그는 별도로 관찰됐으며 기능 테스트 결과와 분리한다. 실제 AI 서버/실제 프로필 파일 저장/재실행 영속성/정식 후일담·오디오 품질은 이번 범위에서 미검증이다.
+- Unity 확인 절차: (1) 저장한 Edit 모드에서 `Gamsamo > UiNext > Open Isolated UI Preview`로 서비스 없는 복사본을 연다. (2) PC 프로필 → 편집, 한글 이름/소개 입력, 취소/Esc와 배경 닫기 차단을 확인한다. 미연결 저장은 비활성이 정상이다. (3) PC 하단 후일담 목록에서 조회 전 상태를 확인한다. (4) 자동 모의 검사는 `-batchmode -executeMethod Gamsamo.Editor.UiNext.UiNextPreview.RunChecks`, 기존 표시/입력 검사는 `-batchmode -quit -executeMethod Gamsamo.Editor.UiNext.UiNextChecks.RunExisting`. 로그·보고서·전체 캡처는 Git 제외 `artifacts/ui-next/`. 미리보기 복사본의 서비스 제거 상태는 **씬에 저장하지 않는다**. (5) B가 §15 ports를 실제 저장/카탈로그에 연결한 뒤 저장 성공·실패·재실행 복원과 해금 재생을 실제 게임에서 추가 검증한다.
+- 다음 우선순위: ① 통합 담당의 프로필 저장/ports 구독과 회차·정보 상태 투영 ② A의 오류 종류 계약 연결 ③ 승인 후일담/사진 납품과 재실행 재생 접근 확인 ④ 실제 HD/FHD 창·IME·Escape 수동 조작 및 오래된 PC 검사 기대값 갱신.

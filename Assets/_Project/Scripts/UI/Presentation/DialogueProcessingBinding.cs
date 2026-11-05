@@ -16,6 +16,15 @@ namespace Gamsamo.UI.Presentation
         private PatientAiAdapter subscribed;
         private bool gameResultPending;
         private string gameSaveError;
+        private UiNext.UiFailureKind failureKind;
+        /// <summary>Integration may classify A's current error from authoritative operation metadata.</summary>
+        public bool SetAiFailureKind(AiConversationKey key, UiNext.UiFailureKind kind)
+        {
+            var status = adapter != null ? adapter.ServiceStatus : null;
+            if (key == null || status?.Key == null || status.Phase != AiServicePhase.Error
+                || key.SettlementId != status.Key.SettlementId) return false;
+            failureKind = kind; Refresh(); return true;
+        }
 
         public void Bind(PatientAiAdapter source, PatientDialogueView target)
         {
@@ -29,17 +38,18 @@ namespace Gamsamo.UI.Presentation
         private void Subscribe()
         {
             if (subscribed != null || adapter == null) return;
-            subscribed = adapter; subscribed.StateChanged += Refresh;
+            subscribed = adapter; subscribed.StateChanged += OnAiStateChanged;
             Refresh();
         }
+        private void OnAiStateChanged() { failureKind = UiNext.UiFailureKind.Unspecified; Refresh(); }
         private void Unsubscribe()
-        { if (subscribed != null) subscribed.StateChanged -= Refresh; subscribed = null; }
+        { if (subscribed != null) subscribed.StateChanged -= OnAiStateChanged; subscribed = null; }
         private void OnDisable() { Unsubscribe(); if (view != null) view.SetPresentationBlock(this, false); }
 
         /// <summary>B brackets the entire game-result commit; A's evaluation event is not that commit.</summary>
         public void BeginGameResultSave() { gameResultPending = true; gameSaveError = null; Refresh(); }
         public void FailGameResultSave(string safeMessage)
-        { gameResultPending = true; gameSaveError = safeMessage ?? "결과를 저장하지 못했습니다."; Refresh(); }
+        { gameResultPending = true; gameSaveError = "저장 실패 · " + (safeMessage ?? "결과를 저장하지 못했습니다."); Refresh(); }
         public void CompleteGameResultSave()
         { gameResultPending = false; gameSaveError = null; if (view != null) view.SetProcessingState(DialogueProcessingState.Saved); Refresh(); }
         public void RetryGameResult()
@@ -63,14 +73,25 @@ namespace Gamsamo.UI.Presentation
                 return;
             }
             if (adapter == null || !adapter.IsAiVisit) return;
-            if (!string.IsNullOrEmpty(adapter.LastError)) view.SetProcessingState(DialogueProcessingState.Error, adapter.LastError);
-            else if (adapter.IsBusy && view.ProcessingState == DialogueProcessingState.SavingTranscript)
-                view.SetProcessingState(adapter.CurrentPhase == "pending_evaluation" ? DialogueProcessingState.SavingResult : DialogueProcessingState.SavingTranscript);
-            else if (adapter.CurrentPhase == "evaluated") view.SetProcessingState(DialogueProcessingState.Saved);
-            else if (adapter.CurrentPhase == "pending_evaluation") view.SetProcessingState(DialogueProcessingState.WaitingForEvaluation);
-            else if (adapter.EndRequested) view.SetProcessingState(DialogueProcessingState.EndingRequested);
-            else if (adapter.IsBusy) view.SetProcessingState(string.IsNullOrEmpty(adapter.LastPatientText) ? DialogueProcessingState.PreparingOpening : DialogueProcessingState.WaitingForReply);
-            else view.SetProcessingState(DialogueProcessingState.Ready);
+            var status = adapter.ServiceStatus;
+            if (status.Phase != AiServicePhase.Error) failureKind = UiNext.UiFailureKind.Unspecified;
+            switch (status.Phase)
+            {
+                case AiServicePhase.PreparingOpening: view.SetProcessingState(DialogueProcessingState.PreparingOpening); break;
+                case AiServicePhase.GeneratingReply: view.SetProcessingState(DialogueProcessingState.WaitingForReply); break;
+                case AiServicePhase.Saving: view.SetProcessingState(DialogueProcessingState.SavingTranscript); break;
+                case AiServicePhase.Closing: view.SetProcessingState(DialogueProcessingState.EndingRequested); break;
+                case AiServicePhase.Evaluating: view.SetProcessingState(DialogueProcessingState.WaitingForEvaluation); break;
+                case AiServicePhase.SavingEvaluation: view.SetProcessingState(DialogueProcessingState.SavingResult); break;
+                case AiServicePhase.Completed: view.SetProcessingState(DialogueProcessingState.Saved); break;
+                case AiServicePhase.Error:
+                    // A currently exposes one Error phase for network and file errors. Do not guess by message/elapsed time.
+                    view.SetProcessingState(DialogueProcessingState.Error, failureKind == UiNext.UiFailureKind.Connection
+                        ? "연결 실패 · " + status.Error : failureKind == UiNext.UiFailureKind.Save
+                        ? "저장 실패 · " + status.Error : "연결·저장 확인 필요 · " + status.Error);
+                    break;
+                default: failureKind = UiNext.UiFailureKind.Unspecified; view.SetProcessingState(DialogueProcessingState.Ready); break;
+            }
         }
     }
 }

@@ -19,6 +19,8 @@ namespace Gamsamo.UI
         public Button shopButton;
         public Button photosButton;
         public Button settingsButton;
+        public Button endingsButton;
+        public UiNext.EndingListView endingListView;
         public Button closeShopButton;
         public CanvasGroup shortcuts;
         public GameObject appWindow;
@@ -34,6 +36,7 @@ namespace Gamsamo.UI
         public Sprite defaultWallpaper;
         public ConsultationRoomAppearance roomAppearance;
 
+        public bool IsEndingsOpen => endingListView != null && endingListView.gameObject.activeSelf;
         public bool IsShopOpen => shopWindow != null && shopWindow.activeSelf;
         public bool IsProfileOpen => profileView != null && profileView.gameObject.activeSelf;
         public bool IsPhotosOpen => photoView != null && photoView.gameObject.activeSelf;
@@ -51,6 +54,8 @@ namespace Gamsamo.UI
             Bind(shopButton, OpenShop);
             Bind(photosButton, OpenPhotos);
             Bind(settingsButton, OpenSettings);
+            Bind(endingsButton, OpenEndings);
+            if (endingListView != null) Bind(endingListView.closeButton, CloseApp);
             Bind(closeShopButton, CloseShop);
             Bind(closeAppButton, CloseApp);
             if (profileView != null) Bind(profileView.closeButton, CloseApp);
@@ -159,7 +164,7 @@ namespace Gamsamo.UI
                 CloseShop();
                 return true;
             }
-            if (IsProfileOpen || IsPhotosOpen || IsSettingsOpen
+            if (IsProfileOpen || IsPhotosOpen || IsSettingsOpen || IsEndingsOpen
                 || (appWindow != null && appWindow.activeSelf))
             {
                 CloseApp();
@@ -171,6 +176,11 @@ namespace Gamsamo.UI
         public void OpenProfile()
         {
             if (profileView != null) OpenContent(profileButton, profileView.gameObject, profileView.closeButton);
+        }
+
+        public void OpenEndings()
+        {
+            if (endingListView != null) OpenContent(endingsButton, endingListView.gameObject, endingListView.closeButton);
         }
 
         public void OpenPhotos()
@@ -197,7 +207,7 @@ namespace Gamsamo.UI
 
         private void CloseApp()
         {
-            if (!IsProfileOpen && !IsPhotosOpen && !IsSettingsOpen
+            if (!IsProfileOpen && !IsPhotosOpen && !IsSettingsOpen && !IsEndingsOpen
                 && (appWindow == null || !appWindow.activeSelf)) return;
             HideInnerWindows();
             SetShortcutInput(true);
@@ -208,6 +218,7 @@ namespace Gamsamo.UI
         private void HideInnerWindows()
         {
             if (IsSettingsOpen) settingsView.CancelEdit();
+            if (endingListView != null) endingListView.gameObject.SetActive(false);
             if (shopWindow != null) shopWindow.SetActive(false);
             if (appWindow != null) appWindow.SetActive(false);
             if (profileView != null) profileView.gameObject.SetActive(false);
@@ -316,6 +327,8 @@ namespace Gamsamo.UI
             Unbind(shopButton, OpenShop);
             Unbind(photosButton, OpenPhotos);
             Unbind(settingsButton, OpenSettings);
+            Unbind(endingsButton, OpenEndings);
+            if (endingListView != null) Unbind(endingListView.closeButton, CloseApp);
             Unbind(closeShopButton, CloseShop);
             Unbind(closeAppButton, CloseApp);
             if (profileView != null) Unbind(profileView.closeButton, CloseApp);

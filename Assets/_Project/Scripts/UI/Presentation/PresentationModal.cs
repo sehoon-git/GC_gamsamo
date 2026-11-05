@@ -13,6 +13,7 @@ namespace Gamsamo.UI.Presentation
         public Selectable initialFocus;
         public PatientDialogueView dialogue;
         public bool IsOpen { get; private set; }
+        public static int LastClosedFrame { get; private set; } = -1;
         public bool IsConnected => acquire != null && release != null;
         private Func<bool> acquire;
         private Action release;
@@ -42,6 +43,7 @@ namespace Gamsamo.UI.Presentation
         {
             if (!IsOpen) return;
             IsOpen = false;
+            LastClosedFrame = Time.frameCount;
             if (panel != null) panel.SetActive(false);
             if (dialogue != null) dialogue.SetPresentationBlock(this, false);
             release?.Invoke();

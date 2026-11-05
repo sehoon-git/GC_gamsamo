@@ -21,6 +21,7 @@ namespace Gamsamo.UI
         public Button closeRecordButton;
         public Button backdropButton;
         public MedicalRecordView recordView;
+        public UiNext.UiFeaturePorts uiFeaturePorts;
         public MedicalRecordDragHandler recordDrag;
         public MedicalRecordData record = MedicalRecordData.CreateSample();
 
@@ -39,6 +40,7 @@ namespace Gamsamo.UI
         // The patient input remains blocked until the room overlay has finished fading out.
         public bool IsOverlayBlocking => activeModal != ModalKind.None || inputBlocks > 0;
         private int inputBlocks;
+        public bool HasExternalInputBlock => inputBlocks > 0;
         public System.IDisposable AcquireInputBlock()
         { inputBlocks++; return new InputLease(this); }
         private sealed class InputLease : System.IDisposable
@@ -123,6 +125,7 @@ namespace Gamsamo.UI
 
             if (recordView != null)
                 recordView.RecordNavigationRequested += NavigateRecord;
+            if (uiFeaturePorts != null) uiFeaturePorts.RecordInformationReceived += ApplyRecordInformation;
             SetRecord(record);
 
             initialized = true;
@@ -140,7 +143,7 @@ namespace Gamsamo.UI
 
         private void Update()
         {
-            if (inputBlocks > 0) return; // A nested presentation owns Escape until it closes.
+            if (inputBlocks > 0 || Presentation.PresentationModal.LastClosedFrame == Time.frameCount) return; // A nested presentation owns Escape until it closes.
             if (!Input.GetKeyDown(KeyCode.Escape))
                 return;
             if (IsPcOpen)
@@ -178,10 +181,25 @@ namespace Gamsamo.UI
             if (recordView == null || patientRecords.Count == 0) return;
             selectedRecord = Mathf.Clamp(selectedRecord, 0, patientRecords.Count - 1);
             var selected = patientRecords[selectedRecord];
-            recordView.BeginRecordContext(selected.gameProgressId, selected.caseId + "/" + selected.sessionId);
+            bool archive = archivedRecords.ContainsValue(selected);
+            recordView.BeginRecordContext(selected.gameProgressId, selected.caseId + "/" + selected.sessionId + "/" + archive);
             recordView.ShowRecord(selected);
             recordView.SetCommittedSettlement(selected.registrationNumber, true, CommittedSettlementForRecord?.Invoke(selected));
             recordView.SetRecordNavigation(selectedRecord, patientRecords.Count);
+            recordView.SetRecordHeading(archive, 0);
+            uiFeaturePorts?.SelectRecord(new UiNext.RecordSelection { GameId = selected.gameProgressId,
+                PatientId = selected.registrationNumber, CaseId = selected.caseId, SessionId = selected.sessionId, IsArchive = archive });
+        }
+
+        private void ApplyRecordInformation(UiNext.RecordSelection selected, IReadOnlyList<UiNext.RecordFieldDisplay> fields)
+        {
+            if (recordView == null || patientRecords.Count == 0) return;
+            var shown = patientRecords[Mathf.Clamp(selectedRecord, 0, patientRecords.Count - 1)];
+            if (shown.gameProgressId != selected.GameId || shown.registrationNumber != selected.PatientId
+                || shown.caseId != selected.CaseId || shown.sessionId != selected.SessionId
+                || archivedRecords.ContainsValue(shown) != selected.IsArchive) return;
+            recordView.SetRecordHeading(selected.IsArchive, selected.Round);
+            foreach (var field in fields) recordView.SetInformationState(selected.PatientId, field.Field, field.State, field.Value);
         }
 
         /// <summary>Cycles the selected room window through half, down, and up while no modal is visible.</summary>
@@ -205,7 +223,7 @@ namespace Gamsamo.UI
 
         public void CloseRecord()
         {
-            if (!isActiveAndEnabled || modal == null || !IsRecordOpen)
+            if (inputBlocks > 0 || !isActiveAndEnabled || modal == null || !IsRecordOpen)
                 return;
 
             CloseModal();
@@ -230,14 +248,14 @@ namespace Gamsamo.UI
         /// <summary>Closes the whole PC, including its shop/app window.</summary>
         public void ClosePc()
         {
-            if (!isActiveAndEnabled || pcModal == null || !IsPcOpen)
+            if (inputBlocks > 0 || !isActiveAndEnabled || pcModal == null || !IsPcOpen)
                 return;
             CloseModal();
         }
 
         private void ClosePcTopmost()
         {
-            if (!IsPcOpen)
+            if (inputBlocks > 0 || !IsPcOpen)
                 return;
             if (pcDesktopView != null && pcDesktopView.CloseActiveWindow())
                 return;
@@ -420,6 +438,7 @@ namespace Gamsamo.UI
 
         private void OnDestroy()
         {
+            if (uiFeaturePorts != null) uiFeaturePorts.RecordInformationReceived -= ApplyRecordInformation;
             if (recordView != null)
                 recordView.RecordNavigationRequested -= NavigateRecord;
             if (openRecordButton != null)

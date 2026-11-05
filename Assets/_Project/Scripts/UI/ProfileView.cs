@@ -42,6 +42,8 @@ namespace Gamsamo.UI
             Refresh();
         }
 
+        public void ClearProgress() { progressLabel = "진행 정보 확인 전"; Refresh(); }
+
         private void EnsureProgressLabel()
         {
             if (progressText != null || introText == null) return;

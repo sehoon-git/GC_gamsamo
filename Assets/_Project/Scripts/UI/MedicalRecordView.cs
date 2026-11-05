@@ -23,7 +23,7 @@ namespace Gamsamo.UI
         public TMP_Text specialNotes;
         public TMP_Text counselor;
 
-        public enum RecordSection { Summary, Transcript, Result }
+        public enum RecordSection { Summary, Transcript, Result, Settlement }
         public enum InformationState { Unknown, NotApplicable, Undisclosed, Disclosed }
         public event Action<int> RecordNavigationRequested;
         public RecordSection Section { get; private set; }
@@ -31,7 +31,14 @@ namespace Gamsamo.UI
         public int DetailPageCount => consultationNotes != null ? Mathf.Max(1, consultationNotes.textInfo.pageCount) : 1;
         private MedicalRecordData current;
         private RectTransform detailControls;
-        private Button summaryTab, transcriptTab, resultTab, previousPage, nextPage;
+        private Button summaryTab, transcriptTab, resultTab, settlementTab, previousPage, nextPage;
+        private TMP_Text heading;
+        private bool isArchive;
+        private int round;
+        public string Heading => (current?.patientName ?? "내담자") + " · " + (isArchive ? "회차별 보관본" : "현재 사례 합본")
+            + "\n" + (round > 0 ? "상담 " + round + "회차 · " : "회차 정보 확인 전 · ") + (string.IsNullOrEmpty(current?.recordedDate) ? "날짜 미확인" : current.recordedDate);
+        public void SetRecordHeading(bool archive, int roundNumber)
+        { isArchive = archive; round = Mathf.Max(0, roundNumber); if (heading != null) heading.text = Heading; }
         private Button previousRecord, nextRecord;
         private TMP_Text pageLabel, recordLabel;
         private int recordIndex, recordCount;
@@ -95,14 +102,14 @@ namespace Gamsamo.UI
             if (resultArrived) Section = RecordSection.Result;
             SetText(registrationNumber, data?.registrationNumber);
             SetText(patientName, data?.patientName);
-            SetText(gender, data?.gender);
-            SetText(age, data?.age);
-            SetText(occupation, data?.occupation);
+            SetText(gender, string.IsNullOrWhiteSpace(data?.gender) ? "미확인" : data.gender);
+            SetText(age, string.IsNullOrWhiteSpace(data?.age) ? "미확인" : data.age);
+            SetText(occupation, string.IsNullOrWhiteSpace(data?.occupation) ? "미확인" : data.occupation);
             SetText(recordedDate, data?.recordedDate);
-            SetText(visitReason, data?.visitReason);
-            SetText(medicalHistory, data?.medicalHistory);
-            SetText(medication, data?.medication);
-            SetText(specialNotes, data?.specialNotes);
+            SetText(visitReason, string.IsNullOrWhiteSpace(data?.visitReason) ? "미확인" : data.visitReason);
+            SetText(medicalHistory, string.IsNullOrWhiteSpace(data?.medicalHistory) ? "미확인" : data.medicalHistory);
+            SetText(medication, string.IsNullOrWhiteSpace(data?.medication) ? "미확인" : data.medication);
+            SetText(specialNotes, string.IsNullOrWhiteSpace(data?.specialNotes) ? "미확인" : data.specialNotes);
             SetText(counselor, data?.counselor);
             foreach (var field in structuredFields) SetText(FieldLabel(field.Key), field.Value);
             if (Application.isPlaying) EnsureDetailsControls();
@@ -144,9 +151,9 @@ namespace Gamsamo.UI
             if (consultationNotes == null) return;
             int oldPage = resetPage ? 1 : DetailPage;
             string text = Section == RecordSection.Transcript ? current?.consultationTranscript
-                : Section == RecordSection.Result ? current?.consultationResult : current?.consultationNotes;
+                : Section == RecordSection.Result ? current?.consultationResult : Section == RecordSection.Settlement ? settlementText : current?.consultationNotes;
             if (Section == RecordSection.Result && !string.IsNullOrEmpty(settlementText)) text += "\n\n정산 내역\n" + settlementText;
-            if (string.IsNullOrWhiteSpace(text)) text = Section == RecordSection.Result ? "상담 결과가 아직 없습니다."
+            if (string.IsNullOrWhiteSpace(text)) text = Section == RecordSection.Settlement ? "저장이 확정된 정산 내역이 아직 없습니다." : Section == RecordSection.Result ? "상담 결과가 아직 없습니다."
                 : Section == RecordSection.Transcript ? "저장된 대화가 아직 없습니다." : "상담에서 확인한 내용을 기록합니다.";
             SetText(consultationNotes, text);
             consultationNotes.overflowMode = TextOverflowModes.Page;
@@ -160,10 +167,13 @@ namespace Gamsamo.UI
         {
             if (detailControls != null || consultationNotes == null || consultationNotes.font == null) return;
             detailControls = Rect("ConsultationRecordControls", transform, 0, 0, 1024, 1536);
-            summaryTab = Button("SummaryTab", "상담 메모", 296, 884, 190, 40, () => SelectSection(RecordSection.Summary));
-            transcriptTab = Button("TranscriptTab", "대화 원문", 496, 884, 190, 40, () => SelectSection(RecordSection.Transcript));
-            resultTab = Button("ResultTab", "상담 결과", 696, 884, 190, 40, () => SelectSection(RecordSection.Result));
-            Place(consultationNotes.rectTransform, 296, 936, 592, 222);
+            heading = Text("RecordHeading", Heading, 296, 884, 592, 60);
+            heading.fontSize = 26; heading.alignment = TextAlignmentOptions.TopLeft;
+            summaryTab = Button("SummaryTab", "메모", 296, 952, 140, 40, () => SelectSection(RecordSection.Summary));
+            transcriptTab = Button("TranscriptTab", "원문", 446, 952, 140, 40, () => SelectSection(RecordSection.Transcript));
+            resultTab = Button("ResultTab", "평가", 596, 952, 140, 40, () => SelectSection(RecordSection.Result));
+            settlementTab = Button("SettlementTab", "정산", 746, 952, 140, 40, () => SelectSection(RecordSection.Settlement));
+            Place(consultationNotes.rectTransform, 296, 1004, 592, 154);
             consultationNotes.alignment = TextAlignmentOptions.TopLeft;
             consultationNotes.enableAutoSizing = false;
             consultationNotes.fontSize = 22;
@@ -182,6 +192,8 @@ namespace Gamsamo.UI
             summaryTab.interactable = Section != RecordSection.Summary;
             transcriptTab.interactable = Section != RecordSection.Transcript;
             resultTab.interactable = Section != RecordSection.Result;
+            settlementTab.interactable = Section != RecordSection.Settlement;
+            heading.text = Heading;
             previousPage.interactable = DetailPage > 1;
             nextPage.interactable = DetailPage < DetailPageCount;
             pageLabel.text = DetailPage + " / " + DetailPageCount;

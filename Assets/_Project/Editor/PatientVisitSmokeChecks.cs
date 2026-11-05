@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Gamsamo.Dialogue;
+using Gamsamo.Networking;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
@@ -33,6 +34,8 @@ namespace Gamsamo.Editor
             visit = UnityEngine.Object.FindFirstObjectByType<PatientVisitController>();
             if (!Application.isPlaying || EditorApplication.isPaused || visit == null)
                 throw new InvalidOperationException("Patient visit checks require the consultation scene in unpaused Play mode.");
+            if (visit.GetComponent<PatientAiAdapter>() != null)
+                throw new InvalidOperationException("External AI is attached. Local demo automation is blocked to protect AI requests and saved conversations. Use Gamsamo/AI/Validate Current Scene and the documented manual checks instead.");
             if (visit.AdmittedCount != 0 || visit.State != PatientVisitController.VisitState.Waiting || visit.room.IsOverlayBlocking)
                 throw new InvalidOperationException("Start fresh Play mode and close room windows before running patient visit checks.");
             Results.Clear();

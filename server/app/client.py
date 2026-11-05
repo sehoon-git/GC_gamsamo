@@ -257,7 +257,14 @@ class SessionClient:
         try:
             response = await self.http.post(endpoint, json=request.model_dump(mode="json"))
             if response.is_error:
-                body = response.json().get("detail", {})
+                # Proxies and an unavailable API can return HTML or plain text.
+                # Keep the pending request; do not replace a retryable HTTP failure
+                # with a JSON decoder error or expose upstream pages in the UI.
+                try:
+                    error_data = response.json()
+                except ValueError:
+                    error_data = None
+                body = error_data.get("detail", {}) if isinstance(error_data, dict) else {}
                 if isinstance(body, dict):
                     code, message = body.get("code", "api_error"), body.get("message", "요청 데이터 또는 서버 상태를 확인하세요.")
                 else:

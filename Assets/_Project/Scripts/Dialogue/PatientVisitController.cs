@@ -31,6 +31,11 @@ namespace Gamsamo.Dialogue
         public event Action<string, string> PatientArrived;
         public event Action<VisitState> StateChanged;
 
+        // A runtime adapter opts in per patient. The remaining local demos keep their own rules.
+        public Func<string, bool> UsesExternalDialogue;
+        public Func<string, bool> ExternalConfirmEnd;
+        public Action ExternalNextRequested;
+
         public VisitState State { get; private set; } = VisitState.Waiting;
         public int CompletedCount { get; private set; }
         public int AdmittedCount => nextPatientIndex;
@@ -162,7 +167,7 @@ namespace Gamsamo.Dialogue
             SetPortraitAlpha(1f);
             transition = null;
             SetState(VisitState.Consulting);
-            if (useDemoDialogue) ShowDemoLine();
+            if (useDemoDialogue && !UsesExternalDialogueNow()) ShowDemoLine();
             else
             {
                 dialogue.ShowLine(CurrentPatient.displayName, string.Empty);
@@ -173,6 +178,7 @@ namespace Gamsamo.Dialogue
 
         private void ShowDemoLine()
         {
+            dialogue.SetEndAvailable(true);
             string[] lines = CurrentPatient.demoLines;
             string line = lines != null && demoLineIndex < lines.Length && !string.IsNullOrWhiteSpace(lines[demoLineIndex])
                 ? lines[demoLineIndex] : "안녕하세요. 오늘은 제 이야기를 조금 나눠 보고 싶어요.";
@@ -186,6 +192,12 @@ namespace Gamsamo.Dialogue
             if (dialogue.IsTyping)
             {
                 dialogue.RevealAll();
+                return;
+            }
+            if (dialogue.AdvancePage()) return;
+            if (UsesExternalDialogueNow())
+            {
+                ExternalNextRequested?.Invoke();
                 return;
             }
             if (!useDemoDialogue || CurrentPatient.demoLines == null || demoLineIndex + 1 >= CurrentPatient.demoLines.Length)
@@ -217,8 +229,11 @@ namespace Gamsamo.Dialogue
         public void ConfirmEndConsultation()
         {
             if (!isActiveAndEnabled || RoomBlocked || State != VisitState.Consulting || dialogue == null || !dialogue.IsConfirming) return;
+            if (UsesExternalDialogueNow() && ExternalConfirmEnd != null && ExternalConfirmEnd(CurrentSessionId)) return;
             CompleteConsultation(CurrentSessionId);
         }
+
+        private bool UsesExternalDialogueNow() => UsesExternalDialogue != null && UsesExternalDialogue(CurrentPatientId);
 
         /// <summary>Ends only this local visit. It does not grant a clear, reward, or saved progress.</summary>
         public bool CompleteConsultation(string sessionId)

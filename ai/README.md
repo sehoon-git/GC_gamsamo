@@ -1,6 +1,6 @@
 # 서윤 AI 베타 실행
 
-서윤 한 명의 환자 첫 발화·한국어 서술형 대화·사용자 종료·기억·자동 저장·두 축 평가 API를 제공한다. Unity는 같은 계약으로 연결한다. `/health`의 `supported_patient_ids`에 있는 환자만 실제 AI 상담 대상이며, 나머지 다섯 명의 임상 설정·평가 데이터는 아직 없다.
+서윤 한 명의 환자 첫 발화·한국어 서술형 대화·사용자 종료·기억·자동 저장·두 축 평가 API를 제공한다. Unity 연결 계층과 [텍스트 입력 UI 연결 명세](../contracts/README.md#unity-text-input)는 같은 계약을 사용한다. 입력창·전송 버튼은 팀원이 별도로 구현한다. `/health`의 `supported_patient_ids`에 있는 환자만 실제 AI 상담 대상이며, 나머지 다섯 명의 임상 설정·평가 데이터는 아직 없다.
 
 ## Conda 실행
 
@@ -48,7 +48,7 @@ python tools/run_experiment.py --server-only
 | `/status`, `/help` | 상담 회차·단계·도움말 |
 | `x`, `/quit` | 확정 상태를 보존하고 CLI 종료 |
 
-LLM은 공개 후보를 반환하고 클라이언트가 확정한다. Python CLI는 검증된 후보를 수용하며 Unity는 공개 정책을 구현한다. 서버 DB는 없다. 고정 종료 안내는 평가·기억 근거에서 제외하며 원문에는 별도 보존한다. 기억 요약은 원문을 대체하지 않는다. 약 12k 토큰부터 출처를 가진 기억으로 압축하고 최근 6왕복의 원문을 보존한다. 환자의 첫 발화는 왕복 수에 포함하지 않으며 원문·기억·평가에서 환자 발언으로 다룬다. 오래된 기록을 압축해도 실제 문맥 한도를 넘으면 최근 원문을 버리지 않고 입력 길이 조정을 안내한다.
+LLM은 공개 후보를 반환하고 클라이언트가 확정한다. Python CLI와 Unity 시연 어댑터는 현재 응답의 출처·허용 ID를 검증한 후보만 수용한다. 실제 대화에서의 의미적 공개 조건은 별도 검토한다. 서버 DB는 없다. 고정 종료 안내는 평가·기억 근거에서 제외하며 원문에는 별도 보존한다. 기억 요약은 원문을 대체하지 않는다. 약 12k 토큰부터 출처를 가진 기억으로 압축하고 최근 6왕복의 원문을 보존한다. 환자의 첫 발화는 왕복 수에 포함하지 않으며 원문·기억·평가에서 환자 발언으로 다룬다. 오래된 기록을 압축해도 실제 문맥 한도를 넘으면 최근 원문을 버리지 않고 입력 길이 조정을 안내한다.
 
 평가는 환자 누적 원문과 상담자 현재 회차를 각각 4항목×25점으로 분석한다. 두 축 모두 70점 이상이어야 클리어하며 근거 ID·정확한 원문 인용·발언자·회차를 검증한다.
 
@@ -67,7 +67,9 @@ python tools/run_tunnel.py
 
 `run_tunnel.py`는 Bearer 인증이 실제로 활성화된 API만 연결하며 기본적으로 홈의 `.local/bin/cloudflared`를 사용한다. 공식 [설치 안내](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/)에서 운영체제별 실행 파일과 무결성을 확인한다. `--cloudflared`로 위치를 지정할 수 있다.
 
-접속 설정은 `ai/outputs/demo-connection.json`에 저장된다. 팀원에게 이 파일을 안전한 경로로 전달하고 저장소에는 올리지 않는다. 팀원 PC에서는 표준 Python만으로 `python tools/check_connection.py <설정파일>`을 실행해 HTTPS·인증·환자 첫 발화·복수 질문 응답을 검사할 수 있다. Unity는 이 파일의 `api_url`, `api_key`를 로컬 설정에 적용한다.
+접속 설정은 `ai/outputs/demo-connection.json`에 저장된다. 팀원에게 이 파일을 안전한 경로로 전달하고 저장소에는 올리지 않는다. 팀원 PC에서는 표준 Python만으로 `python tools/check_connection.py <설정파일>`을 실행해 HTTPS·인증·환자 첫 발화·복수 질문 응답을 검사할 수 있다. Unity는 이 파일의 `api_url`, `api_key`를 로컬 설정에 적용한다. 설정 위치와 공개 함수·이벤트는 [공용 계약](../contracts/README.md#unity-text-input)을 따른다. 연결 주소와 키를 씬이나 Inspector 직렬화 필드에 넣지 않는다.
+
+평가는 일반 대화보다 오래 걸릴 수 있다. Unity의 요청 제한시간 안에서도 외부 프록시가 먼저 연결을 종료할 수 있으므로 오류 상태와 같은 요청 재시도를 제공한다. 실패를 0점으로 저장하지 않는다.
 
 Quick Tunnel은 실행을 종료하거나 다시 생성하면 주소가 바뀐다. 시연 전에 주소를 전달하고 프로세스를 유지한다. 완성 JSON 응답을 사용하며 SSE는 사용하지 않는다. [공식 Quick Tunnel 제한](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/)
 
@@ -80,6 +82,15 @@ python ai/evaluation/terminal_smoke.py --label chosen
 python ai/evaluation/long_context_smoke.py --label chosen
 python ai/evaluation/compare_models.py --label chosen
 ```
+
+Unity와 공유하는 C# 계약·저장 코드는 .NET 8 개발 환경에서 다음과 같이 검사한다. 두 번째 명령은 지정한 API에 합성 상담을 생성해 종료·평가·재상담까지 확인한다. 실제 설정 파일은 Git에 넣지 않는다.
+
+```bash
+dotnet run --project tools/unity-client-checks/UnityClientChecks.csproj -- .
+dotnet run --project tools/unity-client-checks/UnityClientChecks.csproj -- . <로컬연결설정.json>
+```
+
+선택적으로 `dotnet build tools/unity-client-checks/AdapterCompileChecks.csproj`로 Unity 대체 타입을 사용하는 어댑터 구문·타입 검사를 할 수 있다. C# 검사는 Unity Editor의 정식 컴파일·실행이나 입력 UI 검사가 아니다. 팀원의 화면 연결·한글 IME·복원 검증은 [입력 UI 명세](../contracts/README.md#unity-text-input)와 PR 체크리스트를 따른다.
 
 첫 두 검사는 모델 없이 규칙·장애·계약을 확인한다. 나머지는 실제 모델을 하나씩 실행하며 사용자 저장을 건드리지 않는다. `terminal_smoke`는 환자 첫 발화·공감과 복수 질문을 포함한 8턴 대화·명시적 종료·단계 복원·평가 재시도, `long_context_smoke`는 합성 긴 원문·요약·근거 검사를 수행한다. `compare_models`는 같은 20개 상황×2를 측정한다. 결과는 Git 제외 영역에 보존한다.
 

@@ -52,7 +52,10 @@ async def main():
         evaluator = EvaluationService(engine, catalog)
         evaluation_request = EvaluateRequest(state=case, session_id=case.current.id, request_id="long_evaluation")
         def evaluation_fits():
-            _, numbered = numbered_source([r.model_dump() for r in records(case)])
+            # Match EvaluationService.evaluate exactly: closing records and the
+            # record-kind metadata never enter the grading prompt. Including
+            # them can overestimate size and accidentally skip the chunked path.
+            _, numbered = numbered_source([r.model_dump(exclude={"kind"}) for r in records(case) if r.kind == "dialogue"])
             return engine.fits(evaluator.messages({"request": evaluation_request}, "evaluation", {"records": numbered}), "evaluation")
         while engine.count(render(), "controller") < 14000 or evaluation_fits():
             if index >= 250:
@@ -84,8 +87,8 @@ async def main():
         case.current.phase = "pending_evaluation"
         result = await evaluator.evaluate(evaluation_request)
         value = result.state.current.evaluation
-        assert value.metrics.role_seconds.get("evidence", 0) > 0, "Expected chunked evidence extraction."
         report["evaluation"] = value.model_dump()
+        assert value.metrics.role_seconds.get("evidence", 0) > 0, "Expected chunked evidence extraction."
         report["passed"] = True
     except Exception as exc:
         report["error"] = str(exc)

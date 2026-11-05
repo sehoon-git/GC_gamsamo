@@ -23,7 +23,9 @@ async def test_opening_has_no_fabricated_counselor_and_replays_saved_text(catalo
     assert state.model_dump_json() == before
     assert not response.state.current.turns
     assert [(r.id, r.speaker) for r in records(response.state)] == [("first:patient", "patient")]
-    assert all(message["role"] != "user" for message in llm.calls[0][2])
+    user_messages = [message["content"] for message in llm.calls[0][2] if message["role"] == "user"]
+    assert len(user_messages) == 1 and "상담자 발언 아님" in user_messages[0]
+    assert all(user_messages[0] not in r.text for r in records(response.state))
     replay = await service.open_session(OpenRequest(state=response.state, session_id=state.current.id, request_id="first"))
     assert replay.replayed and replay.state == response.state and len(llm.calls) == 1
     with pytest.raises(ExperimentError) as error:

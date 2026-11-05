@@ -31,6 +31,35 @@ class TinyTokenizer:
 
 
 @pytest.mark.asyncio
+async def test_patient_first_opening_supports_templates_requiring_user_query(settings, catalog):
+    import json
+    from app.schemas.models import OpenRequest, records
+    from app.services.dialogue import DialogueService
+    class UserQueryTokenizer(TinyTokenizer):
+        def apply_chat_template(self, messages, *args, **kwargs):
+            if not any(message["role"] == "user" for message in messages):
+                raise ValueError("No user query found in messages.")
+            return super().apply_chat_template(messages, *args, **kwargs)
+    requests = []
+    def handle(request):
+        payload = json.loads(request.content)
+        requests.append(payload)
+        assert any(message["role"] == "user" for message in payload["messages"])
+        return httpx.Response(200, json={"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(reply("안녕하세요. 요즘 마음이 복잡해서 찾아왔어요."), ensure_ascii=False)}}]})
+    llm = VllmClient(settings, tokenizer=UserQueryTokenizer())
+    await llm.http.aclose()
+    llm.http = httpx.AsyncClient(transport=httpx.MockTransport(handle), base_url="http://model")
+    state = CaseState()
+    try:
+        result = await DialogueService(llm, catalog).open_session(OpenRequest(state=state, session_id=state.current.id, request_id="opening"))
+        assert len(requests) == 1
+        assert not result.state.current.turns
+        assert [(r.speaker, r.text) for r in records(result.state)] == [("patient", "안녕하세요. 요즘 마음이 복잡해서 찾아왔어요.")]
+    finally:
+        await llm.close()
+
+
+@pytest.mark.asyncio
 async def test_context_budget_counts_token_ids_instead_of_encoding_fields(settings):
     class LongTokenizer(TinyTokenizer):
         def apply_chat_template(self, *args, **kwargs):

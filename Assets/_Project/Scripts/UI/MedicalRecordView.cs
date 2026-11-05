@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Gamsamo.Patients;
 using TMPro;
 using UnityEngine;
@@ -23,6 +24,7 @@ namespace Gamsamo.UI
         public TMP_Text counselor;
 
         public enum RecordSection { Summary, Transcript, Result }
+        public enum InformationState { Unknown, NotApplicable, Undisclosed, Disclosed }
         public event Action<int> RecordNavigationRequested;
         public RecordSection Section { get; private set; }
         public int DetailPage => consultationNotes != null ? consultationNotes.pageToDisplay : 1;
@@ -33,12 +35,62 @@ namespace Gamsamo.UI
         private Button previousRecord, nextRecord;
         private TMP_Text pageLabel, recordLabel;
         private int recordIndex, recordCount;
+        private readonly Dictionary<string, string> structuredFields = new Dictionary<string, string>(StringComparer.Ordinal);
+        private string settlementText = "";
+        private string contextGame, contextCase;
+
+        /// <summary>B calls before ShowRecord when restoring/switching a run or case.</summary>
+        public void BeginRecordContext(string gameId, string caseId)
+        {
+            if (contextGame == gameId && contextCase == caseId) return;
+            contextGame = gameId; contextCase = caseId;
+            structuredFields.Clear(); settlementText = "";
+        }
+
+        /// <summary>Display projection supplied by A/B. Hidden payloads are discarded, not cached.</summary>
+        public bool SetInformationState(string recordId, string field, InformationState state, string disclosedValue = null)
+        {
+            if (current == null || string.IsNullOrEmpty(recordId) || current.registrationNumber != recordId) return false;
+            TMP_Text label = FieldLabel(field);
+            if (label == null || !Enum.IsDefined(typeof(InformationState), state)) return false;
+            string value = state == InformationState.Unknown ? "미확인"
+                : state == InformationState.NotApplicable ? "해당 없음"
+                : state == InformationState.Undisclosed ? "미공개"
+                : "공개됨" + (string.IsNullOrWhiteSpace(disclosedValue) ? "" : " · " + disclosedValue);
+            structuredFields[field] = value;
+            SetText(label, value);
+            return true;
+        }
+
+        /// <summary>C/B supply an already committed settlement description, never a provisional calculation.</summary>
+        public bool SetCommittedSettlement(string recordId, bool committed, string text)
+        {
+            if (!committed || current == null || current.registrationNumber != recordId) return false;
+            settlementText = text ?? "";
+            ShowDetail(false); return true;
+        }
+
+        private TMP_Text FieldLabel(string field)
+        {
+            switch (field)
+            {
+                case "gender": return gender;
+                case "age": return age;
+                case "occupation": return occupation;
+                case "visitReason": return visitReason;
+                case "medicalHistory": return medicalHistory;
+                case "medication": return medication;
+                case "specialNotes": return specialNotes;
+                default: return null;
+            }
+        }
 
         public void ShowRecord(MedicalRecordData data)
         {
             bool changedPatient = current == null || current.registrationNumber != data?.registrationNumber;
             bool resultArrived = string.IsNullOrEmpty(current?.consultationResult) && !string.IsNullOrEmpty(data?.consultationResult);
             current = data;
+            if (changedPatient) { structuredFields.Clear(); settlementText = ""; }
             if (changedPatient) Section = string.IsNullOrEmpty(data?.consultationTranscript) ? RecordSection.Summary : RecordSection.Transcript;
             if (resultArrived) Section = RecordSection.Result;
             SetText(registrationNumber, data?.registrationNumber);
@@ -52,6 +104,7 @@ namespace Gamsamo.UI
             SetText(medication, data?.medication);
             SetText(specialNotes, data?.specialNotes);
             SetText(counselor, data?.counselor);
+            foreach (var field in structuredFields) SetText(FieldLabel(field.Key), field.Value);
             if (Application.isPlaying) EnsureDetailsControls();
             ShowDetail(changedPatient || resultArrived);
         }
@@ -92,6 +145,7 @@ namespace Gamsamo.UI
             int oldPage = resetPage ? 1 : DetailPage;
             string text = Section == RecordSection.Transcript ? current?.consultationTranscript
                 : Section == RecordSection.Result ? current?.consultationResult : current?.consultationNotes;
+            if (Section == RecordSection.Result && !string.IsNullOrEmpty(settlementText)) text += "\n\n정산 내역\n" + settlementText;
             if (string.IsNullOrWhiteSpace(text)) text = Section == RecordSection.Result ? "상담 결과가 아직 없습니다."
                 : Section == RecordSection.Transcript ? "저장된 대화가 아직 없습니다." : "상담에서 확인한 내용을 기록합니다.";
             SetText(consultationNotes, text);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -41,7 +42,7 @@ namespace Gamsamo.Dialogue
         public event Action HistoryRequested;
 
         public bool IsTyping => typing != null;
-        public bool IsVisible => visible && !suspended;
+        public bool IsVisible => visible && !suspended && !presentationBlocked;
         public bool IsConfirming { get; private set; }
         public string DisplayedText => bodyText != null ? bodyText.text : string.Empty;
         public string Draft => replyInput != null ? replyInput.text : string.Empty;
@@ -63,11 +64,18 @@ namespace Gamsamo.Dialogue
         private bool canReadHistory;
         private Button boundDismissButton;
         private string nextCaption = "계속 듣기";
+        private readonly HashSet<object> presentationBlockOwners = new HashSet<object>();
+        private bool presentationBlocked => presentationBlockOwners.Count > 0;
+        private float processingElapsed;
+        private string processingMessage = "";
+        private bool animateProcessing;
+        public DialogueProcessingState ProcessingState { get; private set; }
 
         private void Awake() => BindButtons();
 
         private void Update()
         {
+            if (animateProcessing) { processingElapsed += Time.unscaledDeltaTime; RefreshProcessingLabel(); }
             // Multiline Enter never submits while the Korean IME is composing.
             if (replyInput != null && replyInput.isFocused && string.IsNullOrEmpty(Input.compositionString)
                 && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
@@ -102,9 +110,49 @@ namespace Gamsamo.Dialogue
 
         public void SetStatus(string text)
         {
+            // Compatibility with A's existing captions. New integrations should send a typed state.
+            // Unknown captions remain ordinary feedback; elapsed time never becomes an error.
+            text = text ?? string.Empty;
+            if (text.EndsWith("의 응답을 기다리고 있어요", StringComparison.Ordinal))
+                SetProcessingState(string.IsNullOrEmpty(DisplayedText) ? DialogueProcessingState.PreparingOpening : DialogueProcessingState.WaitingForReply);
+            else if (text == "자동 저장을 기다리고 있어요") SetProcessingState(DialogueProcessingState.SavingTranscript);
+            else if (text == "상담을 마쳤어요 · 평가 중") SetProcessingState(DialogueProcessingState.WaitingForEvaluation);
+            else if (text == "응답 저장 후 상담을 마칠게요") SetProcessingState(DialogueProcessingState.EndingRequested);
+            else if (text.StartsWith("상담 저장 완료", StringComparison.Ordinal)) SetProcessingState(DialogueProcessingState.Saved, text);
+            else if (canRetry || text == "연결·자동 저장 확인 필요 · 재시도") SetProcessingState(DialogueProcessingState.Error, text);
+            else SetProcessingState(DialogueProcessingState.Ready, text);
+        }
+
+        /// <summary>A supplies operation/error states; B supplies SavingResult until its own commit succeeds.</summary>
+        public void SetProcessingState(DialogueProcessingState state, string message = null)
+        {
+            if (ProcessingState != state) processingElapsed = 0;
+            ProcessingState = state;
+            processingMessage = message ?? DialogueProcessingText.Label(state);
+            animateProcessing = DialogueProcessingText.IsWaiting(state);
+            RefreshProcessingLabel();
+        }
+
+        private void RefreshProcessingLabel()
+        {
             if (statusText == null) return;
+            float elapsed = processingElapsed;
             statusText.richText = false;
-            statusText.text = text ?? string.Empty;
+            statusText.text = processingMessage + (animateProcessing ? new string('.', 1 + (int)(elapsed * 2) % 3) : "");
+            if (animateProcessing && elapsed >= 20f) statusText.text += "  잠시 더 기다려 주세요";
+        }
+
+        /// <summary>A D modal blocks only presentation input; draft, line and service state are untouched.</summary>
+        public void SetPresentationBlocked(bool blocked)
+        {
+            SetPresentationBlock(this, blocked);
+        }
+
+        public void SetPresentationBlock(object owner, bool blocked)
+        {
+            if (owner == null) throw new ArgumentNullException(nameof(owner));
+            if (blocked) presentationBlockOwners.Add(owner); else presentationBlockOwners.Remove(owner);
+            RefreshVisibility();
         }
 
         public void SetNextAvailable(bool available)
@@ -244,7 +292,7 @@ namespace Gamsamo.Dialogue
             yield return null;
             while (shown < total)
             {
-                if (!suspended && !IsConfirming)
+                if (!suspended && !presentationBlocked && !IsConfirming)
                 {
                     shown += Time.unscaledDeltaTime * Mathf.Max(1f, charactersPerSecond);
                     bodyText.maxVisibleCharacters = Mathf.Min(total, Mathf.FloorToInt(shown));
@@ -262,12 +310,12 @@ namespace Gamsamo.Dialogue
             if (root != null)
             {
                 root.alpha = shown ? 1f : 0f;
-                root.interactable = shown && !IsConfirming;
+                root.interactable = shown && !IsConfirming && !presentationBlocked;
                 root.blocksRaycasts = shown;
             }
             if (confirmationPanel != null)
                 confirmationPanel.SetActive(shown && IsConfirming);
-            bool interactive = shown && !IsConfirming;
+            bool interactive = shown && !IsConfirming && !presentationBlocked;
             if (nextButton != null)
             {
                 nextButton.interactable = interactive && ((allowNext && !canDepart) || IsTyping || HasMorePages);
@@ -346,6 +394,38 @@ namespace Gamsamo.Dialogue
             if (retryButton != null) retryButton.onClick.RemoveListener(NotifyRetry);
             if (historyButton != null) historyButton.onClick.RemoveListener(NotifyHistory);
             if (previousPageButton != null) previousPageButton.onClick.RemoveListener(PreviousPage);
+        }
+    }
+}
+
+namespace Gamsamo.Dialogue
+{
+    // Presentation states, not AI/save DTOs. A/B retain ownership of the underlying operation.
+    public enum DialogueProcessingState
+    {
+        Ready, PreparingOpening, WaitingForReply, SavingTranscript, WaitingForEvaluation,
+        SavingResult, EndingRequested, Saved, Error
+    }
+
+    public static class DialogueProcessingText
+    {
+        public static bool IsWaiting(DialogueProcessingState state) => state != DialogueProcessingState.Ready
+            && state != DialogueProcessingState.Saved && state != DialogueProcessingState.Error;
+
+        public static string Label(DialogueProcessingState state)
+        {
+            switch (state)
+            {
+                case DialogueProcessingState.PreparingOpening: return "첫 이야기를 준비하고 있어요";
+                case DialogueProcessingState.WaitingForReply: return "답변을 기다리고 있어요";
+                case DialogueProcessingState.SavingTranscript: return "상담 기록을 저장하고 있어요";
+                case DialogueProcessingState.WaitingForEvaluation: return "상담 결과를 정리하고 있어요";
+                case DialogueProcessingState.SavingResult: return "결과를 저장하고 있어요";
+                case DialogueProcessingState.EndingRequested: return "진행 중인 응답과 기록 저장 후 상담을 마칠게요";
+                case DialogueProcessingState.Saved: return "상담 기록 저장 완료 · 상세 결과는 서류에서 확인해 주세요";
+                case DialogueProcessingState.Error: return "처리를 완료하지 못했어요. 재시도로 이어갈 수 있어요";
+                default: return "답변을 자유롭게 적어 주세요";
+            }
         }
     }
 }

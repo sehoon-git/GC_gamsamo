@@ -155,6 +155,11 @@ async def test_revisit_prompt_uses_real_prior_dialogue_and_rejects_identical_int
     messages = service.patient_messages(work)
     assert any(m['role'] == 'assistant' and m['content'] == original for m in messages)
     assert '자신이 마지막으로 말했던 고민' in messages[0]['content']
+    # Undiscussed background/future aspirations cannot masquerade as a memory.
+    for fact in service.catalog.patient['public_facts']:
+        assert fact not in messages[0]['content']
+    if patient_id == 'yeonwoo':
+        assert '이거 꼭 보여줘!' in messages[0]['content']
     with pytest.raises(InvalidModelOutput, match='그대로 반복'):
         service.validate_reply(work, PatientReply(text=original, disclosed_fact_ids=[]))
     service.validate_reply(work, PatientReply(text='지난번에 말한 고민이 아직 남아 있어서 더 이야기하고 싶어요.', disclosed_fact_ids=[]))
@@ -166,3 +171,25 @@ async def test_malformed_patient_state_is_a_client_error(state):
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(Settings(mock=True))), base_url='http://test') as http:
         response = await http.post('/v1/dialogue/open', json=dict(state=state, session_id='session', request_id='request'))
         assert response.status_code == 422
+
+
+@pytest.mark.parametrize('text', [
+    '아이 아빠가 영상을 보냈어요.', '아이의 엄마와 이야기했어요.',
+    '전 남편과 통화했어요.', '우리 딸이 신나 보여요.',
+])
+def test_yeonwoo_rejects_unapproved_family_gender(text):
+    settings = Settings(mock=True)
+    service = DialogueService(MockLLM(settings), Catalog(settings, 'yeonwoo'))
+    state = CaseState(patient_id='yeonwoo')
+    work = dict(case=state, request=OpenRequest(state=state, session_id=state.current.id, request_id='opening'), allowed=[])
+    with pytest.raises(InvalidModelOutput, match='미정인 성별'):
+        service.validate_reply(work, PatientReply(text=text, disclosed_fact_ids=[]))
+
+
+@pytest.mark.parametrize('text', ['다른 부모가 영상을 보내 줬어요.', '아이가 즐거웠다고 해서 기뻐요.', '이전처럼 아이에게 제 마음을 달래 달라고 하고 싶지는 않아요.'])
+def test_yeonwoo_accepts_authored_neutral_family_roles(text):
+    settings = Settings(mock=True)
+    service = DialogueService(MockLLM(settings), Catalog(settings, 'yeonwoo'))
+    state = CaseState(patient_id='yeonwoo')
+    work = dict(case=state, request=TurnRequest(state=state, session_id=state.current.id, turn_id='reply', text='마음이 어떤가요?'), allowed=[])
+    service.validate_reply(work, PatientReply(text=text, disclosed_fact_ids=[]))

@@ -78,6 +78,15 @@ class DialogueService:
         character["story_events"] = self.catalog.active_story_events(case)
         character["possible_change"] = self.catalog.patient.get("possible_change", "")
         character["private_facts"] = [fact for fact in self.catalog.patient["private_facts"] if fact["id"] in visible]
+        if isinstance(work["request"], OpenRequest) and len(case.sessions) > 1:
+            # Full background and possible outcomes were being mistaken for things
+            # discussed or achieved since the last visit. Opening continuity needs
+            # actual records/memory plus only the newly authored session event.
+            # Ordinary turns and grading still receive the complete fixed story.
+            for key in ("public_facts", "private_facts", "direction", "possible_change"):
+                character.pop(key)
+            character["story_events"] = [event for event in character["story_events"]
+                                         if event["min_session"] == len(case.sessions)]
         policy = {
             "fixed_character": character, "memory": case.memory.model_dump(),
             "current_topic": work["classification"].topic_label,
@@ -97,13 +106,21 @@ class DialogueService:
                     "첫 방문의 자기소개·방문 이유를 처음부터 그대로 되풀이하지 마세요. 이전 원문 또는 출처가 있는 기억에서 "
                     "자신이 마지막으로 말했던 고민·감정·선택 중 하나를 이어서, 오늘 더 이야기하고 싶은 마음을 2~4문장으로 말하세요. "
                     "미해결된 마음이 그대로 남아 있어도 괜찮습니다. 이전에 말하지 않은 설정을 함께 나눈 기억으로 만들거나, "
-                    "상담 밖의 실천·호전·새 사건을 지어내지 마세요. 미공개 정보는 새로 노출하지 마세요.")
+                    "상담 밖의 실천·호전·새 사건을 지어내지 마세요. 이번 첫 발화에는 실제 이전 원문·기억과 "
+                    "새로 열린 사건만 제공됩니다. 회차가 늘었다고 과거 일이 다시 발생한 것은 아닙니다. "
+                    "이미 말한 과거 사건에 '이번에도'·'그 뒤 또' 같은 "
+                    "재발 표현을 붙이지 말고 그때부터 남아 있는 현재 감정을 이어 말하세요. "
+                    "새로 열린 story_events만 새 사건으로 이야기할 수 있습니다. 미공개 정보는 새로 노출하지 마세요.")
             new_events = [event for event in self.catalog.active_story_events(case)
                           if event["min_session"] == len(case.sessions)]
             if new_events:
                 messages[0]["content"] += ("\n이번 회차에 새로 열린 story_events는 사전 작성된 실제 이야기 사건입니다. "
                     "이번 첫 발화에서 그 사건을 먼저 꺼내세요. 이전 회차에 이미 말했다고 하지 말고, "
                     "그에 대한 감정은 기쁨·서운함 등이 함께 남을 수 있도록 표현하세요. 사건을 상담자의 공로나 완치로 돌리지 마세요.")
+                if self.catalog.patient["id"] == "yeonwoo":
+                    messages[0]["content"] += ("\n이번 사건에서 영상을 보낸 사람의 호칭은 반드시 '다른 부모'입니다. "
+                        "아이 아빠·아이 엄마·전 남편·전 아내로 바꾸지 마세요. 연우·아이·다른 부모의 성별을 추정하지 않으며, "
+                        "아이도 아들·딸이 아니라 '아이'라고 말하세요.")
             # Qwen's chat template requires a user query, including for a patient-first
             # opening. This provider-only cue is never appended to the transcript.
             cue = (f"[대화 시작 제어 신호 — 상담자 발언 아님] 지금은 {len(case.sessions)}번째 상담의 시작입니다. "
@@ -120,6 +137,12 @@ class DialogueService:
         return messages
 
     def validate_reply(self, work, value):
+        # The authored Yeonwoo story identifies the child and the other parent
+        # without assigning gender. Reject observed unsupported labels; never
+        # replace the generated dialogue with a canned successful response.
+        if self.catalog.patient["id"] == "yeonwoo" and re.search(
+                r"아이(?:의)?\s*(?:아빠|엄마|아버지|어머니)|(?<![가-힣])전\s*(?:남편|아내|부인|처(?!럼|리))|(?:제|우리)\s*(?:아들|딸)", value.text):
+            raise InvalidModelOutput("연우·아이·다른 부모의 미정인 성별을 확정하지 마세요. 제공된 설정의 '아이'와 '다른 부모'라는 표현을 사용하세요.")
         if isinstance(work["request"], OpenRequest) and len(work["case"].sessions) > 1:
             if any(session.opening and re.sub(r"\s+", "", value.text) == re.sub(r"\s+", "", session.opening.patient_text)
                    for session in work["case"].sessions[:-1]):

@@ -45,8 +45,18 @@ async def check(args):
         progress = "smoke_" + uuid4().hex
         catalog = Catalog(Settings(), args.patient)
         async def step(action, body):
+            if action == "start" and args.timeout_probe:
+                try:
+                    await http.post("/v1/dialogue/" + action, json=body,
+                                    timeout=httpx.Timeout(.05, connect=5))
+                except httpx.ReadTimeout:
+                    print("start: client read timeout observed; retrying the original request")
+                else:
+                    raise AssertionError("Opening completed too quickly to exercise the timeout probe")
             first = await http.post("/v1/dialogue/" + action, json=body)
             assert first.status_code == 200, f"{action}: HTTP {first.status_code}"
+            if action == "start" and args.timeout_probe:
+                assert first.headers["x-ai-cache"] in {"joined", "hit"}, "Retry started duplicate work"
             result = first.json()
             state = CaseState.model_validate(result["state"])
             catalog.validate_state(state)
@@ -80,7 +90,10 @@ def main():
     parser.add_argument("--expect-revision")
     parser.add_argument("--patient", choices=PATIENT_IDS, default="seoyun")
     parser.add_argument("--lifecycle", action="store_true", help="Generate a new isolated synthetic case (uses the model)")
+    parser.add_argument("--timeout-probe", action="store_true", help="With --lifecycle, interrupt the first HTTP read at 50ms and rejoin the original opening")
     args = parser.parse_args()
+    if args.timeout_probe and not args.lifecycle:
+        parser.error("--timeout-probe requires --lifecycle")
     try:
         asyncio.run(check(args))
     except httpx.HTTPError as error:

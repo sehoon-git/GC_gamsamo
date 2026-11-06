@@ -120,6 +120,32 @@ def test_character_specific_rubric_and_authored_choices(patient_id):
     assert patient['boundaries'] and patient['unspecified']
 
 
+@pytest.mark.parametrize('role', ['patient', 'patient_compact', 'evaluation'])
+def test_character_guidance_reaches_only_its_own_model_prompt(role):
+    settings = Settings(mock=True)
+    additions = {
+        patient_id: (settings.prompts / patient_id / (role + '.txt')).read_text('utf-8').strip()
+        for patient_id in PATIENT_IDS
+    }
+    for patient_id, addition in additions.items():
+        prompt = Catalog(settings, patient_id).prompts[role]
+        assert addition and prompt.rstrip().endswith(addition)
+        assert all(other not in prompt for key, other in additions.items() if key != patient_id)
+
+
+def test_harin_disclosure_guidance_is_only_sent_to_her_controller():
+    settings = Settings(mock=True)
+    rule = (settings.prompts / 'harin' / 'controller.txt').read_text('utf-8').strip()
+    for patient_id in PATIENT_IDS:
+        catalog = Catalog(settings, patient_id)
+        service = DialogueService(MockLLM(settings), catalog)
+        state = CaseState(patient_id=patient_id)
+        request = TurnRequest(state=state, session_id=state.current.id, turn_id='help', text='어떤 부탁이라면 편할까요?')
+        system = service.management_messages({'case': state, 'request': request})[0]['content']
+        assert (rule in system) == (patient_id == 'harin')
+        assert rule not in catalog.prompts['patient']
+
+
 @pytest.mark.parametrize('patient_id', PATIENT_IDS)
 def test_reduced_context_preserves_all_authored_facts_conditions_and_rubric_once(patient_id):
     settings = Settings(mock=True)

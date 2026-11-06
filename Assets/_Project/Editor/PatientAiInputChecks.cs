@@ -170,6 +170,7 @@ namespace Gamsamo.Editor
                 var bodyObject = new GameObject("PatientText", typeof(RectTransform));
                 bodyObject.transform.SetParent(host.transform, false);
                 view.bodyText = bodyObject.AddComponent<TextMeshProUGUI>();
+                view.bodyText.font = inputFont;
                 view.bodyText.text = "직전 환자 대사";
                 Call(adapter, "RenderCommitted");
                 Check(view.DisplayedText == "직전 환자 대사", "Committing evaluation does not replace patient dialogue with a result popup");
@@ -231,6 +232,7 @@ namespace Gamsamo.Editor
                 Field(adapter, "healthReady", true);
                 Field(view, "visible", true);
                 view.SetDepartureAvailable(false);
+                session = CheckRevisitInput(adapter, view, visits, temporary, Check);
                 CheckRecordPages(host.transform, Check);
                 foreach (string id in new[] { "seoyun", "dohyeon", "taejun", "yeonwoo", "harin" })
                 {
@@ -273,6 +275,107 @@ namespace Gamsamo.Editor
 
         private static void BeforeWrite(AiSaveStore store, Action<string> action) =>
             typeof(AiSaveStore).GetProperty("BeforeWrite", Private).SetValue(store, action);
+
+        private static AiSession CheckRevisitInput(PatientAiAdapter adapter, PatientDialogueView view,
+            PatientVisitController visits, string temporary, Action<bool, string> check)
+        {
+            var before = AiProtocol.Object(Example("scoped-revisit.request"), "state");
+            string patientId = AiProtocol.Id(before, "patient_id");
+            string patientName = AiProtocol.Text(AiProtocol.Patient(patientId), "name");
+            Property(visits, "CurrentPatient", new PatientVisitDefinition { patientId = patientId, displayName = patientName });
+            Field(adapter, "activePatientId", patientId);
+            Field(adapter, "patientName", patientName);
+            var snapshot = AiSaveStore.NewSnapshot(patientId);
+            snapshot["state"] = before.DeepClone();
+            snapshot["end_requested"] = true;
+            snapshot["visit_completed"] = true;
+            var store = new AiSaveStore(Path.Combine(temporary, "revisit-input"));
+            store.Save(snapshot, -1);
+            var revisit = new AiSession(store, patientId);
+            string target = AiProtocol.Id(Example("scoped-revisit.request"), "session_id");
+            revisit.Schedule("revisit", revisitSessionId: target);
+            string requestBody = AiProtocol.Encode(revisit.PendingRequest);
+            revisit = new AiSession(store, patientId); // A queued revisit must survive stopping/restarting Play.
+            check(AiProtocol.Encode(revisit.PendingRequest) == requestBody && !revisit.EndRequested,
+                "Revisit restores the original request and clears the previous end intent");
+            BindSession(adapter, revisit);
+            Field(adapter, "committedState", revisit.State);
+            Field(adapter, "renderedRevision", -1);
+            Field(adapter, "draftDirty", false);
+            Field(adapter, "networkBusy", true); // Transport held here; no external server or player save.
+            Field(adapter, "healthReady", true);
+            var processing = visits.gameObject.AddComponent<Gamsamo.UI.Presentation.DialogueProcessingBinding>();
+            processing.Bind(adapter, view);
+            int evaluations = 0;
+            Action<string> onEvaluation = _ => evaluations++;
+            adapter.EvaluationCommitted += onEvaluation;
+            try
+            {
+                Call(adapter, "RenderCommitted");
+                check(!visits.IsAwaitingDeparture && evaluations == 0,
+                    "Pending revisit does not end the new visit or emit the old evaluation again");
+                check(view.ProcessingState == DialogueProcessingState.PreparingOpening,
+                    "Pending revisit displays preparation instead of the previous saved result");
+                check(!view.replyInput.interactable && !adapter.CanFinishVisit && !adapter.CanRetry,
+                    "An in-flight revisit blocks input, departure and duplicate retries");
+                Field(adapter, "networkBusy", false);
+                Call(adapter, "Publish");
+                check(adapter.CanRetry && AiProtocol.Encode(revisit.PendingRequest) == requestBody,
+                    "An interrupted revisit offers retry without allocating another request");
+                Property(adapter, "LastError", "isolated revisit connection failure");
+                Call(adapter, "Publish");
+                check(view.ProcessingState == DialogueProcessingState.Error && adapter.CanRetry && !view.replyInput.interactable,
+                    "A failed revisit exposes recovery while preserving the input lock");
+                Property(adapter, "LastError", "");
+
+                var request = revisit.PendingRequest;
+                var body = AiProtocol.Object(request, "body");
+                var response = Example("scoped-revisit.response");
+                response["request_id"] = body["request_id"].DeepClone();
+                var current = AiProtocol.Current(AiProtocol.Object(response, "state"));
+                current["started_at"] = body["created_at"].DeepClone();
+                current["opening"]["id"] = body["request_id"].DeepClone();
+                BeforeWrite(store, _ => { throw new IOException("isolated revisit response save failure"); });
+                bool failed = false;
+                try { revisit.Receive(request, response, "model"); }
+                catch (IOException) { failed = true; }
+                check(failed && revisit.HasPendingSave && revisit.Phase == "evaluated"
+                    && !view.replyInput.interactable && AiProtocol.Encode(revisit.PendingRequest) == requestBody,
+                    "A revisit response cannot unlock input before its atomic save succeeds");
+                BeforeWrite(store, null);
+                revisit.RetrySave();
+                Call(adapter, "RenderCommitted");
+                view.RevealAll();
+                Call(adapter, "Publish");
+                check(adapter.CurrentPhase == "active" && !visits.IsAwaitingDeparture && !adapter.EndRequested
+                    && adapter.CanEditDraft && view.replyInput.interactable && view.sendButton.interactable
+                    && view.endButton.gameObject.activeSelf && view.endButton.interactable,
+                    "Saved revisit opening unlocks typing, sending and ending the new consultation");
+                check(view.ProcessingState == DialogueProcessingState.Ready && !view.dismissButton.gameObject.activeSelf,
+                    "The new active round clears the old saved status and departure action");
+                check(JToken.DeepEquals(AiProtocol.Array(before, "sessions")[0], AiProtocol.Array(revisit.State, "sessions")[0])
+                    && AiProtocol.Id(AiProtocol.Current(revisit.State), "id") == target,
+                    "Revisit preserves the prior transcript and evaluation in the same case");
+                view.replyInput.text = "다시 만나서 반가워요. 오늘은 어떠셨나요?";
+                check(adapter.Draft == view.replyInput.text, "Korean input reaches the adapter after a failed consultation revisit");
+                Call(adapter, "FlushDraft");
+                check(new AiSession(store, patientId).Draft == view.replyInput.text, "Revisit draft survives an actual save and reload");
+                var restored = new AiSession(store, patientId);
+                BindSession(adapter, restored);
+                Field(adapter, "committedState", restored.State);
+                Field(adapter, "renderedRevision", -1);
+                Call(adapter, "RenderCommitted"); view.RevealAll(); Call(adapter, "Publish");
+                check(view.replyInput.interactable && adapter.CanSubmit && adapter.Draft == view.replyInput.text,
+                    "Reloading an active revisit retains editable input and its draft");
+                return restored;
+            }
+            finally
+            {
+                BeforeWrite(store, null);
+                adapter.EvaluationCommitted -= onEvaluation;
+                UnityEngine.Object.DestroyImmediate(processing);
+            }
+        }
 
         private static void CheckDraftAutosave(PatientAiAdapter adapter, PatientDialogueView view, AiSession session,
             AiSaveStore store, EventSystem eventSystem, string original, Action<bool, string> check)

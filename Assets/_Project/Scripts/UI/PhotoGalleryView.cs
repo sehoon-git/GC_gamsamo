@@ -59,18 +59,28 @@ namespace Gamsamo.UI
         /// <summary>B supplies the saved unlock list. This method replaces, never awards, the displayed set.</summary>
         public void SetUnlockedPhotos(string gameId, IReadOnlyList<string> unlockedIds, IReadOnlyList<PhotoGalleryEntry> catalog)
         {
+            ShowGrantedPhotos(gameId, ResolveUnlockedPhotos(unlockedIds, catalog));
+        }
+
+        internal void ShowGrantedPhotos(string gameId, IReadOnlyList<PhotoGalleryEntry> photos)
+        {
             if (GameId != (gameId ?? "") && viewer != null) viewer.Close();
             GameId = gameId ?? "";
+            SetPhotos(string.IsNullOrWhiteSpace(GameId) ? null : photos);
+        }
+
+        internal static PhotoGalleryEntry[] ResolveUnlockedPhotos(IReadOnlyList<string> unlockedIds, IReadOnlyList<PhotoGalleryEntry> catalog)
+        {
             var selected = new List<PhotoGalleryEntry>();
             var seen = new HashSet<string>(StringComparer.Ordinal);
-            if (!string.IsNullOrWhiteSpace(GameId) && unlockedIds != null && catalog != null)
+            if (unlockedIds != null && catalog != null)
                 foreach (string id in unlockedIds)
                 {
                     if (string.IsNullOrWhiteSpace(id) || !seen.Add(id)) continue;
                     foreach (var entry in catalog)
                         if (entry != null && entry.photoId == id) { selected.Add(entry); break; }
                 }
-            SetPhotos(selected);
+            return selected.ToArray();
         }
 
         public bool OpenPhoto(int index)

@@ -18,6 +18,7 @@ namespace Gamsamo.Progression
         private DialogueProcessingBinding processing;
         private IDisposable modalLease;
         private int displayedRevision = -1;
+        private PhotoGalleryEntry[] grantedPhotos = Array.Empty<PhotoGalleryEntry>();
 
         public void Bind(GameProgressRuntime source, PatientVisitController controller, PatientAiAdapter ai)
         {
@@ -63,15 +64,17 @@ namespace Gamsamo.Progression
                 var pc = visits.room?.pcDesktopView;
                 var photos = content?.patients?.Where(p => p != null && p.approved && p.photo != null)
                     .Select(p => new PhotoGalleryEntry { photoId = p.photoId, title = p.title, description = p.description, thumbnail = p.photo, fullSize = p.photo }).ToArray();
+                grantedPhotos = PhotoGalleryView.ResolveUnlockedPhotos(state.Photos, photos);
                 if (pc?.photoView != null)
                 {
                     pc.photoView.EmptyStateText = photos == null || photos.Length == 0 ? "웃는 사진은 준비 중입니다. 클리어 기록은 안전하게 저장됩니다." : null;
-                    pc.photoView.SetUnlockedPhotos(state.ProgressId, state.Photos, photos);
+                    pc.photoView.ShowGrantedPhotos(state.ProgressId, grantedPhotos);
                 }
             }
             if (ending == null || ending.IsOpen || ending.AwaitingSave) return;
             var receipt = state.PendingPresentation;
-            if (state.Phase == ProgressPhase.Presenting && receipt != null)
+            if (state.Phase == ProgressPhase.Presenting && receipt != null
+                && visits.State == PatientVisitController.VisitState.Consulting)
             {
                 var id = receipt.Identity;
                 var entry = content?.FindApproved(id.PatientId);
@@ -79,8 +82,12 @@ namespace Gamsamo.Progression
                     visits.patients.First(p => p.patientId == id.PatientId).displayName, checked((int)receipt.Granted),
                     entry?.photo != null && state.Photos.Contains(entry.photoId), state.PresentationStage);
             }
-            else if (state.Phase == ProgressPhase.Finished && state.FinalEndingUnlocked && !state.FinalEndingPlayed)
-                ending.RestoreFinalEnding(state.ProgressId, true, true, state.FinalPresentationStage);
+            else if (state.Phase == ProgressPhase.Finished && state.FinalEndingUnlocked && !state.FinalEndingPlayed
+                && visits.State == PatientVisitController.VisitState.Finished)
+            {
+                if (ending.RestoreFinalEnding(state.ProgressId, true, true, state.FinalPresentationStage))
+                    ending.SetCreditsPhotos(state.ProgressId, grantedPhotos);
+            }
         }
         private void SavePlayback(string game, string patient, string caseId, string session, string stage)
         {
@@ -88,7 +95,7 @@ namespace Gamsamo.Progression
             try
             {
                 if (game != runtime.Progress.State.ProgressId) throw new InvalidOperationException("다른 진행의 재생 요청입니다.");
-                if (string.IsNullOrEmpty(patient)) runtime.Progress.CompleteFinalEnding();
+                if (string.IsNullOrEmpty(patient)) runtime.Progress.CompleteFinalEnding(stage);
                 else runtime.Progress.SavePresentationStage(new RoundIdentity { ProgressId = game, PatientId = patient, CaseId = caseId, RoundId = session }.Key, stage);
                 saved = true;
             }

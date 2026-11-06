@@ -37,7 +37,7 @@ namespace Gamsamo.Editor.Presentation
             Report.Clear(); passed = 0;
             try
             {
-                CheckDialogueAndGuide(); CheckEnding(); CheckPhotoRecordProfile();
+                CheckDialogueAndGuide(); CheckEnding(); CheckAuthoredAlbum(); CheckPhotoRecordProfile();
                 Report.AppendLine("TOTAL " + passed + " passed; no AI/server or player-save calls.");
                 Debug.Log("D presentation checks: " + passed + " passed.");
             }
@@ -150,7 +150,7 @@ namespace Gamsamo.Editor.Presentation
             Check(!view.RestoreCommittedClear("g", "p", "c", "s", true, false, "개발용", 7, true), "Uncleared result cannot open clear UI");
             Check(!view.RestoreCommittedClear("g", "p", "", "s", true, true, "개발용", 7, true), "Complete settlement identity is required");
             Check(view.RestoreCommittedClear("g", "p", "c", "s", true, true, "개발용", 7, true), "B committed clear opens presentation");
-            Check(view.rewardText.text.Contains("7 C") && view.photoNotice.text.Contains("사진첩") && !view.bodyText.text.Contains("점수"), "Clear shows supplied award/photo notice, detailed score remains in record");
+            Check(view.rewardText.text.Contains("7 C") && view.photoNotice.text.Contains("사진첩") && !view.bodyText.text.Contains("점수"), "Clear shows supplied award/photo notice, clear summary omits numerical grades");
             view.Continue(); view.Continue(); view.Skip();
             Check(saves == 1 && view.AwaitingSave && view.Stage == "clear", "Playback waits for one B save; repeated clicks do not advance");
             Check(!view.AcknowledgePlaybackSaved("wrong", "p", "c", "s", "ending", true), "Late result for another game is rejected");
@@ -183,6 +183,82 @@ namespace Gamsamo.Editor.Presentation
             restored.RestoreCommittedClear("other-game", "p", "c", "s", true, true, "개발용", 0, false, "ending");
             Check(!restored.photo.enabled, "Approved content alone cannot reveal a photo B has not unlocked");
             restored.Skip(); restored.AcknowledgePlaybackSaved("other-game", "p", "c", "s", "skipped", true);
+        }
+
+        private static void CheckAuthoredAlbum()
+        {
+            // Exercise the shipped prefab as well as the generated missing-content UI above.
+            var template = AssetDatabase.LoadAssetAtPath<GameObject>(PresentationPrefabBuilder.Folder + "/ClearEnding.prefab");
+            var root = Track(UnityEngine.Object.Instantiate(template));
+            var view = root.GetComponent<EndingPresentationView>();
+            Call(view, "Awake");
+            var texture = Track(new Texture2D(16, 12));
+            var storyPhoto = Track(Sprite.Create(texture, new Rect(0, 0, 16, 9), Vector2.one * 0.5f));
+            var smilePhoto = Track(Sprite.Create(texture, new Rect(0, 0, 8, 12), Vector2.one * 0.5f));
+            var catalog = Track(ScriptableObject.CreateInstance<EndingContentCatalog>());
+            var album = new EndingContent { patientId = "album", approved = true, title = "다시 보는 날들",
+                photo = smilePhoto, moments = new EndingMoment[5] };
+            for (int i = 0; i < album.moments.Length; i++)
+                album.moments[i] = new EndingMoment { title = "기억 " + i, description = "그날의 이야기 " + i, photo = storyPhoto };
+            catalog.patients = new[] { album };
+            view.content = catalog;
+            int saves = 0;
+            view.BindModalGate(() => true, () => { });
+            view.PlaybackSaveRequested += (g, p, c, s, stage) => saves++;
+            var tick = typeof(EndingPresentationView).GetMethod("AdvanceReading", BindingFlags.Instance | BindingFlags.NonPublic);
+            void ReadFor(float seconds) => tick.Invoke(view, new object[] { seconds });
+
+            Check(view.RestoreCommittedClear("g", "album", "c", "s", true, true, "서윤", 5, true), "Shipped ending prefab opens after committed clear");
+            ReadFor(2f);
+            Check(saves == 0 && view.Stage == "clear", "Clear summary allows reading time");
+            ReadFor(3f); ReadFor(100f);
+            Check(saves == 1 && view.PendingStage == "ending" && !view.photo.enabled, "Timed opening waits for one committed stage change");
+            view.AcknowledgePlaybackSaved("g", "album", "c", "s", "ending", true);
+            var spread = view.photo.transform.parent.Find("EndingAlbumSpread");
+            var folio = spread.Find("MomentNumber").GetComponent<TMP_Text>();
+            var signature = spread.Find("ClosingThanks").GetComponent<TMP_Text>();
+            Check(view.photo.sprite == storyPhoto && view.bodyText.text == album.moments[0].description
+                && view.photo.rectTransform.anchoredPosition.x + view.photo.rectTransform.rect.width < view.bodyText.rectTransform.anchoredPosition.x,
+                "Album pairs the uncropped first photo with its description on the right");
+            ReadFor(1f);
+            Check(folio.text == "장면 1 / 6", "First album photo remains available to read");
+            for (int i = 1; i < album.moments.Length; i++)
+            {
+                if (i % 2 == 0) ReadFor(30f); else view.Continue();
+                Check(view.bodyText.text == album.moments[i].description && signature.text == "" && saves == 1,
+                    "Timed and manual page turns show authored moment " + (i + 1) + " without a save");
+            }
+            ReadFor(30f); ReadFor(100f);
+            Check(folio.text == "장면 6 / 6" && view.photo.sprite == smilePhoto && signature.text == "상담해주셔서 감사합니다"
+                && view.IsOpen && !view.AwaitingSave, "Final smile and exact thanks stay visible until dismissed");
+            view.Continue(); view.AcknowledgePlaybackSaved("g", "album", "c", "s", "completed", false);
+            ReadFor(100f);
+            Check(view.IsOpen && view.photo.sprite == smilePhoto && saves == 2 && view.retryButton.gameObject.activeSelf,
+                "Failed completion holds the final photo and retry button");
+            view.RetryPlaybackSave(); view.AcknowledgePlaybackSaved("g", "album", "c", "s", "completed", true);
+            Check(!view.IsOpen && saves == 3, "Completion acknowledgement releases the album");
+            view.Replay(); view.Skip();
+            Check(folio.text == "장면 6 / 6" && view.photo.sprite == smilePhoto && saves == 3,
+                "Replay can jump to the final photo without another save");
+            view.Continue();
+            Check(!view.IsOpen && saves == 3, "Replay closes without granting rewards or changing playback state");
+
+            var granted = new PhotoGalleryEntry[5];
+            for (int i = 0; i < granted.Length; i++)
+                granted[i] = new PhotoGalleryEntry { title = "환자 " + (i + 1) + "의 웃는 얼굴", thumbnail = smilePhoto };
+            Check(view.RestoreFinalEnding("g", true, true), "Final ending opens after the personal album releases its modal");
+            view.SetCreditsPhotos("another-game", granted);
+            Check(!view.finalPhotos[0].enabled, "Final credits reject photos from another save");
+            view.SetCreditsPhotos("g", granted);
+            for (int i = 0; i < granted.Length; i++)
+                Check(view.finalPhotos[i].enabled && view.finalPhotos[i].preserveAspect
+                    && view.finalCaptions[i].text == granted[i].title, "Final credits show saved portrait and caption " + (i + 1));
+            Check(!view.finalPhotos[5].enabled && view.finalCaptions[5].text == "", "Five saved photos leave no extra visible slot");
+            Check(view.creditsBody.anchoredPosition.y <= 0
+                && -view.creditsBody.anchoredPosition.y < ((RectTransform)view.creditsViewport.transform).rect.height,
+                "Short credits are visible immediately between the photo columns");
+            view.Continue(); view.AcknowledgePlaybackSaved("g", "", "", "", "completed", true);
+            Check(!view.IsOpen && saves == 4, "Final credits close after their separate committed completion");
         }
 
         private static void CheckPhotoRecordProfile()

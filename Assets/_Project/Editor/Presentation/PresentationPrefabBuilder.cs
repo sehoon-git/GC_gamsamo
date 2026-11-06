@@ -88,8 +88,16 @@ namespace Gamsamo.Editor.Presentation
             var root = CanvasRoot("ClearEnding");
             var view = root.AddComponent<EndingPresentationView>();
             view.content = AssetDatabase.LoadAssetAtPath<EndingContentCatalog>(CatalogPath);
+            view.albumPaper = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/UI/Dialogue/WarmPaperSurface.asset");
             view.panel = Modal(root.transform);
-            Transform paper = PaperPanel(view.panel.transform);
+            var blocker = (RectTransform)view.panel.transform;
+            blocker.anchorMin = Vector2.zero;
+            blocker.anchorMax = Vector2.one;
+            blocker.pivot = Vector2.one * 0.5f;
+            blocker.anchoredPosition = blocker.sizeDelta = Vector2.zero;
+            var paper = (RectTransform)PaperPanel(blocker);
+            paper.anchorMin = paper.anchorMax = paper.pivot = Vector2.one * 0.5f;
+            paper.anchoredPosition = Vector2.zero;
             view.titleText = Label("Title", paper, "", 70, 40, 1020, 85, 38, TextAlignmentOptions.Center);
             view.bodyText = Label("Body", paper, "", 270, 150, 620, 310, 27, TextAlignmentOptions.Center);
             view.rewardText = Label("Reward", paper, "", 70, 470, 1020, 64, 36, TextAlignmentOptions.Center);
@@ -108,6 +116,9 @@ namespace Gamsamo.Editor.Presentation
             view.continueButton = Button("Continue", paper, "계속하기", 650, 655, 240, 70);
             view.skipButton = Button("Skip", paper, "건너뛰기", 270, 655, 240, 70);
             view.retryButton = Button("Retry", paper, "저장 재시도", 460, 655, 240, 70);
+            RoomPaperPresentationBuilder.StylePaperButton(view.continueButton);
+            RoomPaperPresentationBuilder.StylePaperButton(view.skipButton);
+            RoomPaperPresentationBuilder.StylePaperButton(view.retryButton);
             view.retryButton.gameObject.SetActive(false);
             view.initialFocus = view.continueButton;
             view.finalPhotos = new Image[6]; view.finalCaptions = new TMP_Text[6];

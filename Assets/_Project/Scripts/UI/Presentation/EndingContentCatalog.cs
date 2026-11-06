@@ -4,6 +4,14 @@ using UnityEngine;
 namespace Gamsamo.UI.Presentation
 {
     [Serializable]
+    public sealed class EndingMoment
+    {
+        public string title;
+        [TextArea(2, 5)] public string description;
+        public Sprite photo;
+    }
+
+    [Serializable]
     public sealed class EndingContent
     {
         public string patientId;
@@ -12,6 +20,7 @@ namespace Gamsamo.UI.Presentation
         public string title;
         [TextArea(3, 12)] public string description;
         public Sprite photo;
+        public EndingMoment[] moments = Array.Empty<EndingMoment>();
     }
 
     /// <summary>Authored media only. This asset grants no photos, endings, score or currency.</summary>

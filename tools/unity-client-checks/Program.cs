@@ -210,11 +210,11 @@ internal static class Program
         Check(transcript.Contains(quotation) && transcript.Contains("<color=red>문자 그대로</color>"), "formatter rewrote literal markup; richText=false belongs to the view");
         string result = AiRecordFormatter.Results(history, labels);
         Check(result.Contains("상담 1 · 평가 결과") && !result.Contains("상담 2 · 평가 결과"), "unevaluated revisit hid or fabricated a result");
-        Check(result.Contains("환자 변화 0 / 100") && result.Contains("상담자 대응 0 / 100"), "result omitted either scoring axis");
-        Check(scores.Cast<JObject>().All(score => result.Contains(labels[AiProtocol.Text(score, "criterion_id")] + " · 0 / 25")
-            && result.Contains(AiProtocol.Text(score, "explanation"))), "result omitted an authored criterion, score, or explanation");
+        Check(!result.Contains("/ 100") && !result.Contains("/ 25"), "desk record exposed numerical scores");
+        Check(scores.Cast<JObject>().All(score => result.Contains(labels[AiProtocol.Text(score, "criterion_id")])
+            && result.Contains(AiProtocol.Text(score, "explanation"))), "result omitted an authored criterion or explanation");
         Check(result.Contains("근거: “" + quotation + "”") && result.Contains("반대 근거: “다음 줄도 그대로”"), "support or counter-evidence quote was rewritten or omitted");
-        Check(AiRecordFormatter.Results(history, null).Contains("self_worth · 0 / 25"), "missing optional labels hid a criterion");
+        Check(AiRecordFormatter.Results(history, null).Contains("self_worth"), "missing optional labels hid a criterion");
         Check(AiProtocol.Encode(history) == original, "formatting mutated saved state or original evidence");
         current["evaluation"] = evaluation.DeepClone();
         string completed = AiRecordFormatter.Results(history, labels);

@@ -50,10 +50,10 @@ namespace Gamsamo.Editor
             Place(view.replyInput.placeholder.rectTransform, 0, 0, 626, 42);
             Style(view.sendButton, paper, 665, 0, 135, 52);
             Style(view.previousPageButton, paper, 32, 282, 110, 44);
-            Place(view.pageText.rectTransform, 145, 282, 76, 44);
-            Style(view.historyButton, paper, 228, 282, 130, 44);
+            Style(view.nextButton, paper, 152, 282, 110, 44);
+            Place(view.pageText.rectTransform, 272, 282, 76, 44);
+            Style(view.historyButton, paper, 550, 282, 130, 44);
             Style(view.retryButton, paper, 368, 282, 145, 44);
-            Style(view.nextButton, paper, 525, 282, 155, 44);
             Style(view.endButton, paper, 690, 282, 155, 44);
             Style(view.dismissButton, paper, 690, 282, 155, 44);
             // The confirmation dialog uses the same paper controls.

@@ -90,6 +90,7 @@ namespace Gamsamo.Networking
         private int renderedRevision = -1;
         private string draftBuffer = "";
         private bool draftDirty;
+        private bool flushingDraft;
         private float draftSaveAt;
         private bool previousCanSubmit;
         private bool previousCanEdit;
@@ -171,9 +172,18 @@ namespace Gamsamo.Networking
         }
         private void BindSession(AiSession value)
         {
-            if (session != null) session.PersistenceChanged -= Publish;
+            if (session != null) session.PersistenceChanged -= PersistenceChanged;
             session = value;
-            if (session != null) session.PersistenceChanged += Publish;
+            if (session != null) session.PersistenceChanged += PersistenceChanged;
+        }
+
+        private void PersistenceChanged()
+        {
+            // Draft writes are synchronous: do not expose their transient busy state to TMP.
+            // Toggling interactable clears selection and interrupts an in-progress IME composition.
+            // Completion (including a failed write) still publishes the actual persistence state.
+            if (flushingDraft && session.IsWriting) return;
+            Publish();
         }
 
         /// <summary>B calls before PatientArrived, with IDs already persisted in its game progress intent.</summary>
@@ -251,8 +261,14 @@ namespace Gamsamo.Networking
         private void FlushDraft()
         {
             if (!draftDirty || session == null || session.PendingRequest != null || session.HasPendingSave || session.EndRequested) return;
-            try { session.SaveDraft(draftBuffer); draftDirty = false; }
+            try
+            {
+                flushingDraft = true;
+                session.SaveDraft(draftBuffer);
+                draftDirty = false;
+            }
             catch (Exception) { Fail("초안을 자동 저장하지 못했습니다. 공간·쓰기 권한을 확인한 뒤 재시도해 주세요."); }
+            finally { flushingDraft = false; }
         }
         public bool Retry()
         {
@@ -565,7 +581,7 @@ namespace Gamsamo.Networking
         private void OnDisable() { FlushDraft(); AbortNetwork(); }
         private void OnDestroy()
         {
-            if (session != null) session.PersistenceChanged -= Publish;
+            if (session != null) session.PersistenceChanged -= PersistenceChanged;
             if (visits == null) return;
             if (visits.UsesExternalDialogue == UsesPatient) visits.UsesExternalDialogue = null;
             if (visits.ExternalConfirmEnd == ConfirmFromView) visits.ExternalConfirmEnd = null;

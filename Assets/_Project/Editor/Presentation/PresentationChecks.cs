@@ -239,9 +239,13 @@ namespace Gamsamo.Editor.Presentation
             Check(record.age.text == "미확인" && !record.consultationNotes.text.Contains("확정 7 C"), "Switching records clears old disclosure/settlement display");
 
             var profile = host.AddComponent<ProfileView>();
-            profile.progressText = PresentationPrefabBuilder.Label("Progress", host.transform, "", 0, 0, 800, 180, 20);
-            profile.SetProgress("B가 제공한 자격증", "현재 내담자", "재상담 대기", 2, 6);
-            Check(profile.progressText.text.Contains("B가 제공한 자격증") && profile.progressText.text.Contains("2 / 6"), "Profile displays B's supplied certification and progress without computing promotion");
+            profile.nameText = PresentationPrefabBuilder.Label("Name", host.transform, "", 0, 0, 800, 60, 20);
+            profile.affiliationText = PresentationPrefabBuilder.Label("Affiliation", host.transform, "", 0, 60, 800, 60, 20);
+            profile.introText = PresentationPrefabBuilder.Label("Intro", host.transform, "", 0, 120, 800, 60, 20);
+            profile.SetProfile("한이수", "상담실", "말이 잘 나오지 않는 날엔 천천히 시작해요.");
+            Check(profile.nameText.text == "한이수" && profile.affiliationText.text == "상담실"
+                && profile.introText.text == "말이 잘 나오지 않는 날엔 천천히 시작해요."
+                && profile.transform.Find("CommittedProgress") == null, "Profile preserves supplied identity and introduction without a progress footer");
         }
     }
 }

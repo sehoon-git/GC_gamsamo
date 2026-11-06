@@ -759,7 +759,7 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 - `GameProgressRuntime`은 A의 `AiConversationKey(gameProgressId, patientId, caseId, sessionId)`와 `TryGetSavedEvaluation()`만 사용한다. `ProgressService.PrepareAiOperation()`으로 사례/회차 생성 의도를 먼저 저장하므로 재실행이 새 사례나 재방문을 중복 생성하지 않는다. 실제 서버에는 `game_progress_scope`, `patient_catalog_v1` 기능이 필요하다. 이번 검증 중 사용자가 서버 변경을 배포했고 실제 대화·종료·평가·재방문이 성공했다.
 - `EconomyIntegration`은 B의 공용 저장에 C의 원장 전체를 넣는다. 보상·진행·사진 해금은 한 트랜잭션이며 상점도 같은 원장의 잔액/소유권/장착을 사용한다. 중복 회차는 다시 지급하지 않고 저장 실패 구매는 차감하지 않는다. 기록부는 진행/사례/회차 식별자로 저장된 기본 보상·첫 클리어 보너스·이번 지급을 표시한다.
 - `GamePresentationIntegration`은 기존 씬/프리팹에 D 안내서·엔딩·사진 확대·처리 상태·오디오 프리팹을 연결한다. 모달 입력 잠금과 재생 단계 저장을 B가 관리한다. 5명 클리어 후 최종 엔딩 해금, 재생 완료 저장은 보상과 분리한다.
-- 프로필에서 미확정 승급의 `자격증: 승급 기준 준비 중` 문구는 표시하지 않는다. `GamePresentationIntegration`이 빈 자격증 값을 전달하고 `ProfileView.SetProgress()`가 빈 값의 자격증 접두사와 구분자를 생략한다. 완료 인원·현재 내담자·진행 상태는 계속 표시하며, 이후 확정된 자격증 값이 제공되면 기존 자격증 표시를 사용한다. 승급 기준이나 저장 데이터는 바꾸지 않는다.
+- 내 프로필은 상담사의 그림·이름·소속·한 줄 소개와 그 내용을 유지한다. 아래쪽 자격증·완료 인원·현재 내담자·방문/상담 상태는 표시하지 않는다. `GamePresentationIntegration`의 프로필 진행 전달과 `ProfileView`의 진행 문구 생성 경로를 제거했다. 진행·승급·저장 데이터는 변경하지 않으며 화면만 정리한다.
 - 사용자가 승인한 미준비 콘텐츠 정책: 정식 사진/후일담/크레딧/음원이 없어도 클리어·보상·다음 환자를 막지 않는다. 화면에는 준비 중을 명시한다. 사진 권리는 `<patientId>_smile`로 예약하며 나중에 정식 카탈로그를 추가할 때 같은 ID를 유지하거나 명시적으로 이관해야 한다.
 - Windows Mono에서 긴 사례 저장 경로와 임시 파일 이름이 합쳐져 첫 입장이 실패하는 문제를 짧은 같은 디렉터리 임시 파일로 수정했다. 원자적 파일 교체와 백업은 유지한다. 안내서 줄바꿈, 사진 빈 상태 안내, 중첩 모달 Escape 처리도 보완했다.
 - 검증용 실행: Unity 6000.3.28f1 `-batchmode -quit -executeMethod IntegrationChecks.Build`. 자동 검사 후 `artifacts/integration/player/GC_gamsamo_E2E.exe`를 만든다. 제품명을 `GC_gamsamo_Integration_E2E`로 빌드할 때만 변경하여 기존 플레이어 저장과 분리하며 프로젝트 제품명은 복구한다. 접속 설정은 비공개 로컬 파일로 제공하고 커밋하지 않는다.
@@ -1853,3 +1853,10 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - `GamePresentationIntegration.Update()`가 미확정 자격증 안내 대신 null을 전달한다. `ProfileView.SetProgress()`는 자격증 값이 없으면 `자격증:` 접두사와 중간 구분자도 생략해 첫 줄을 `완료 0 / 5` 형식으로 표시한다. 완료 수·현재 내담자·진행 상태와 제공된 실제 자격증 표시 기능은 유지한다. 승급 조건·승급 계산·진행/프로필 저장 데이터·씬/프리팹·UI 배치는 변경하지 않는다.
 - 검증: Unity **6000.3.28f1** 별도 작업 공간의 batch import/Runtime·Editor 컴파일과 기존 `Gamsamo.Editor.Presentation.PresentationChecks.Run` **77개 통과**, 종료 코드 0. 코드/씬/프리팹에서 해당 준비 중 문자열의 잔여 표시 경로가 없는지 검색했고 `git diff --check`를 통과했다. 검증 로그는 Git 제외 `artifacts/profile-copy/unity.log`, 보고서는 `artifacts/d-presentation/edit-checks.txt`에 있다. 단순 표시 문구 변경으로 새 테스트·Windows 재빌드·Play 화면 조작·외부 AI E2E는 수행하지 않았다.
 - 검증 작업 공간에서 생성된 폰트 캐시·ProjectSettings 변경은 제외하고, 사용자 Unity 프로젝트의 미커밋 변경과 실제 저장은 보존했다. PR에는 위 런타임 파일 2개와 이 문서만 포함한다. 다음 확인은 PR 병합 후 최신 main을 반영하고 Play 재시작 → PC → 내 프로필에서 첫 줄의 준비 중 문구가 사라졌는지 보는 것이다. main 직접 push·원격 병합은 하지 않는다.
+
+### 17.44 내 프로필 하단 진행 안내 세 줄 제거
+
+- 구현·검증 완료 시각: **2026-11-06 09:48:05 KST (UTC+09:00)**. 최신 main `24a4d2f`에서 `codex/remove-profile-progress-lines`로 작업했다. 사용자는 PR #42의 프로필처럼 이름·소속·한 줄 소개와 내용을 남기고, 하단 완료 인원·현재 내담자·방문 대기를 모두 제거하도록 요청했다. 이 요청이 17.43의 완료 인원 유지 결정을 대체한다.
+- `ProfileView`의 `SetProgress()`·`EnsureProgressLabel()`·진행 텍스트 필드/문구 생성·갱신을 제거했다. `GamePresentationIntegration.Update()`의 해당 호출과 프로필 전용 `StatusText()`도 제거했다. 상담 진행/재상담/완료 상태로 바뀌어도 프로필 하단 문구를 다시 만들지 않는다. 프로필 `SetProfile()`·이름/소속/소개 필드 및 표시·초상화·닫기·기존 레이아웃은 그대로다. 진행 상태와 완료 수는 저장에 계속 보존되며 경제·AI·해금·저장 형식은 바꾸지 않는다.
+- 기존 `PresentationChecks`의 진행 문구 표시 기대값을 이름·소속·소개 내용 보존과 하단 진행 객체 미생성 확인으로 갱신했다. Unity **6000.3.28f1** 별도 작업 공간의 Runtime/Editor 컴파일 및 표시 검사 **77개 통과**, 종료 코드 0. 제거한 API/필드의 호출 잔여와 `git diff --check`를 확인했다. 로그는 Git 제외 `artifacts/profile-footer/unity.log`, 보고서는 `artifacts/d-presentation/edit-checks.txt`다. Windows 재빌드·Play 화면 조작·실제 AI E2E는 이번 표시 정리에서 실행하지 않았다.
+- 코드 2개·기존 검사 1개·이 문서를 하나의 PR로 제출한다. 생성된 폰트/ProjectSettings는 검증 작업 공간에서 제외하며, 사용자 Unity 프로젝트의 한이수 기본 프로필 연결과 미커밋 폰트/설정은 보존한 채 같은 수정 커밋을 로컬 통합한다. 이는 원격 main 병합과 구분한다. 다음 확인은 현재 Play를 중지하고 다시 실행해 PC → 내 프로필에서 이름·소속·소개만 보이는지 확인하는 것이다. main 직접 push·원격 병합은 하지 않는다.

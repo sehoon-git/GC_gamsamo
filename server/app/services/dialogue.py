@@ -170,7 +170,8 @@ class DialogueService:
         render = lambda: self.patient_messages(work)
         messages = await self.memory.prepare(work["case"], render, "patient", work["metrics"])
         reply = await self.llm.generate("patient", messages, self.reply_schema(work), work["metrics"], lambda r: self.validate_reply(work, r),
-            repair_context={key: self.catalog.patient[key] for key in ("name", "public_facts", "unspecified")})
+            repair_context={"speaker_background": {key: self.catalog.patient[key] for key in ("name", "public_facts", "unspecified")},
+                            "instruction": self.catalog.prompts["patient_compact"]})
         return {"reply": reply}
 
     def check_request(self, request):

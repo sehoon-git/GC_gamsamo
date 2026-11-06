@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -16,5 +17,13 @@
     <Compile Include="../../Assets/_Project/Scripts/Patients/MedicalRecordData.cs" />
     <Compile Include="../../Assets/_Project/Editor/PatientAiEditorTools.cs" />
     <Compile Include="UnityApiStubs.cs" />
+    <Compile Include="ProgressRuntimeStubs.cs" />
+    <Compile Include="RuntimeGuardChecks.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Progression/GameProgress.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Progression/ProgressService.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Progression/GameProgressRuntime.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Progression/DevelopmentProgressMode.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Save/GameProgressStore.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Economy/EconomyState.cs" />
   </ItemGroup>
 </Project>

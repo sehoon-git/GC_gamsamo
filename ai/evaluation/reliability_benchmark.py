@@ -39,11 +39,11 @@ class ObservedClient(VllmClient):
         self.observed_calls = 0
         self.observed_roles = {}
 
-    async def generate(self, role, messages, schema, metrics, validate=None):
+    async def generate(self, role, messages, schema, metrics, validate=None, repair_context=None):
         before_calls = metrics.calls
         before_seconds = metrics.role_seconds.get(role, 0)
         try:
-            return await super().generate(role, messages, schema, metrics, validate)
+            return await super().generate(role, messages, schema, metrics, validate, repair_context=repair_context)
         finally:
             self.observed_calls += metrics.calls - before_calls
             self.observed_roles[role] = self.observed_roles.get(role, 0) + metrics.role_seconds.get(role, 0) - before_seconds
@@ -97,6 +97,21 @@ async def run(args):
                         vllm_url=args.model_url, vllm_api_key=os.getenv("SEOYUN_VLLM_API_KEY", ""))
     engine = ObservedClient(settings)
     engine.reset()
+    attempts = []
+    async def observe_model_response(response):
+        if not args.private_records or response.request.url.path != "/v1/chat/completions": return
+        await response.aread()
+        try:
+            request = json.loads(response.request.content)
+            data = response.json()
+            choice = data.get("choices", [{}])[0]
+            # Opt-in synthetic diagnostics only; never retain keys or hidden reasoning.
+            attempts.append({"schema": request["response_format"]["json_schema"]["name"],
+                "max_tokens": request["max_tokens"], "finish_reason": choice.get("finish_reason"),
+                "temperature": request["temperature"], "presence_penalty": request.get("presence_penalty"),
+                "content": choice.get("message", {}).get("content"), "usage": data.get("usage", {})})
+        except (ValueError, KeyError, IndexError): pass
+    engine.http.event_hooks["response"] = [observe_model_response]
     assert (await engine.health())["ready"], "The fixed model profile does not match the running model."
     cold_started = perf_counter(); engine.load_tokenizer(); cold_seconds = perf_counter()-cold_started
     app = create_app(settings, llm=engine)
@@ -114,6 +129,9 @@ async def run(args):
               "scenario_sha256": hashlib.sha256(args.scenarios.read_bytes()).hexdigest(),
               "conditions": "one benchmark request at a time; shared model; production busy observations excluded from aggregates",
               "quantile_minimums": {"p50": 20, "p95": 100}, "rows": [], "cases": []}
+    report["effective_role_max_tokens"] = {role: engine.output_budget(role) if hasattr(engine, "output_budget") else value["max_tokens"]
+        for role, value in profile["roles"].items()}
+    report["patient_compression_generation"] = getattr(engine, "patient_compression_generation", None)
     packets = []
     out = args.output / (args.label + ".json")
     raw = args.output / (args.label + ".private.json")
@@ -139,6 +157,7 @@ async def run(args):
                     await asyncio.sleep(.5)
             monitor = asyncio.create_task(watch())
             engine.reset()
+            attempts.clear()
             started = perf_counter()
             try:
                 response = await api.post("/v1/dialogue/"+action, json=body)
@@ -174,6 +193,8 @@ async def run(args):
                         assert len(state.sessions) == len(prior.sessions) + 1
                         assert state.sessions[:-1] == prior.sessions
                 current = state.current
+                speech = current.turns[-1].patient_text if action == "turn" else current.opening.patient_text if action in ("start", "open", "revisit") else None
+                if speech is not None: row["reply_characters"] = len(speech)
                 metrics = current.evaluation.metrics if action == "evaluate" else current.closing_metrics if action == "close" else current.turns[-1].metrics if action == "turn" else current.opening.metrics
                 row.update(model_service_seconds=sum(engine.observed_roles.values()), model_calls=engine.observed_calls,
                            role_seconds=engine.observed_roles, prompt_tokens=metrics.prompt_tokens if engine.observed_calls else 0,
@@ -190,7 +211,7 @@ async def run(args):
             report["summary"] = summary(report["rows"])
             if args.private_records:
                 packets.append({"patient_id": patient, "scenario": scenario, "operation": action, "step": step,
-                                "request": copy.deepcopy(body), "response": copy.deepcopy(data)})
+                                "request": copy.deepcopy(body), "response": copy.deepcopy(data), "model_attempts": copy.deepcopy(attempts)})
                 write_private(raw, packets)
             write_private(out, report)
             print(patient, scenario, action, "HTTP_OK" if row["ok"] else "HTTP_FAIL", flush=True)

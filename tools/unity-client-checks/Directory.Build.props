@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- These two projects share a directory. Separate apphost/restore caches so
+         dotnet run cannot launch the other project's executable after a build. -->
+    <BaseIntermediateOutputPath>obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin/$(MSBuildProjectName)/</BaseOutputPath>
+  </PropertyGroup>
+</Project>

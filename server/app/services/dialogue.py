@@ -6,6 +6,7 @@ from pydantic import Field, create_model
 from langgraph.graph import END, START, StateGraph
 
 from app.core.config import ExperimentError, InvalidModelOutput
+from app.core.dialogue_limits import PATIENT_MAX_CHARACTERS, PATIENT_TEXT_PATTERN
 from app.llm.client import compact
 from app.schemas.models import (
     CLOSING_TEXT, CaseState, Classification, CloseRequest, Metrics, Opening, OpenRequest,
@@ -100,11 +101,11 @@ class DialogueService:
             # This is a system-directed opening, never a fabricated counselor record.
             if len(case.sessions) == 1:
                 messages[0]["content"] += ("\n첫 상담을 시작했습니다. 상담자의 선행 발언은 없습니다. "
-                    f"{self.catalog.patient['name']}이 먼저 인사하고 지금 이야기하고 싶은 마음을 자연스럽게 2~4문장으로 말하세요.")
+                    f"{self.catalog.patient['name']}이 지금 이야기하고 싶은 마음 하나를 짧은 1~2문장으로 말하세요. 인사는 생략해도 됩니다.")
             else:
                 messages[0]["content"] += ("\n이전에 상담한 내담자가 새 회차에 다시 방문했습니다. 이번 회차의 상담자 발언은 아직 없습니다. "
                     "첫 방문의 자기소개·방문 이유를 처음부터 그대로 되풀이하지 마세요. 이전 원문 또는 출처가 있는 기억에서 "
-                    "자신이 마지막으로 말했던 고민·감정·선택 중 하나를 이어서, 오늘 더 이야기하고 싶은 마음을 2~4문장으로 말하세요. "
+                    "자신이 마지막으로 말했던 고민·감정·선택 중 하나를 이어서, 오늘 더 이야기하고 싶은 마음을 짧은 1~2문장으로 말하세요. "
                     "미해결된 마음이 그대로 남아 있어도 괜찮습니다. 이전에 말하지 않은 설정을 함께 나눈 기억으로 만들거나, "
                     "상담 밖의 실천·호전·새 사건을 지어내지 마세요. 이번 첫 발화에는 실제 이전 원문·기억과 "
                     "새로 열린 사건만 제공됩니다. 회차가 늘었다고 과거 일이 다시 발생한 것은 아닙니다. "
@@ -137,6 +138,10 @@ class DialogueService:
         return messages
 
     def validate_reply(self, work, value):
+        if len(value.text) > PATIENT_MAX_CHARACTERS or not re.fullmatch(PATIENT_TEXT_PATTERN, value.text) or value.text != value.text.strip():
+            raise InvalidModelOutput(f"공백·문장부호 포함 {PATIENT_MAX_CHARACTERS}자 이내 한 문단으로 다시 쓰세요. 핵심 답변 하나를 완결된 1~2문장으로 표현하세요.")
+        if not re.search(r'[.!?…][\"\u201d\u2019\u300d\u300f]*$', value.text):
+            raise InvalidModelOutput("중간에 끊거나 말줄임으로 생략하지 말고, 문장부호로 끝나는 짧은 한국어 문장을 완성하세요.")
         # The authored Yeonwoo story identifies the child and the other parent
         # without assigning gender. Reject observed unsupported labels; never
         # replace the generated dialogue with a canned successful response.
@@ -164,7 +169,8 @@ class DialogueService:
     async def respond(self, work):
         render = lambda: self.patient_messages(work)
         messages = await self.memory.prepare(work["case"], render, "patient", work["metrics"])
-        reply = await self.llm.generate("patient", messages, self.reply_schema(work), work["metrics"], lambda r: self.validate_reply(work, r))
+        reply = await self.llm.generate("patient", messages, self.reply_schema(work), work["metrics"], lambda r: self.validate_reply(work, r),
+            repair_context={key: self.catalog.patient[key] for key in ("name", "public_facts", "unspecified")})
         return {"reply": reply}
 
     def check_request(self, request):

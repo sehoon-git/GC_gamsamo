@@ -46,6 +46,9 @@ namespace Gamsamo.Progression
         public bool Cleared, FirstClear;
         public long Granted;
         public string PhotoId;
+        // Absent in older saves. Development results never represent AI evidence.
+        public bool DevelopmentSkip;
+        public int? PatientScore, CounselorScore;
     }
     [Serializable] public sealed class PatientProgress
     {
@@ -57,6 +60,7 @@ namespace Gamsamo.Progression
     {
         public int Version = 1, Revision;
         public string ProgressId;
+        public bool DevelopmentMode;
         public List<PatientProgress> Patients = new List<PatientProgress>();
         public int CurrentIndex;
         public ProgressPhase Phase;
@@ -85,6 +89,9 @@ namespace Gamsamo.Progression
                 || Patients.Take(CurrentIndex).Any(p => !p.Cleared)
                 || (Phase == ProgressPhase.Presenting && PendingPresentation == null))
                 throw new InvalidOperationException("진행 저장의 형식·상태가 손상되었습니다. 원본과 백업을 보존하고 복구해 주세요.");
+            if (Settlements.Values.Concat(PendingPresentation == null ? new ConfirmedResult[0] : new[] { PendingPresentation })
+                .Any(r => r != null && r.DevelopmentSkip && (!DevelopmentMode || r.PatientScore != 70 || r.CounselorScore != 70 || r.Granted != 0)))
+                throw new InvalidOperationException("개발 스킵 결과는 별도 개발 진행에서만 사용할 수 있습니다.");
         }
     }
     public interface IProgressStore

@@ -310,3 +310,33 @@ PYTHONPATH=server python ai/evaluation/compare_runs.py \
 실행·계약 내보내기·smoke 도구는 자신의 체크아웃에 있는 `server`를 우선 import한다. 기존 Conda editable 설치가 다른 작업 트리를 가리켜도 실행 버전과 실제 코드가 달라지지 않게 하기 위한 처리다. 비교 측정 도구는 기준 소스 사본을 선택할 수 있도록 `PYTHONPATH`와 `--source-root`를 같은 소스로 지정한다.
 
 실제 HTTP 대기 중단은 `--lifecycle --timeout-probe`로 추가 검사한다. 첫 발화의 클라이언트 읽기를 50ms에 중단하고 원래 본문으로 재전송하여 `joined` 또는 `hit`인지 확인한다. 테스트용 새 진행에서만 실행하며, 첫 응답이 너무 빨리 끝나 중단을 재현하지 못하면 성공으로 보고하지 않는다. 서버 프로세스 강제 종료나 Unity 디스크 저장 실패를 검사하는 옵션은 아니다.
+
+
+## AI 0.4.4: 한 대화창 응답과 개발 진행 미리보기
+
+### 응답 길이와 이전 저장
+
+- 새 첫 발화·일반 답변·재방문 첫 발화의 `text`는 **공백·문장부호 포함 최대 60자, 줄바꿈 없는 1~2문장**이다. 보통 25~45자를 지향한다. 환자 생성 요청의 `max_tokens`는 **192**이며 JSON과 공개 ID까지 포함한다. 낮은 사용자 설정은 유지하고, 이전/로컬 프로필이 512여도 서버가 192로 제한한다. 분류·요약·평가 토큰 예산과 실제 평가 70/70 기준은 바꾸지 않는다.
+- 한국어 글자와 토큰의 비율은 일정하지 않다. 토큰 상한과 별도로 완결된 출력의 길이를 검사한다. `finish_reason=length`, 너무 긴 대사, 문장 미완성, 형식/공개 조건 위반은 한 번 다시 생성한다. 두 번 실패하면 `invalid_model_output`(502, 재시도 가능)이며 원문·revision을 확정하지 않는다. 대사를 잘라 붙이거나 임시 대사로 성공 처리하지 않는다. 길이만 초과한 후보는 별도 `patient_compact.txt` 편집 지침으로 핵심 감정/사실 하나를 압축한다. 원래 글자 수와 목표 30자, 정식 공개 인물 설정을 전달한다. 공개 설정은 인물/소유 관계 확인에만 사용하며 미공개 정보·미래 사건은 추가하지 않는다. 주어·부정·시제·감정 대상을 보존한다. 압축 시 temperature는 최대 0.2, presence_penalty는 0으로 낮춘다. 잘못된 공개 ID·형식·추론 태그가 있는 후보는 이 경로로 살리지 않는다. 압축 결과에도 원래 인물·공개 검증을 적용한다. 미확정 후보는 원문에 저장하지 않는다. JSON 생성 문법에 최대 글자 수를 강제하지 않는다. 실제 모델에서 단어 중간에 문자열이 닫히는 현상을 확인했기 때문이다.
+- 성공 응답 DTO·형식 4·콘텐츠 버전·기존 긴 원문은 그대로다. 기존 저장의 `patient_text`에는 새 길이 제한을 소급 적용하지 않으며, 이미 저장된 긴 발화의 재전송도 그대로 보존한다. `/health`에 `single_bubble_reply_v1` capability와 `patient_reply_limits={max_characters:60,max_output_tokens:192,single_paragraph:true}`를 추가한다. 구 클라이언트는 추가 필드를 무시할 수 있다.
+- Unity `PatientDialogueView`는 이전/다음 쪽과 쪽 번호를 숨긴다. ‘바로 보기’는 타이핑만 완료하며, 기존 `AdvancePage()`는 false를 반환한다. 현재 본문 790×76, 26pt에서 시작해 필요 시 24pt까지 조절한다. 이전 서버/저장의 긴 답변이나 예상보다 좁은 레이아웃은 **같은 대화칸의 마스크·스크롤**로 원문 전체를 보존한다. 새 짧은 답변에서는 스크롤이 필요하지 않는지 실제 TMP 검사로 확인한다. 기록부·안내서의 쪽 이동은 그대로다.
+
+### 개발 전용 70/70 스킵
+
+실제 AI 평가를 강제로 통과시키는 API는 추가하지 않는다. 개발 미리보기는 AI 호출·가짜 원문/근거를 만들지 않고, **명시적 개발 결과 70/70**으로 환자·개별 엔딩·5인 최종 엔딩의 진행을 확인하는 오프라인 경로다. 스킵 보상은 0이며 최신 main의 새 게임 초기 자금 200C는 그대로 유지한다. 승인된 엔딩 콘텐츠가 미준비라면 기존 준비 중 화면을 사용한다.
+
+1. Editor에서 Play를 끈 뒤 **Gamsamo → Development → 70-70 Skip Preview (separate save)**를 체크한다. 기본값은 OFF이며 프로젝트별 로컬 EditorPrefs에만 저장한다. Play 중에는 전환할 수 없다.
+2. 새 게임 또는 개발 이어하기로 입장한다. 문으로 환자를 맞이한 후 좌측 위 **Skip patient (70 / 70)**를 누른다. 저장된 개발 결과 표시/엔딩을 마친 뒤 기존 **환자 내보내기**와 문 입장으로 다음 환자를 확인한다. 다섯 명을 마치면 최종 엔딩을 확인한다.
+3. Play를 끄고 같은 메뉴를 해제하면 원래 일반 진행으로 돌아온다. Development Build는 명시적인 `--gamsamo-dev-skip` 실행 옵션으로만 켠다. 일반 출시 빌드는 이 옵션을 무시한다.
+
+- `GameProgressSession.Root`는 개발 모드일 때만 `Application.persistentDataPath/game-progress-development`를 사용한다. 일반 `game-progress`의 포인터·잔액·사진·기록은 건드리지 않는다. AI 저장을 복사하거나 변경하지 않는다. 기존 저장은 추가 필드 생략 시 일반 진행으로 읽는다.
+- 호출: `GameProgressRuntime.CanSkipDevelopmentPatient` 확인 → `SkipDevelopmentPatient()`. 현재 개발 회차의 저장 성공 후에만 true를 반환하고 기존 D 결과 표시/퇴장 흐름을 사용한다. UI 모달·입장/퇴장 중에는 거절한다. 저장 실패 시 같은 식별자로 버튼을 다시 눌러 복구한다. 정상 모드에서는 항상 false다.
+- `ProgressService.BeginDevelopmentVisit()`는 개발용 사례/회차를 먼저 저장하고 재실행 시 같은 ID를 유지한다. `SkipDevelopmentVisit(RoundIdentity, photoId)`는 진행·환자·사례·회차 전체 키로 중복을 막는다. 결과는 `DevelopmentSkip=true`, `PatientScore=70`, `CounselorScore=70`, `Granted=0`이며 `GameProgress.DevelopmentMode=true`인 별도 저장에서만 유효하다. `SavedEvaluation`·AI 완료 이벤트·원문 근거를 만들지 않는다. 일반 `TryGetSavedEvaluation()` → 검증/저장 → 보상 정산 순서는 유지한다.
+
+### 검증·배포·복구
+
+- 서버: `python -m pytest server/tests -q`, `python tools/export_contracts.py --check`. C# 계약: `dotnet run --project tools/unity-client-checks/UnityClientChecks.csproj -- <repo-root>`. 진행: `dotnet run --project tools/b-progression-checks/ProgressChecks.csproj`.
+- `AdapterCompileChecks.csproj`는 Unity API **대역**으로 통신·뷰·진행 런타임을 컴파일하고 모드/파일 선택을 검사한다. `-p:DefineConstants=UNITY_EDITOR`, `-p:DefineConstants=DEVELOPMENT_BUILD`, 기본 출시 구성으로 나누어 실행한다. Development Build의 ON은 `-- --gamsamo-dev-skip`을 추가한다. 실제 Unity 컴파일/화면 검사를 대체하지 않는다.
+- Unity 6000.3.28f1: **Gamsamo → AI → Run Single Bubble Checks**, 또는 `-batchmode -quit -executeMethod Gamsamo.Editor.DialogueBubbleChecks.Run`. 기존 프리팹을 저장하지 않는 격리 검사에서 실제 TMP 글리프 경계, 60자, 세 배율, 긴 원문의 마스크/스크롤, 짧은 다음 답변의 스크롤 초기화를 확인한다. 보고서는 `artifacts/dialogue-fit/unity-checks.txt`다. Play에서는 입력/한글 IME·바로 보기·수동 종료·개발 ON/OFF·5인 진행·엔딩 후 이어하기를 확인한다.
+- 실제 모델 비교는 `ai/evaluation/reliability_benchmark.py --replay ... --operations start turn revisit`를 사용한다. 동일 입력·모델·시드로 기준/후보를 순차 실행하고, `--private-records`일 때만 합성 요청/결과와 모델의 JSON·종료 사유를 로컬에 보관한다. 숨은 추론·키는 저장하지 않는다. `check_bubble_budget.py <private-records> --output <local-report>`는 fontTools로 폰트 폭을 **추정**하며 실제 TMP 렌더 검사는 아니다. 원문/측정 산출물은 커밋하지 않는다.
+- 공용 서버는 이번 작업에서 재시작하지 않는다. API 변경은 별도 배포 승인이 필요하다. 앞 절의 후보 포트 실행/복구 절차를 사용하고 새 `health` capability·192/60 제한·실행 커밋을 확인한다. `tools/ai_release_smoke.py --lifecycle --timeout-probe`가 새 답변 길이와 동일 요청 재전송도 검사한다. UI만 먼저 배포하면 구 서버의 긴 답변은 스크롤로 읽을 수 있으며, 짧은 생성은 API 0.4.4 배포 후 적용된다. 복구 시 이전 API/프로필로 되돌리고 저장은 삭제하지 않는다.

@@ -52,8 +52,15 @@ def compare(before, after, baseline_packets=()):
     for role, config in before["model"]["roles"].items():
         other = after["model"]["roles"][role]
         changed = {k: {"before": config.get(k), "after": other.get(k)} for k in config.keys() | other.keys() if config.get(k) != other.get(k)}
+        old_budget = before.get("effective_role_max_tokens", {}).get(role, config["max_tokens"])
+        new_budget = after.get("effective_role_max_tokens", {}).get(role, other["max_tokens"])
+        if old_budget != new_budget:
+            changed["effective_max_tokens"] = {"before": old_budget, "after": new_budget}
         if changed:
             generation_changes[role] = changed
+    if before.get("patient_compression_generation") != after.get("patient_compression_generation"):
+        generation_changes["patient_compression"] = {"before": before.get("patient_compression_generation"),
+                                                     "after": after.get("patient_compression_generation")}
     return {"before_label": before["label"], "after_label": after["label"],
             "paired_requests": len(left), "excluded_pairs": excluded,
             "before": summary(left), "after": summary(right), "scores": scores,

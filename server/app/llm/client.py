@@ -8,6 +8,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from app.core.config import ExperimentError, InvalidModelOutput, Settings
+from app.core.dialogue_limits import PATIENT_MAX_CHARACTERS, PATIENT_MAX_OUTPUT_TOKENS
 from app.core.telemetry import current_trace
 from app.schemas.models import Metrics
 
@@ -51,7 +52,15 @@ class VllmClient:
                 "enable_thinking": self.config["roles"][role]["thinking"]}
 
     def fits(self, messages: list[dict], role: str) -> bool:
-        return self.count(messages, role) + self.config["roles"][role]["max_tokens"] + 128 <= self.config["max_model_len"]
+        return self.count(messages, role) + self.output_budget(role) + 128 <= self.config["max_model_len"]
+
+    def output_budget(self, role: str) -> int:
+        configured = self.config["roles"][role]["max_tokens"]
+        return min(configured, PATIENT_MAX_OUTPUT_TOKENS) if role == "patient" else configured
+
+    @property
+    def patient_compression_generation(self) -> dict:
+        return {"temperature": min(self.config["roles"]["patient"]["temperature"], 0.2), "presence_penalty": 0.0}
 
     async def health(self) -> dict:
         try:
@@ -65,17 +74,18 @@ class VllmClient:
             return {"ready": False, "model": self.config["served_model_name"]}
 
     async def generate(self, role: str, messages: list[dict], schema: type[T], metrics: Metrics,
-                       validate: Callable[[T], None] | None = None) -> T:
+                       validate: Callable[[T], None] | None = None, repair_context: dict | None = None) -> T:
         request_messages = list(messages)
         role_config = self.config["roles"][role]
         error = ""
+        compression = False
         for attempt in range(2):
             if not self.fits(request_messages, role):
                 raise ExperimentError("문맥 한도를 초과했습니다. 입력을 줄이거나 기억 압축 상태를 확인하세요.", "context_overflow")
             payload = {
                 "model": self.config["served_model_name"], "messages": request_messages,
                 "stream": False, "temperature": role_config["temperature"],
-                "max_tokens": role_config["max_tokens"],
+                "max_tokens": self.output_budget(role),
                 "chat_template_kwargs": self.template_kwargs(role),
                 "response_format": {"type": "json_schema", "json_schema": {"name": schema.__name__, "schema": schema.model_json_schema(), "strict": True}},
             }
@@ -84,6 +94,8 @@ class VllmClient:
                     payload[key] = role_config[key]
             if role_config.get("thinking_token_budget"):
                 payload["thinking_token_budget"] = role_config["thinking_token_budget"]
+            if compression:
+                payload.update(self.patient_compression_generation)
             started = perf_counter()
             try:
                 response = await self.http.post("/v1/chat/completions", json=payload)
@@ -103,6 +115,7 @@ class VllmClient:
                     trace.model_seconds += seconds
                     trace.role_seconds[role] = trace.role_seconds.get(role, 0) + seconds
             processed = perf_counter()
+            raw_content = None
             try:
                 usage = data.get("usage", {})
                 metrics.prompt_tokens += usage.get("prompt_tokens", 0)
@@ -114,14 +127,40 @@ class VllmClient:
                 if choice.get("finish_reason") != "stop":
                     raise InvalidModelOutput("출력이 끝나기 전에 잘렸습니다. 더 짧게 작성하세요.")
                 # Only content is consumed. Reasoning is neither displayed nor persisted.
-                value = schema.model_validate_json(choice["message"]["content"])
+                raw_content = choice["message"]["content"]
+                value = schema.model_validate_json(raw_content)
                 if validate:
                     validate(value)
                 return value
             except (ValidationError, InvalidModelOutput, ValueError, KeyError, TypeError, IndexError) as exc:
-                error = str(exc)[:700]
+                error = ("; ".join(item["msg"] for item in exc.errors(include_input=False, include_url=False))
+                         if role == "patient" and isinstance(exc, ValidationError) else str(exc))[:700]
                 if attempt == 0:
-                    request_messages = messages + [{"role": "user", "content": "형식/검증 오류입니다. 원래 과제를 다시 수행하고 JSON만 짧게 반환하세요. 잘린 출력은 더 간결하게 만드세요. 오류: " + error}]
+                    feedback = "형식/검증 오류입니다. 원래 과제를 다시 수행하고 JSON만 짧게 반환하세요. 잘린 출력은 더 간결하게 만드세요. 오류: " + error
+                    if role == "patient":
+                        feedback += " 이번 수정의 text는 공백 포함 35자 안팎의 완결된 한 문장으로 끝내세요. 가장 중요한 대답 하나를 고르고, 추가 설명은 다음 대화로 미루세요."
+                        try:
+                            draft = json.loads(raw_content)
+                            length_only = isinstance(exc, ValidationError) and all(e["type"] == "patient_reply_too_long" for e in exc.errors())
+                            if (length_only and isinstance(draft.get("text"), str) and len(draft["text"]) > PATIENT_MAX_CHARACTERS
+                                    and "<think>" not in draft["text"] and "</think>" not in draft["text"]):
+                                # A focused editing task avoids both copying the long
+                                # answer verbatim and inventing a new emotional reply.
+                                # It still goes through the original schema and the
+                                # caller's character/disclosure validator below.
+                                compression = True
+                                request_messages = [
+                                    {"role": "system", "content": (self.settings.prompts / "patient_compact.txt").read_text("utf-8")},
+                                    {"role": "user", "content": compact({"source_text": draft["text"],
+                                        "source_characters": len(draft["text"]), "target_characters": 30,
+                                        "speaker_background": repair_context or {},
+                                        "source_fact_ids": draft.get("disclosed_fact_ids", [])})
+                                        + "\n핵심 뜻·감정·사실을 보존하며 원래 길이의 절반 이하인 짧은 한 문장으로 고쳐 쓰세요."},
+                                ]
+                        except (ValueError, KeyError, TypeError, AttributeError):
+                            pass
+                    if not compression:
+                        request_messages = messages + [{"role": "user", "content": feedback}]
             finally:
                 if trace is not None:
                     trace.postprocess_seconds += perf_counter() - processed

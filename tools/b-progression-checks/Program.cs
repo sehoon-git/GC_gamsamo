@@ -20,6 +20,7 @@ class Program {
  }
  static void Main(string[] args) {
   if(args.Length==2 && args[0]=="--resume-starting") { StartingFundsChecks.Restore(args[1]); return; }
+  DevelopmentChecks.Run(Check, Reject);
   string root=Path.Combine(Path.GetTempPath(),"b-progress-check-"+Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
   StartingFundsChecks.Run(root);
   string path=Path.Combine(root,"run.json"); var store=new GameProgressStore(path); var s=new ProgressService(store); var c=new CountingReward(s);

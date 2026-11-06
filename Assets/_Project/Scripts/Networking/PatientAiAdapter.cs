@@ -124,7 +124,7 @@ namespace Gamsamo.Networking
         }
         private void Arrived(string visitId, string patientId)
         {
-            if (!UsesPatient(patientId)) return;
+            if (!isActiveAndEnabled || !UsesPatient(patientId)) return;
             patientId = CanonicalPatientId(patientId);
             FlushDraft();
             // Never discard a response whose state/transcript write failed when another visit arrives.
@@ -217,6 +217,7 @@ namespace Gamsamo.Networking
         }
         private void VisitChanged(PatientVisitController.VisitState value)
         {
+            if (!isActiveAndEnabled) return;
             if (value == PatientVisitController.VisitState.Consulting) return;
             FlushDraft();
             AbortNetwork();

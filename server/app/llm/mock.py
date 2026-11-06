@@ -19,7 +19,7 @@ class MockLLM:
     async def close(self):
         pass
 
-    async def generate(self, role, messages, schema, metrics, validate=None):
+    async def generate(self, role, messages, schema, metrics, validate=None, repair_context=None):
         metrics.calls += 1
         text = messages[-1]["content"]
         if role == "controller":

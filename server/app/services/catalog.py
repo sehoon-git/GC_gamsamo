@@ -20,7 +20,7 @@ class Catalog:
             raise RuntimeError("Each axis requires four 25-point criteria.")
         self.prompts = {p.stem: p.read_text("utf-8") for p in sorted(settings.prompts.glob("*.txt"))}
         self.prompt_version = hashlib.sha256(json.dumps(self.prompts, ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:16]
-        dialogue_prompts = {key: self.prompts[key] for key in ("controller", "patient", "summary")}
+        dialogue_prompts = {key: self.prompts[key] for key in ("controller", "patient", "patient_compact", "summary")}
         self.dialogue_prompt_version = hashlib.sha256(json.dumps(dialogue_prompts, ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:16]
 
     def validate_state(self, state: CaseState):

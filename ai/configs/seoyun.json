@@ -11,7 +11,7 @@
   "roles": {
     "patient": {
       "temperature": 0.7,
-      "max_tokens": 512,
+      "max_tokens": 192,
       "thinking": false,
       "top_p": 1.0,
       "top_k": -1,

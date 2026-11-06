@@ -11,10 +11,10 @@ namespace Gamsamo.Progression
         private GameProgress state;
         public GameProgress State => GameProgress.Copy(state);
         public ProgressService(IProgressStore store) { this.store = store; state = store.Load(); }
-        public void Create(IEnumerable<string> roster)
+        public void Create(IEnumerable<string> roster, bool developmentMode = false)
         {
             if (state != null) throw new InvalidOperationException("A new progress requires a new store.");
-            var next = new GameProgress { ProgressId = Guid.NewGuid().ToString("N"), Phase = ProgressPhase.Waiting,
+            var next = new GameProgress { ProgressId = Guid.NewGuid().ToString("N"), Phase = ProgressPhase.Waiting, DevelopmentMode = developmentMode,
                 Patients = roster.Select(id => new PatientProgress { PatientId = id }).ToList() };
             next.Economy.Ledger = Gamsamo.Economy.EconomyState.NewGame(next.ProgressId);
             next.Economy.Balance = next.Economy.Ledger.balance;
@@ -70,6 +70,7 @@ namespace Gamsamo.Progression
         // Snapshot is A's existing serialized AiSaveStore format, never an independently invented AI DTO.
         public void CaptureAi(string patientId, string caseId, string roundId, string snapshot, string phase)
         {
+            if (state.DevelopmentMode) throw new InvalidOperationException("개발 미리보기에는 AI 원문·평가를 삽입하지 않습니다.");
             if (!new[] { "active", "closing", "pending_evaluation", "evaluated" }.Contains(phase))
                 throw new InvalidOperationException("알 수 없는 상담 상태입니다.");
             if (state.Current == null || state.Current.PatientId != patientId || string.IsNullOrEmpty(caseId) || string.IsNullOrEmpty(roundId))
@@ -90,6 +91,7 @@ namespace Gamsamo.Progression
         }
         public ConfirmedResult Settle(SavedEvaluation evaluation, IRewardCalculator calculator, string photoId = null)
         {
+            if (state.DevelopmentMode) throw new InvalidOperationException("개발 미리보기에서는 명시적인 70/70 스킵을 사용하세요.");
             var id = evaluation?.Identity;
             if (id == null || !id.IsValid || id.ProgressId != state.ProgressId || !evaluation.AiSaveCompleted || evaluation.Phase != "evaluated"
                 || evaluation.PatientScore < 0 || evaluation.PatientScore > 100 || evaluation.CounselorScore < 0 || evaluation.CounselorScore > 100)
@@ -107,7 +109,8 @@ namespace Gamsamo.Progression
                 throw new InvalidOperationException("보상 결과의 식별자·잔액이 일치하지 않습니다.");
             var next = State;
             var receipt = new ConfirmedResult { Identity = GameProgress.Copy(id), Cleared = cleared, FirstClear = first,
-                Granted = reward.Granted, PhotoId = cleared ? photoId : null };
+                Granted = reward.Granted, PhotoId = cleared ? photoId : null,
+                PatientScore = evaluation.PatientScore, CounselorScore = evaluation.CounselorScore };
             next.Economy = GameProgress.Copy(reward.Economy);
             next.Current.Cleared = cleared; next.Current.NeedsRevisit = !cleared;
             next.Settlements.Add(id.Key, receipt);
@@ -116,6 +119,38 @@ namespace Gamsamo.Progression
             next.PendingPresentation = receipt;
             next.PresentationStage = "clear";
             next.Phase = cleared ? ProgressPhase.Presenting : ProgressPhase.AwaitingDeparture;
+            Commit(next); return GameProgress.Copy(receipt);
+        }
+
+        /// <summary>Developer-only traversal with its own store. No AI request, evidence or currency award.</summary>
+        public void BeginDevelopmentVisit()
+        {
+            if (!state.DevelopmentMode || state.Current == null) throw new InvalidOperationException("개발 진행이 아닙니다.");
+            if (state.Phase != ProgressPhase.Waiting) return; // Restore the same visit/presentation.
+            var next = State;
+            next.Current.CaseId = next.Current.CaseId ?? Guid.NewGuid().ToString("N");
+            next.Current.RoundId = next.Current.RoundId ?? Guid.NewGuid().ToString("N");
+            next.Phase = ProgressPhase.Consulting;
+            Commit(next);
+        }
+
+        public ConfirmedResult SkipDevelopmentVisit(RoundIdentity id, string photoId = null)
+        {
+            if (!state.DevelopmentMode || id == null || !id.IsValid || id.ProgressId != state.ProgressId)
+                throw new InvalidOperationException("별도 개발 진행의 유효한 회차가 필요합니다.");
+            if (state.Settlements.TryGetValue(id.Key, out var saved)) return GameProgress.Copy(saved);
+            var current = state.Current;
+            if (current == null || current.PatientId != id.PatientId || current.CaseId != id.CaseId || current.RoundId != id.RoundId
+                || state.Phase != ProgressPhase.Consulting)
+                throw new InvalidOperationException("현재 개발 회차가 다릅니다.");
+            var next = State;
+            var receipt = new ConfirmedResult { Identity = GameProgress.Copy(id), Cleared = true, FirstClear = true,
+                DevelopmentSkip = true, PatientScore = 70, CounselorScore = 70, PhotoId = photoId, Granted = 0 };
+            next.Current.Cleared = true; next.Current.NeedsRevisit = false;
+            next.Settlements.Add(id.Key, receipt);
+            if (!string.IsNullOrEmpty(photoId) && !next.Photos.Contains(photoId)) next.Photos.Add(photoId);
+            next.FinalEndingUnlocked = next.ClearedCount == next.Patients.Count;
+            next.PendingPresentation = receipt; next.PresentationStage = "clear"; next.Phase = ProgressPhase.Presenting;
             Commit(next); return GameProgress.Copy(receipt);
         }
         public void CompletePresentation(string settlementKey)

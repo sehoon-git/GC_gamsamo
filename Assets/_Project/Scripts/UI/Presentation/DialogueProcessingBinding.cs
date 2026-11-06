@@ -64,6 +64,9 @@ namespace Gamsamo.UI.Presentation
             }
             if (adapter == null || !adapter.IsAiVisit) return;
             if (!string.IsNullOrEmpty(adapter.LastError)) view.SetProcessingState(DialogueProcessingState.Error, adapter.LastError);
+            else if (adapter.ServiceStatus.PendingAction == "revisit")
+                view.SetProcessingState(adapter.ServiceStatus.Phase == AiServicePhase.Saving
+                    ? DialogueProcessingState.SavingTranscript : DialogueProcessingState.PreparingOpening);
             else if (adapter.IsBusy && view.ProcessingState == DialogueProcessingState.SavingTranscript)
                 view.SetProcessingState(adapter.CurrentPhase == "pending_evaluation" ? DialogueProcessingState.SavingResult : DialogueProcessingState.SavingTranscript);
             else if (adapter.CurrentPhase == "evaluated") view.SetProcessingState(DialogueProcessingState.Saved);

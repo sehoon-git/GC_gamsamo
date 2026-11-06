@@ -62,7 +62,7 @@ namespace Gamsamo.Networking
         public bool EndRequested => session != null && session.EndRequested;
         public bool IsMock => inferenceMode == "mock";
         public bool IsSeoyunVisit => HasActiveVisit && activePatientId == "seoyun"; // Legacy meaning; use IsAiVisit for the full roster.
-        public bool CanRetry => HasActiveVisit && !networkBusy && (!string.IsNullOrEmpty(LastError) || (session != null && session.HasPendingSave));
+        public bool CanRetry => HasActiveVisit && ServiceStatus.CanRetry;
         public bool CanEditDraft => CanInteract && healthReady && session != null && !IsBusy && !EndRequested
             && CurrentPhase == "active" && string.IsNullOrEmpty(LastError)
             && AiProtocol.Current(committedState)["opening"] is JObject;
@@ -462,6 +462,16 @@ namespace Gamsamo.Networking
         {
             if (session == null || !HasActiveVisit) return;
             committedState = session.State;
+            if (session.PendingRequest != null && AiProtocol.Text(session.PendingRequest, "action") == "revisit")
+            {
+                // Until the new opening is durably saved, State still contains the previous evaluation.
+                // It is history, not permission to end this newly admitted visit or replay result events.
+                visits.ClearConsultationEnded(localVisitId);
+                LastPatientText = "";
+                View.ShowLine(patientName, "");
+                Publish();
+                return;
+            }
             int revision = AiProtocol.Number(committedState, "revision");
             if (revision == renderedRevision) { Publish(); return; }
             renderedRevision = revision;

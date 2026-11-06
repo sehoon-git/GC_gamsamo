@@ -108,6 +108,7 @@ async def run(args):
             # Opt-in synthetic diagnostics only; never retain keys or hidden reasoning.
             attempts.append({"schema": request["response_format"]["json_schema"]["name"],
                 "max_tokens": request["max_tokens"], "finish_reason": choice.get("finish_reason"),
+                "temperature": request["temperature"], "presence_penalty": request.get("presence_penalty"),
                 "content": choice.get("message", {}).get("content"), "usage": data.get("usage", {})})
         except (ValueError, KeyError, IndexError): pass
     engine.http.event_hooks["response"] = [observe_model_response]
@@ -130,6 +131,7 @@ async def run(args):
               "quantile_minimums": {"p50": 20, "p95": 100}, "rows": [], "cases": []}
     report["effective_role_max_tokens"] = {role: engine.output_budget(role) if hasattr(engine, "output_budget") else value["max_tokens"]
         for role, value in profile["roles"].items()}
+    report["patient_compression_generation"] = getattr(engine, "patient_compression_generation", None)
     packets = []
     out = args.output / (args.label + ".json")
     raw = args.output / (args.label + ".private.json")

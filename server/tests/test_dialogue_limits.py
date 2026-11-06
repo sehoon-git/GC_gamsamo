@@ -66,8 +66,36 @@ async def test_budget_repair_and_failure_leave_input_state_intact(settings, cata
             # Compression has its source meaning, but never appends that rejected
             # draft to the saved conversation or substitutes a clipped substring.
             feedback = calls[-1]["messages"][-1]["content"]
-            assert "핵심 뜻·감정·사실을 그대로 유지" in feedback and "가" * 61 in feedback
+            assert "핵심 뜻·감정·사실을 보존" in feedback and "가" * 61 in feedback
+            assert calls[-1]["temperature"] <= 0.2 and calls[-1]["presence_penalty"] == 0
+            assert len(calls[-1]["messages"]) == 2
         assert llm.output_budget("evaluation") == llm.config["roles"]["evaluation"]["max_tokens"]
         assert llm.output_budget("summary") == llm.config["roles"]["summary"]["max_tokens"]
+    finally:
+        await llm.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fault", ["disclosure", "extra_field", "thinking_tag"])
+async def test_invalid_drafts_are_regenerated_in_context_not_treated_as_compression_sources(settings, catalog, fault):
+    calls = []
+    draft = {"text": "가" * 61 + ".", "disclosed_fact_ids": []}
+    if fault == "disclosure": draft["disclosed_fact_ids"] = ["not_allowed"]
+    if fault == "extra_field": draft["extra"] = True
+    if fault == "thinking_tag": draft["text"] = "<think>" + draft["text"] + "</think>"
+    def handle(request):
+        calls.append(json.loads(request.content))
+        content = draft if len(calls) == 1 else {"text": "제 마음을 천천히 이야기하고 싶어요.", "disclosed_fact_ids": []}
+        return httpx.Response(200, json={"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(content, ensure_ascii=False)}}]})
+    llm = VllmClient(settings); llm.count = lambda *args: 1
+    await llm.http.aclose()
+    llm.http = httpx.AsyncClient(transport=httpx.MockTransport(handle), base_url="http://test")
+    state = CaseState()
+    try:
+        result = await DialogueService(llm, catalog).open_session(OpenRequest(state=state, session_id=state.current.id, request_id="invalid_draft"))
+        assert len(calls) == 2 and '"fixed_character"' in calls[1]["messages"][0]["content"]
+        assert "source_characters" not in calls[1]["messages"][-1]["content"]
+        assert result.state.current.opening.patient_text == "제 마음을 천천히 이야기하고 싶어요."
+        assert state.current.opening is None
     finally:
         await llm.close()

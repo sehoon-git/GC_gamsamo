@@ -3,6 +3,7 @@ from typing import Annotated, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer, model_validator
+from pydantic_core import PydanticCustomError
 from app.patient_registry import PATIENT_IDS, content_version
 from app.core.dialogue_limits import PATIENT_MAX_CHARACTERS, PATIENT_TEXT_PATTERN
 
@@ -69,7 +70,7 @@ class PatientReply(Model):
     @classmethod
     def complete_short_reply(cls, value):
         if len(value) > PATIENT_MAX_CHARACTERS:
-            raise ValueError(f"대사가 너무 깁니다. 한 가지 마음만 25~45자의 완결된 한국어 문장으로 다시 쓰세요. 최대 {PATIENT_MAX_CHARACTERS}자입니다.")
+            raise PydanticCustomError("patient_reply_too_long", f"대사가 너무 깁니다. 한 가지 마음만 25~45자의 완결된 한국어 문장으로 다시 쓰세요. 최대 {PATIENT_MAX_CHARACTERS}자입니다.")
         return value
 
 

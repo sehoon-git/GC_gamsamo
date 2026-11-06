@@ -58,6 +58,9 @@ def compare(before, after, baseline_packets=()):
             changed["effective_max_tokens"] = {"before": old_budget, "after": new_budget}
         if changed:
             generation_changes[role] = changed
+    if before.get("patient_compression_generation") != after.get("patient_compression_generation"):
+        generation_changes["patient_compression"] = {"before": before.get("patient_compression_generation"),
+                                                     "after": after.get("patient_compression_generation")}
     return {"before_label": before["label"], "after_label": after["label"],
             "paired_requests": len(left), "excluded_pairs": excluded,
             "before": summary(left), "after": summary(right), "scores": scores,

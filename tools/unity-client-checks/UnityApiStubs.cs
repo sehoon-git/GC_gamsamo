@@ -72,7 +72,11 @@ namespace UnityEngine
         public static bool GetKeyDown(KeyCode key) => false;
         public static bool GetKey(KeyCode key) => false;
     }
-    public static class Application { public static string persistentDataPath; public static string streamingAssetsPath; public static string dataPath; public static bool isPlaying; }
+    public static class Application
+    {
+        public static string persistentDataPath; public static string streamingAssetsPath; public static string dataPath; public static bool isPlaying;
+        public static bool CanStreamedLevelBeLoaded(string name) => throw new NotSupportedException("Scene availability requires real Unity checks.");
+    }
     public static class Resources { public static T Load<T>(string path) => default(T); }
     public static class GUI { public static bool enabled; public static void Box(Rect r, string s) { } public static bool Button(Rect r, string s) => false; public static void Label(Rect r, string s) { } }
     public static class Debug { public static void Log(object value) { } public static void LogWarning(object value) { } public static void LogError(object value, Object context = null) { } }
@@ -155,6 +159,7 @@ namespace Gamsamo.UI
         public bool IsOverlayBlocking; public Gamsamo.Patients.MedicalRecordData record;
         public PcStub pcDesktopView;
         public Func<Gamsamo.Patients.MedicalRecordData, string> CommittedSettlementForRecord;
+        public void ClearRecords() => throw new NotSupportedException("Record clearing requires real Unity checks.");
         public void ClearArchivedRecords() { }
         public void SetArchivedRecord(string key, Gamsamo.Patients.MedicalRecordData data) { }
         public void SetRecord(Gamsamo.Patients.MedicalRecordData data) { record = data; }

@@ -61,8 +61,6 @@ namespace Gamsamo.Progression
             {
                 displayedRevision = state.Revision;
                 var pc = visits.room?.pcDesktopView;
-                string name = visits.patients.FirstOrDefault(p => p.patientId == state.Current?.PatientId)?.displayName;
-                pc?.profileView?.SetProgress(null, name, StatusText(state), state.ClearedCount, state.Patients.Count);
                 var photos = content?.patients?.Where(p => p != null && p.approved && p.photo != null)
                     .Select(p => new PhotoGalleryEntry { photoId = p.photoId, title = p.title, description = p.description, thumbnail = p.photo, fullSize = p.photo }).ToArray();
                 if (pc?.photoView != null)
@@ -84,8 +82,6 @@ namespace Gamsamo.Progression
             else if (state.Phase == ProgressPhase.Finished && state.FinalEndingUnlocked && !state.FinalEndingPlayed)
                 ending.RestoreFinalEnding(state.ProgressId, true, true, state.FinalPresentationStage);
         }
-        private static string StatusText(GameProgress state) => state.Phase == ProgressPhase.Finished ? "모든 내담자의 상담을 마쳤습니다"
-            : state.Current?.NeedsRevisit == true ? "재상담 대기" : state.Phase == ProgressPhase.Waiting ? "방문 대기" : "상담 진행 중";
         private void SavePlayback(string game, string patient, string caseId, string session, string stage)
         {
             bool saved = false; string error = null;

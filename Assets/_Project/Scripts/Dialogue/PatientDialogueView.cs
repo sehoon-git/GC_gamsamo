@@ -460,7 +460,7 @@ namespace Gamsamo.Dialogue
             switch (state)
             {
                 case DialogueProcessingState.PreparingOpening: return "첫 이야기를 준비하고 있어요";
-                case DialogueProcessingState.WaitingForReply: return "답변을 기다리고 있어요";
+                case DialogueProcessingState.WaitingForReply: return "답변을 기다리고 있습니다";
                 case DialogueProcessingState.SavingTranscript: return "상담 기록을 저장하고 있어요";
                 case DialogueProcessingState.WaitingForEvaluation: return "상담 결과를 정리하고 있어요";
                 case DialogueProcessingState.SavingResult: return "결과를 저장하고 있어요";

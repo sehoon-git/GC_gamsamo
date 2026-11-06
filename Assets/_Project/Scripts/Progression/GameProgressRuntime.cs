@@ -120,6 +120,7 @@ namespace Gamsamo.Progression
                 if (visits.room != null) visits.room.CommittedSettlementForRecord = data =>
                     settlementDescriptions.TryGetValue(data.gameProgressId + "/" + data.registrationNumber + "/" + data.caseId + "/" + data.sessionId, out var description) ? description : "";
                 if (ai != null && !DevelopmentProgressMode.Enabled) ai.StateChanged += OnAiChanged;
+                visits.room?.ClearRecords();
                 RestoreRecords();
                 visits.ProgressReady = true;
                 if (Progress.State.Phase == ProgressPhase.Finished) visits.TryAdmitNextPatient();
@@ -257,13 +258,12 @@ namespace Gamsamo.Progression
             if (visits.room == null) return;
             visits.room.ClearArchivedRecords();
             settlementDescriptions.Clear();
-            var runs = GameProgressSession.SavedRuns();
-            foreach (var run in runs)
+            var run = Progress.State;
             foreach (var receipt in run.Economy.Ledger?.settlements ?? new List<Gamsamo.Economy.SessionSettlement>())
                 settlementDescriptions[run.ProgressId + "/" + receipt.patientId + "/" + receipt.caseId + "/" + receipt.sessionId] =
                     "기본 보상 " + receipt.baseCoins + " C · 첫 클리어 보너스 " + receipt.bonusCoins + " C\n이번 지급 " + (receipt.baseCoins + receipt.bonusCoins) + " C\n" + (receipt.cleared ? "클리어 완료" : "재상담이 필요합니다");
-            // Previous runs are read-only; browsing never changes the active progress or A's active case.
-            foreach (var run in runs)
+            // A new game has an empty clipboard. Only an explicit continue restores that run's records.
+            // Other runs stay on disk for recovery and must not leak into the current clipboard.
             foreach (var patient in run.Patients)
             {
                 if (string.IsNullOrEmpty(patient.AiSnapshot)) continue;
@@ -291,6 +291,8 @@ namespace Gamsamo.Progression
             if (ai != null && ai.IsBusy) { LastError = "요청·자동 저장을 완료한 후 돌아가세요."; return false; }
             try
             {
+                if (!Application.CanStreamedLevelBeLoaded("StartMenu"))
+                    throw new InvalidOperationException("시작 화면을 열 수 없습니다. 빌드 씬 설정을 확인해 주세요.");
                 if (ai != null && ai.IsAiVisit)
                 {
                     var snapshot = PatientAiAdapter.CreateCaseRepository().Store(ai.ConversationKey).Load();
@@ -300,6 +302,8 @@ namespace Gamsamo.Progression
                     Progress.CaptureAi(ai.PatientId, AiProtocol.Id(state, "case_id"), AiProtocol.Id(AiProtocol.Current(state), "id"),
                         AiProtocol.Encode(snapshot), AiProtocol.Phase(state));
                 }
+                visits?.room?.ClearRecords();
+                settlementDescriptions.Clear();
                 SceneManager.LoadScene("StartMenu"); return true;
             }
             catch (Exception e) { Fail(e); return false; }

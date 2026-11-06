@@ -179,12 +179,12 @@ namespace Gamsamo.Editor
             view.bodyText = Text(panelRect, "PatientLine", font, 45, 134, 790, 93, 26);
             view.bodyText.alignment = TextAlignmentOptions.TopLeft;
             view.bodyText.overflowMode = TextOverflowModes.Page;
-            view.nextButton = Button(panelRect, "ContinueDialogue", font, "계속 듣기", 525, 315, 155, 39, false);
+            view.nextButton = Button(panelRect, "ContinueDialogue", font, "다음 쪽", 152, 315, 110, 39, false);
             view.endButton = Button(panelRect, "RequestEndVisit", font, "상담 그만하기", 690, 315, 155, 39, true);
-            view.previousPageButton = Button(panelRect, "PreviousPage", font, "이전 쪽", 32, 315, 95, 39, false);
-            view.pageText = Text(panelRect, "PageNumber", font, 132, 315, 90, 39, 18);
+            view.previousPageButton = Button(panelRect, "PreviousPage", font, "이전 쪽", 32, 315, 110, 39, false);
+            view.pageText = Text(panelRect, "PageNumber", font, 272, 315, 76, 39, 18);
             view.pageText.alignment = TextAlignmentOptions.Center;
-            view.historyButton = Button(panelRect, "DialogueHistory", font, "대화 기록", 228, 315, 130, 39, false);
+            view.historyButton = Button(panelRect, "DialogueHistory", font, "대화 기록", 550, 315, 130, 39, false);
             view.retryButton = Button(panelRect, "RetryRequest", font, "다시 시도", 368, 315, 145, 39, false);
             var replyRoot = Child(panelRect, "ReplyComposer");
             Place(replyRoot, 40, 236, 800, 65);

@@ -19,6 +19,11 @@ class Catalog:
         if any(sum(r["axis"] == axis for r in self.rubric.values()) != 4 for axis in ("patient", "counselor")) or any(r["max_score"] != 25 for r in self.rubric.values()):
             raise RuntimeError("Each axis requires four 25-point criteria.")
         self.prompts = {p.stem: p.read_text("utf-8") for p in sorted(settings.prompts.glob("*.txt"))}
+        # Character-specific additions are versioned and never sent to another patient.
+        for role in ("patient", "patient_compact", "evaluation"):
+            addition = settings.prompts / patient_id / (role + ".txt")
+            if addition.is_file():
+                self.prompts[role] += "\n" + addition.read_text("utf-8")
         self.prompt_version = hashlib.sha256(json.dumps(self.prompts, ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:16]
         dialogue_prompts = {key: self.prompts[key] for key in ("controller", "patient", "patient_compact", "summary")}
         self.dialogue_prompt_version = hashlib.sha256(json.dumps(dialogue_prompts, ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:16]

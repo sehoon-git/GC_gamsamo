@@ -53,7 +53,7 @@ def create_app(settings: Settings | None = None, llm=None):
         await coordinator.close()
         await engine.close()
 
-    app = FastAPI(title="상담 게임 AI", version="0.4.4", lifespan=lifespan)
+    app = FastAPI(title="상담 게임 AI", version="0.4.5", lifespan=lifespan)
     app.state.coordinator = coordinator
 
     @app.middleware("http")

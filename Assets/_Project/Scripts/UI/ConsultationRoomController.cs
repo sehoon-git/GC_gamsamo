@@ -63,6 +63,21 @@ namespace Gamsamo.UI
         private int selectedRecord;
         public System.Func<MedicalRecordData, string> CommittedSettlementForRecord;
         private readonly Dictionary<string, MedicalRecordData> archivedRecords = new Dictionary<string, MedicalRecordData>();
+        /// <summary>Clears this room's record display; saved progress and AI cases are untouched.</summary>
+        public void ClearRecords()
+        {
+            patientRecords.Clear();
+            archivedRecords.Clear();
+            selectedRecord = 0;
+            // The visit/AI adapters carry the configured counselor from this display template.
+            // Keep that setting without retaining a patient's fields or adding a browsable record.
+            record = new MedicalRecordData { counselor = record?.counselor };
+            if (recordView == null) return;
+            recordView.BeginRecordContext(null, null);
+            recordView.ShowRecord(null);
+            recordView.SetRecordNavigation(0, 0);
+        }
+
         public void ClearArchivedRecords()
         {
             foreach (var archived in archivedRecords.Values) patientRecords.Remove(archived);

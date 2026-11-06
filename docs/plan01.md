@@ -752,6 +752,8 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 ### A/B/C/D 통합 후 현행 기준 (2026-11-06)
 
+- **시작 화면 복귀·진료기록부 초기화(17.44절):** 저장 확인 후 시작 화면으로 돌아가면 `ConsultationRoomController.ClearRecords()`가 현재·보관 서류와 메모·대화 원문·결과·공개 정보·정산 표시·쪽 선택을 비운다. 상담자 설정만 다음 상담에 전달할 빈 데이터에 보존하며 빈 양식에는 표시하지 않는다. `GameProgressRuntime.RestoreRecords()`는 현재 `Progress.State`의 기록만 복원한다. 새 게임에 과거 진행의 원문을 합치지 않으며, 명시적 불러오기는 선택된 진행의 상담과 회차 기록을 복원한다. 이전 저장·AI 사례·지갑·구매·장착·정산 이력은 삭제하거나 수정하지 않는다.
+
 - **안내 문구 정리(17.38절):** 시작 화면의 불러오기 하단 설명과 대화 입력창의 자리표시자·입력 대기 안내를 비웠다. `StartMenuController.Awake()`의 저장 조회 오류, `PatientAiAdapter.Publish()`와 `DialogueProcessingText.Label()`의 연결·응답·저장·평가·오류 표시는 유지한다. 기존 씬·프리팹의 참조와 입력/전송/저장 동작은 그대로이며 생성기와 미리보기에도 같은 기준을 적용한다.
 
 아래 v0.16 비교표는 통합 전 조사 이력이다. 이 단락과 17.31절을 현재 상태로 우선한다. 사용자 승인에 따라 정식 진행은 **서윤 → 도현 → 태준 → 연우 → 하린, 총 5명**이며 민석은 진행 목록에서 제외했다. A #35, B #33, C #36, D #34를 병합하고 누락된 연결 코드를 추가했다. 환자/상담자 평가가 모두 70점 이상이어야 다음 환자로 진행하며, 미클리어는 명시적 퇴장 후 같은 사례의 새 회차로 재방문한다.
@@ -1853,3 +1855,14 @@ Use case: background-extraction and precise-object-edit. Edit target: attached K
 - `GamePresentationIntegration.Update()`가 미확정 자격증 안내 대신 null을 전달한다. `ProfileView.SetProgress()`는 자격증 값이 없으면 `자격증:` 접두사와 중간 구분자도 생략해 첫 줄을 `완료 0 / 5` 형식으로 표시한다. 완료 수·현재 내담자·진행 상태와 제공된 실제 자격증 표시 기능은 유지한다. 승급 조건·승급 계산·진행/프로필 저장 데이터·씬/프리팹·UI 배치는 변경하지 않는다.
 - 검증: Unity **6000.3.28f1** 별도 작업 공간의 batch import/Runtime·Editor 컴파일과 기존 `Gamsamo.Editor.Presentation.PresentationChecks.Run` **77개 통과**, 종료 코드 0. 코드/씬/프리팹에서 해당 준비 중 문자열의 잔여 표시 경로가 없는지 검색했고 `git diff --check`를 통과했다. 검증 로그는 Git 제외 `artifacts/profile-copy/unity.log`, 보고서는 `artifacts/d-presentation/edit-checks.txt`에 있다. 단순 표시 문구 변경으로 새 테스트·Windows 재빌드·Play 화면 조작·외부 AI E2E는 수행하지 않았다.
 - 검증 작업 공간에서 생성된 폰트 캐시·ProjectSettings 변경은 제외하고, 사용자 Unity 프로젝트의 미커밋 변경과 실제 저장은 보존했다. PR에는 위 런타임 파일 2개와 이 문서만 포함한다. 다음 확인은 PR 병합 후 최신 main을 반영하고 Play 재시작 → PC → 내 프로필에서 첫 줄의 준비 중 문구가 사라졌는지 보는 것이다. main 직접 push·원격 병합은 하지 않는다.
+
+### 17.44 시작 화면 복귀 후 진료기록부 초기화
+
+- 구현·검증 완료 시각: **2026-11-06 09:51:31 KST (UTC+09:00)**. 최신 main `24a4d2f`를 ff-only로 반영하고 `codex/reset-record-on-start-menu`에서 작업했다. 사용자 요청은 AI와 대화한 뒤 시작 화면으로 돌아가면 서류철 내용을 초기화하는 것이다. 기존 사용자 미커밋 변경은 보존한다.
+- 원인: `GameProgressRuntime.RestoreRecords()`가 `GameProgressSession.SavedRuns()`의 모든 진행을 합쳐 새 게임에도 과거 대화가 표시됐다. 복원 대상을 현재 `Progress.State`로 제한했다. 같은 진행의 회차 기록은 유지하고, 다른 진행은 파일로 보존하되 현재 서류철에 투영하지 않는다.
+- `ConsultationRoomController.ClearRecords()`가 현재/보관 서류 캐시·선택 문서·구조화 공개 정보·메모/원문/결과·정산 문구·선택 탭/쪽·내비게이션을 초기화한다. 표시용 빈 데이터에 기존 상담자 설정만 보존하여 다음 환자의 담당자 표시가 사라지는 회귀도 방지했다. `GameProgressRuntime.Start()`에서 복원 전, `ReturnToStartMenu()`에서 AI 자동 저장 확인 및 B 저장 성공 후 호출한다. 시작 씬이 없는 경우는 사전 검사하며, 기존 모달/요청 중 복귀 차단과 저장 실패 경로를 유지한다. 씬·프리팹·메타·AI 계약·전체 저장 형식은 변경하지 않는다.
+- 불러오기 정책: 새 게임은 빈 양식으로 시작하고 이전 진행의 원문이 다시 나타나지 않는다. 시작 화면에서 명시적으로 불러오기를 누르면 기존 상담을 이어하므로 그 진행의 원문도 복원한다. 초기화는 표시 상태에만 적용되며 실제 사용자 저장·AI 사례·지갑·보상·구매·장착 이력을 삭제하지 않는다.
+- 검증: 별도 QA 프로젝트의 Unity **6000.3.28f1** batch compile 및 `BProgressIntegrationChecks.Run` **28개 통과**, 종료 코드 0. 기존 진행/정산 9개와 추가 회귀 19개다. 두 회차 원문의 구분, 모든 필드/정산/페이지 초기화, 새 진행의 동일 환자 정보 분리, 명시적 기존 진행 복원, 상담자 설정 보존과 두 임시 저장 파일의 바이트 불변을 확인했다. 테스트의 합성 원문은 Editor 전용 비활성 프리팹 인스턴스와 임시 저장만 사용하며 제품 AI 응답 경로에 넣지 않는다. `git diff --check`도 통과했다.
+- 검증 구분/제한: `dotnet run --project tools/b-progression-checks/ProgressChecks.csproj --no-restore`는 설치된 .NET SDK가 없어 실행하지 못했다. 위 Unity 컴파일·Editor 통합 검사는 실제 실행한 결과다. 이번 작업에서 PlayMode 버튼 조작·Windows 빌드·실제 서버 대화 E2E는 실행하지 않았다. 로그는 저장소 밖 QA 폴더의 `record-reset-final.log`에 있다.
+- Unity 확인 절차: Play를 새로 시작 → 새 게임 → 문으로 환자 입장 → 몇 차례 대화 → 서류철 원문 확인 → 서류철 닫기 → 시작 화면으로 → 새 게임 → 환자 입장 전에 서류철을 열어 메모/원문/결과에 이전 기록이 없음을 확인한다. 이어서 새 상담을 하면 해당 진행의 원문만 표시된다. 기존 진행을 선택한 상태에서 시작 화면으로 돌아가 불러오기를 하면 그 상담 기록이 복원돼야 한다. 응답/저장 대기 중에는 복귀가 거절되고 기록을 지우면 안 된다.
+- 변경 파일: `GameProgressRuntime.cs`, `ConsultationRoomController.cs`, `BProgressIntegrationChecks.cs`, 이 문서. 다음 작업은 PR 검토와 위 실제 게임 조작 확인이다. main 직접 push·PR 병합은 수행하지 않는다.

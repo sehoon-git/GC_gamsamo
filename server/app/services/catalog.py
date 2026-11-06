@@ -20,7 +20,7 @@ class Catalog:
             raise RuntimeError("Each axis requires four 25-point criteria.")
         self.prompts = {p.stem: p.read_text("utf-8") for p in sorted(settings.prompts.glob("*.txt"))}
         # Character-specific additions are versioned and never sent to another patient.
-        for role in ("patient", "patient_compact", "evaluation"):
+        for role in ("controller", "patient", "patient_compact", "evaluation"):
             addition = settings.prompts / patient_id / (role + ".txt")
             if addition.is_file():
                 self.prompts[role] += "\n" + addition.read_text("utf-8")

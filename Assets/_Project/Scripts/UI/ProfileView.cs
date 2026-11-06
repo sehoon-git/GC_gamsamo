@@ -36,7 +36,8 @@ namespace Gamsamo.UI
         public void SetProgress(string certification, string currentPatient, string state, int clearedCount, int totalCount)
         {
             if (clearedCount < 0 || totalCount < clearedCount) throw new System.ArgumentOutOfRangeException(nameof(clearedCount));
-            progressLabel = "자격증: " + Value(certification) + "  ·  완료 " + clearedCount + " / " + totalCount
+            string certificationLabel = string.IsNullOrWhiteSpace(certification) ? "" : "자격증: " + certification + "  ·  ";
+            progressLabel = certificationLabel + "완료 " + clearedCount + " / " + totalCount
                 + "\n현재 내담자: " + Value(currentPatient) + "\n" + Value(state);
             EnsureProgressLabel();
             Refresh();

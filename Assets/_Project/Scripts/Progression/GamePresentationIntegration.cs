@@ -62,7 +62,7 @@ namespace Gamsamo.Progression
                 displayedRevision = state.Revision;
                 var pc = visits.room?.pcDesktopView;
                 string name = visits.patients.FirstOrDefault(p => p.patientId == state.Current?.PatientId)?.displayName;
-                pc?.profileView?.SetProgress("승급 기준 준비 중", name, StatusText(state), state.ClearedCount, state.Patients.Count);
+                pc?.profileView?.SetProgress(null, name, StatusText(state), state.ClearedCount, state.Patients.Count);
                 var photos = content?.patients?.Where(p => p != null && p.approved && p.photo != null)
                     .Select(p => new PhotoGalleryEntry { photoId = p.photoId, title = p.title, description = p.description, thumbnail = p.photo, fullSize = p.photo }).ToArray();
                 if (pc?.photoView != null)

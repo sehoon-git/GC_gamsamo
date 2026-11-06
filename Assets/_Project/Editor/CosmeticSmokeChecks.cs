@@ -180,6 +180,9 @@ namespace Gamsamo.Editor
             desktop.OpenShop();
             desktop.SelectTab(0);
             yield return 0.1f;
+            appearance.RestoreCategory("window");
+            appearance.roomAppearance.SetWeather(ConsultationRoomAppearance.Weather.Clear);
+            Color32[] waitingRoom = WaitingRoomSamples(appearance.roomAppearance.CompositeTexture);
             foreach (CosmeticItem item in catalog.GetItems("window"))
             {
                 r.Check(appearance.Preview(item.id), "Window preview route accepts " + item.id);
@@ -201,10 +204,15 @@ namespace Gamsamo.Editor
                             ConsultationRoomAppearance.CosmeticLayer.Window) == expected.texture,
                             "Window combination: " + item.id + "/" + blind + "/" + weather);
                         hashes.Add(PixelHash(appearance.roomAppearance.CompositeTexture));
+                        Color32[] visible = WaitingRoomSamples(appearance.roomAppearance.CompositeTexture);
+                        r.Check(blind < 2 ? visible.SequenceEqual(waitingRoom)
+                                : visible.Zip(waitingRoom, (actual, original) => !actual.Equals(original)).All(different => different),
+                            (blind < 2 ? "Open glass preserves waiting people: " : "Closed blinds cover waiting people: ")
+                            + item.id + "/" + blind + "/" + weather);
                         r.Check(Mathf.Approximately(Blur(room), 1), "Weather/blinds keep modal blur: " + item.id + "/" + blind + "/" + weather);
                     }
                 }
-                r.Check(hashes.Count >= 7, "GPU shows distinct open/half weather and closed blind pixels: " + item.id);
+                r.Check(hashes.Count >= 3, "GPU shows distinct open/half/closed blinds while preserving the indoor view: " + item.id);
                 yield return 0.03f;
             }
 
@@ -285,6 +293,17 @@ namespace Gamsamo.Editor
             // Top-left source coordinates: exposed wall, door, window, PC, clipboard, desk.
             var points = new[] { new Vector2Int(650, 300), new Vector2Int(300, 350),
                 new Vector2Int(1000, 250), new Vector2Int(1600, 500), new Vector2Int(150, 850), new Vector2Int(1000, 980) };
+            return Samples(source, points);
+        }
+
+        private static Color32[] WaitingRoomSamples(RenderTexture source)
+        {
+            // Two people below half-lowered blinds, clear of every design's mullions and the PC.
+            return Samples(source, new[] { new Vector2Int(946, 372), new Vector2Int(1551, 372) });
+        }
+
+        private static Color32[] Samples(RenderTexture source, Vector2Int[] points)
+        {
             var readback = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
             RenderTexture previous = RenderTexture.active;
             try

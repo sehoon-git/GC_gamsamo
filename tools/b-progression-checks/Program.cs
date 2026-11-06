@@ -3,9 +3,11 @@ using System.IO;
 using System.Linq;
 using Gamsamo.Progression;
 using Gamsamo.Save;
-class FixedReward : IRewardCalculator {
+class CountingReward : IRewardCalculator {
  public int Calls;
- public RewardCalculation Calculate(SavedEvaluation e, EconomyState old, bool first) { Calls++; old.Balance += 17; return new RewardCalculation { SettlementKey=e.Identity.Key, Granted=17, Economy=old }; }
+ readonly EconomyIntegration inner;
+ public CountingReward(ProgressService service) { inner=new EconomyIntegration(service); }
+ public RewardCalculation Calculate(SavedEvaluation e, EconomyState old, bool first) { Calls++; return inner.Calculate(e,old,first); }
 }
 class Program {
  static int checks;
@@ -16,10 +18,12 @@ class Program {
   s.CaptureAi(id,"case_"+id,round,"saved-A-snapshot","evaluated");
   return new SavedEvaluation { Identity=new RoundIdentity { ProgressId=s.State.ProgressId, PatientId=id, CaseId="case_"+id, RoundId=round }, AiSaveCompleted=true, Phase="evaluated",PatientScore=a,CounselorScore=b };
  }
- static void Main() {
+ static void Main(string[] args) {
+  if(args.Length==2 && args[0]=="--resume-starting") { StartingFundsChecks.Restore(args[1]); return; }
   DevelopmentChecks.Run(Check, Reject);
   string root=Path.Combine(Path.GetTempPath(),"b-progress-check-"+Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
-  string path=Path.Combine(root,"run.json"); var store=new GameProgressStore(path); var s=new ProgressService(store); var c=new FixedReward();
+  StartingFundsChecks.Run(root);
+  string path=Path.Combine(root,"run.json"); var store=new GameProgressStore(path); var s=new ProgressService(store); var c=new CountingReward(s);
   s.Create(new[]{"a","b","c","d","e"}); var firstId=s.State.ProgressId;
   s.BeginVisit(); Check(new ProgressService(store).State.Phase==ProgressPhase.Consulting,"restart during consultation");
   s.CaptureAi("a","case_a","r1","snapshot","pending_evaluation"); Check(new ProgressService(store).State.Phase==ProgressPhase.Evaluating,"restart during evaluation");
@@ -31,7 +35,7 @@ class Program {
   Reject(()=>s.Settle(e,null),"missing C is pending"); Check(s.State.Revision==before,"missing C does not mutate");
   e.AiSaveCompleted=false; Reject(()=>s.Settle(e,c),"unsaved evaluation rejected"); e.AiSaveCompleted=true;
   var r=s.Settle(e,c,"photo_a"); Check(!r.Cleared && s.State.ClearedCount==0 && s.State.Photos.Count==0,"90/60 is not clear");
-  s.Settle(e,c,"photo_a"); Check(c.Calls==1 && s.State.Economy.Balance==17,"duplicate settlement once");
+  s.Settle(e,c,"photo_a"); Check(c.Calls==1 && s.State.Economy.Balance==350,"duplicate settlement once");
   s.Depart(); Check(s.State.CurrentIndex==0 && s.State.Phase==ProgressPhase.Waiting,"same patient waits for door");
   s.BeginVisit(); e=Eval(s,70,70,"r2"); Check(!s.State.Current.NeedsRevisit,"new round clears revisit intent"); store.BeforeReplace=()=>throw new IOException("injected disk failure");
   before=s.State.Revision; Reject(()=>s.Settle(e,c,"photo_a"),"save failure"); Check(s.State.Revision==before && s.State.ClearedCount==0 && store.Load().ClearedCount==0,"failed transaction leaves all state unchanged");
@@ -44,10 +48,12 @@ class Program {
   Check(s.State.ClearedCount==5 && s.State.FinalEndingUnlocked && s.State.Phase==ProgressPhase.Finished,"five DISTINCT patients unlock ending"); s.CompleteFinalEnding(); Check(new ProgressService(store).State.FinalEndingPlayed,"ending play state persists");
   var next=new ProgressService(new GameProgressStore(Path.Combine(root,"second.json"))); next.Create(new[]{"a","b","c","d","e"}); Check(next.State.ProgressId!=firstId && store.Load().ClearedCount==5,"new run preserves previous run and history");
   Reject(()=>new ProgressService(new GameProgressStore(Path.Combine(root,"bad-roster.json"))).Create(new[]{"a","a","b","c","d","e"}),"duplicate roster rejected");
-  var detached=next.State; detached.Economy.Balance=999; Check(next.State.Economy.Balance==0,"read state cannot mutate service");
-  var eco=next.State.Economy; eco.Balance=42; eco.OwnedItems.Add("test-hat"); eco.EquippedItems["hat"]="test-hat";
+  var detached=next.State; detached.Economy.Balance=999; Check(next.State.Economy.Balance==200,"read state cannot mutate service");
+  var eco=next.State.Economy; eco.Balance=42; eco.Ledger.balance=42;
+  eco.Ledger.ownedItemIds.Add("test-hat"); eco.Ledger.purchases.Add(new Gamsamo.Economy.PurchaseReceipt { itemId="test-hat",price=158 });
+  eco.Ledger.equippedItems.Add(new Gamsamo.Economy.EquippedItem { categoryId="hat",itemId="test-hat" });
   next.CommitEconomy(eco,next.State.Revision); var reloaded=new ProgressService(new GameProgressStore(Path.Combine(root,"second.json")));
-  Check(reloaded.State.Economy.Balance==42 && reloaded.State.Economy.EquippedItems["hat"]=="test-hat","economic ownership and equipment persist together");
+  Check(reloaded.State.Economy.Balance==42 && reloaded.State.Economy.Ledger.equippedItems.Single().itemId=="test-hat","economic ownership and equipment persist together");
   Reject(()=>next.CommitEconomy(eco,0),"stale economic transaction rejected");
   File.WriteAllText(path,"{broken"); Reject(()=>new ProgressService(store),"corrupt save surfaced"); Check(File.ReadAllText(path)=="{broken" && File.Exists(path+".bak"),"corrupt save not overwritten; backup retained");
   Console.WriteLine("PASS "+checks+" checks; fixtures: "+root);

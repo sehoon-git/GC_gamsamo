@@ -21,6 +21,7 @@ static class DevelopmentChecks
             reject(() => normal.SkipDevelopmentVisit(new RoundIdentity()), "normal progress cannot accept 70/70 skip");
             var store = new GameProgressStore(Path.Combine(root, "development.json"));
             var progress = new ProgressService(store); progress.Create(roster, true);
+            var initialBalance = progress.State.Economy.Balance;
             for (int i = 0; i < roster.Length; i++)
             {
                 progress.BeginDevelopmentVisit();
@@ -39,7 +40,7 @@ static class DevelopmentChecks
                 store.BeforeReplace = null;
                 var receipt = progress.SkipDevelopmentVisit(identity, patient.PatientId + "_smile");
                 check(receipt.DevelopmentSkip && receipt.PatientScore == 70 && receipt.CounselorScore == 70
-                    && receipt.Granted == 0 && progress.State.Economy.Balance == 0, "explicit 70/70 preview has no coin award " + i);
+                    && receipt.Granted == 0 && progress.State.Economy.Balance == initialBalance, "explicit 70/70 preview has no coin award " + i);
                 var committed = progress.State.Revision;
                 progress = new ProgressService(store);
                 progress.SkipDevelopmentVisit(identity, patient.PatientId + "_smile");

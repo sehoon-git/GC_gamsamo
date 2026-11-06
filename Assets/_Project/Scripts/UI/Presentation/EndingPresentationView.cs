@@ -202,7 +202,7 @@ namespace Gamsamo.UI.Presentation
             readingElapsed = 0;
             spread?.Hide();
             EndingContent entry = content != null ? content.FindApproved(patientId) : null;
-            GuidebookView.Set(titleText, clear ? displayName + " 님의 상담을 마쳤어요" : final ? "함께 만든 이야기" : entry != null ? entry.title : "후일담");
+            GuidebookView.Set(titleText, clear ? displayName + " 님의 상담을 마쳤어요" : final ? "함께 만든 이야기" : "");
             GuidebookView.Set(bodyText, clear ? "함께 나눈 이야기와 상세 결과는 책상 위 서류에 보관되어 있습니다."
                 : final ? FinalCreditsText() : entry != null ? entry.description : "후일담 콘텐츠가 아직 준비되지 않았습니다. 계속하기로 돌아갈 수 있어요.");
             GuidebookView.Set(rewardText, clear ? "이번 획득 " + awardedCoins + " C" : "");
@@ -253,7 +253,7 @@ namespace Gamsamo.UI.Presentation
             return content.credits;
         }
 
-        /// <summary>B supplies only saved, unlocked photos and verified captions for this run.</summary>
+        /// <summary>Display the portraits unlocked in this save.</summary>
         public void SetCreditsPhotos(string game, IReadOnlyList<PhotoGalleryEntry> unlockedPhotos)
         {
             if (game != gameId || !final) return;
@@ -274,13 +274,6 @@ namespace Gamsamo.UI.Presentation
                     image.rectTransform.anchoredPosition = new Vector2(x, -y);
                     image.rectTransform.sizeDelta = new Vector2(204, 98);
                 }
-                if (finalCaptions == null || index >= finalCaptions.Length || finalCaptions[index] == null) continue;
-                var caption = finalCaptions[index];
-                GuidebookView.Set(caption, entry?.title);
-                caption.rectTransform.anchoredPosition = new Vector2(x, -(y + 101));
-                caption.rectTransform.sizeDelta = new Vector2(204, 45);
-                caption.enableAutoSizing = true;
-                caption.fontSizeMin = 16; caption.fontSizeMax = 20;
             }
         }
         private bool HasMoreText() => bodyText != null && !string.IsNullOrEmpty(bodyText.text)

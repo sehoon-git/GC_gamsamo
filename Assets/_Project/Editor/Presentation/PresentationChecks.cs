@@ -217,7 +217,7 @@ namespace Gamsamo.Editor.Presentation
             var spread = view.photo.transform.parent.Find("EndingAlbumSpread");
             var folio = spread.Find("MomentNumber").GetComponent<TMP_Text>();
             var signature = spread.Find("ClosingThanks").GetComponent<TMP_Text>();
-            Check(view.photo.sprite == storyPhoto && view.bodyText.text == album.moments[0].description
+            Check(view.titleText.text == "" && view.photo.sprite == storyPhoto && view.bodyText.text == album.moments[0].description
                 && view.photo.rectTransform.anchoredPosition.x + view.photo.rectTransform.rect.width < view.bodyText.rectTransform.anchoredPosition.x,
                 "Album pairs the uncropped first photo with its description on the right");
             ReadFor(1f);
@@ -252,7 +252,7 @@ namespace Gamsamo.Editor.Presentation
             view.SetCreditsPhotos("g", granted);
             for (int i = 0; i < granted.Length; i++)
                 Check(view.finalPhotos[i].enabled && view.finalPhotos[i].preserveAspect
-                    && view.finalCaptions[i].text == granted[i].title, "Final credits show saved portrait and caption " + (i + 1));
+                    && view.finalCaptions[i].text == "", "Final credits show saved portrait without its album title " + (i + 1));
             Check(!view.finalPhotos[5].enabled && view.finalCaptions[5].text == "", "Five saved photos leave no extra visible slot");
             Check(view.creditsBody.anchoredPosition.y <= 0
                 && -view.creditsBody.anchoredPosition.y < ((RectTransform)view.creditsViewport.transform).rect.height,

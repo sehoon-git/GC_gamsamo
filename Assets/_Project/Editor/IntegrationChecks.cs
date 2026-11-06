@@ -43,7 +43,7 @@ public static class IntegrationChecks
             AiSaveCompleted = true, Phase = "evaluated", PatientScore = 70, CounselorScore = 70 };
         var bridge = new EconomyIntegration(progress);
         var receipt = progress.Settle(evaluation, bridge, "seoyun_smile");
-        Check(receipt.Granted == 240 && progress.State.Economy.Ledger.balance == 240, "Real C policy committed atomically with B progress");
+        Check(receipt.Granted == 240 && progress.State.Economy.Ledger.balance == 440, "Real C policy adds to starting coins atomically with B progress");
         progress.Settle(evaluation, bridge, "seoyun_smile");
         Check(progress.State.Economy.Ledger.settlements.Count == 1 && progress.State.Photos.Count == 1, "Duplicate result grants once");
         progress.SavePresentationStage(receipt.Identity.Key, "ending");
@@ -52,14 +52,14 @@ public static class IntegrationChecks
         Check(progress.State.Current.PatientId == "dohyeon", "Missing media does not block next patient");
         var catalog = AssetDatabase.LoadAssetAtPath<CosmeticCatalog>("Assets/_Project/Settings/CosmeticCatalog.asset");
         var wallet = new EconomyWallet(progress.State.ProgressId, bridge, catalog);
-        Check(wallet.Reload() == EconomyStatus.Success && wallet.Balance == 240, "Wallet reads common save");
-        Check(wallet.Purchase("window.oak", 50) == EconomyStatus.Success && wallet.Balance == 190, "Purchase commits to common save");
+        Check(wallet.Reload() == EconomyStatus.Success && wallet.Balance == 440, "Wallet reads common save");
+        Check(wallet.Purchase("window.oak", 50) == EconomyStatus.Success && wallet.Balance == 390, "Purchase commits to common save");
         Check(wallet.Equip("window.oak") == EconomyStatus.Success, "Equip purchased item");
         var restored = new ProgressService(store);
-        Check(restored.State.Economy.Ledger.balance == 190 && restored.State.Economy.Ledger.equippedItems.Any(i => i.itemId == "window.oak"), "Restart restores coins ownership and equipment");
+        Check(restored.State.Economy.Ledger.balance == 390 && restored.State.Economy.Ledger.equippedItems.Any(i => i.itemId == "window.oak"), "Restart restores coins ownership and equipment");
         store.BeforeReplace = () => { throw new IOException("injected test-only write failure"); };
         Check(wallet.Purchase("door.oak", 40) != EconomyStatus.Success, "Failed write rejects purchase");
-        Check(store.Load().Economy.Ledger.balance == 190 && !store.Load().Economy.Ledger.ownedItemIds.Contains("door.oak"), "Failed write preserves money and inventory");
+        Check(store.Load().Economy.Ledger.balance == 390 && !store.Load().Economy.Ledger.ownedItemIds.Contains("door.oak"), "Failed write preserves money and inventory");
         store.BeforeReplace = null;
         for (int i = 1; i < 5; i++)
         {

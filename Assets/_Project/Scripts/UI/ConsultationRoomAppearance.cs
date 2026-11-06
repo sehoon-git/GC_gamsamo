@@ -53,6 +53,10 @@ namespace Gamsamo.UI
         private static readonly int LayerTextureId = Shader.PropertyToID("_LayerTex");
         private static readonly int LayerRectId = Shader.PropertyToID("_LayerRect");
         private static readonly int ProjectionId = Shader.PropertyToID("_CanvasProjection");
+        private static readonly int PreserveWindowViewId = Shader.PropertyToID("_PreserveWindowView");
+        private static readonly int WindowViewId = Shader.PropertyToID("_WindowViewTex");
+        private static readonly int WindowClearId = Shader.PropertyToID("_WindowClearTex");
+        private static readonly int WindowCloudyId = Shader.PropertyToID("_WindowCloudyTex");
         private RenderTexture compositeTexture;
         private Material compositeMaterial;
         private Mesh quad;
@@ -98,7 +102,8 @@ namespace Gamsamo.UI
         /// <summary>
         /// Sets either three weather variants or nine blind/weather variants.
         /// Nine entries are up(clear/cloudy/rain), half(clear/cloudy/rain), down(clear/cloudy/rain).
-        /// Subsequent weather changes retain the selected design and blind state.
+        /// The glass keeps the default waiting-room view; frame and blinds come from the design.
+        /// Weather variants identify glass pixels without modifying the source artwork.
         /// </summary>
         public void SetWindowVariant(Texture2D[] states, int blindState)
         {
@@ -213,7 +218,7 @@ namespace Gamsamo.UI
                 Draw(commands, baseTexture, new Rect(0, 0, canvasSize.x, canvasSize.y), projection);
                 Draw(commands, TextureForLayer(CosmeticLayer.RoomWallpaper), new Rect(0, 0, canvasSize.x, canvasSize.y), projection);
                 Draw(commands, TextureForLayer(CosmeticLayer.Door), doorRect, projection);
-                Draw(commands, TextureForLayer(CosmeticLayer.Window), windowRect, projection);
+                Draw(commands, TextureForLayer(CosmeticLayer.Window), windowRect, projection, HasWindowVariants);
                 Draw(commands, TextureForLayer(CosmeticLayer.Pc), pcRect, projection);
                 Draw(commands, TextureForLayer(CosmeticLayer.Clipboard), clipboardRect, projection);
                 Graphics.ExecuteCommandBuffer(commands);
@@ -296,7 +301,8 @@ namespace Gamsamo.UI
             if (!compositeTexture.IsCreated()) compositeTexture.Create();
         }
 
-        private void Draw(CommandBuffer commands, Texture texture, Rect rect, Matrix4x4 projection)
+        private void Draw(CommandBuffer commands, Texture texture, Rect rect, Matrix4x4 projection,
+            bool preserveWindowView = false)
         {
             // The wallpaper layer is optional; null leaves the original wall visible.
             if (texture == null) return;
@@ -304,6 +310,14 @@ namespace Gamsamo.UI
             properties.SetTexture(LayerTextureId, texture);
             properties.SetVector(LayerRectId, new Vector4(rect.x, rect.y, rect.width, rect.height));
             properties.SetMatrix(ProjectionId, projection);
+            if (preserveWindowView)
+            {
+                int offset = HasBlindVariants ? windowBlindState * 3 : 0;
+                properties.SetFloat(PreserveWindowViewId, 1);
+                properties.SetTexture(WindowViewId, clearWindow);
+                properties.SetTexture(WindowClearId, windowVariantTextures[offset]);
+                properties.SetTexture(WindowCloudyId, windowVariantTextures[offset + 1]);
+            }
             commands.DrawMesh(quad, Matrix4x4.identity, compositeMaterial, 0, 0, properties);
         }
 

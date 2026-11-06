@@ -88,7 +88,7 @@ public static class BProgressPlayChecks
                     if (visits.State != PatientVisitController.VisitState.Consulting) return;
                     var ai = Find<PatientAiAdapter>(); if (ai == null || string.IsNullOrEmpty(ai.LastError)) return;
                     Check(!string.IsNullOrEmpty(ai.CaseId) && !string.IsNullOrEmpty(ai.SessionId), "A case and round bound");
-                    Check(runtime.Progress.State.ClearedCount == 0 && runtime.Progress.State.Economy.Balance == 0 && !visits.IsAwaitingDeparture,
+                    Check(runtime.Progress.State.ClearedCount == 0 && runtime.Progress.State.Economy.Balance == 200 && !visits.IsAwaitingDeparture,
                         "missing connection is not a clear or departure");
                     Check(!visits.TryAdmitNextPatient(), "active consultation blocks another admission");
                     SessionState.SetString(Key + "case", ai.CaseId); SessionState.SetString(Key + "round", ai.SessionId);

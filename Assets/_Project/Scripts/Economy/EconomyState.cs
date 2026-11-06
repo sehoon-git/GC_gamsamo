@@ -40,7 +40,10 @@ namespace Gamsamo.Economy
     [Serializable]
     public sealed class EconomyState
     {
+        public const int NewGameStartingCoins = 200;
         public string runId;
+        // Missing in older saves means zero. Loading never awards a new starting grant.
+        public int startingCoins;
         public int balance;
         public int totalEarned;
         public List<SessionSettlement> settlements = new List<SessionSettlement>();
@@ -54,11 +57,21 @@ namespace Gamsamo.Economy
             return new EconomyState { runId = runId };
         }
 
+        // Only the new-progress transaction calls this; legacy empty ledgers use NewRun.
+        public static EconomyState NewGame(string runId)
+        {
+            var state = NewRun(runId);
+            state.startingCoins = NewGameStartingCoins;
+            state.balance = state.totalEarned = state.startingCoins;
+            return state;
+        }
+
         public EconomyState DeepCopy()
         {
             return new EconomyState
             {
                 runId = runId,
+                startingCoins = startingCoins,
                 balance = balance,
                 totalEarned = totalEarned,
                 settlements = settlements.ConvertAll(record => record.Copy()),
@@ -85,7 +98,7 @@ namespace Gamsamo.Economy
 
         public bool IsValid()
         {
-            if (string.IsNullOrWhiteSpace(runId) || balance < 0 || balance > totalEarned ||
+            if (string.IsNullOrWhiteSpace(runId) || startingCoins < 0 || balance < 0 || balance > totalEarned ||
                 settlements == null || purchases == null || ownedItemIds == null || equippedItems == null) return false;
             var owned = new HashSet<string>(StringComparer.Ordinal);
             foreach (string item in ownedItemIds)
@@ -107,7 +120,7 @@ namespace Gamsamo.Economy
             var keys = new HashSet<Tuple<string, string, string>>();
             var highest = new Dictionary<string, int>(StringComparer.Ordinal);
             var clearedPatients = new HashSet<string>(StringComparer.Ordinal);
-            long earned = 0;
+            long earned = startingCoins;
             foreach (var record in settlements)
             {
                 if (record == null || string.IsNullOrWhiteSpace(record.patientId) || string.IsNullOrWhiteSpace(record.caseId) ||

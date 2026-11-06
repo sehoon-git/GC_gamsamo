@@ -12,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.core.config import ExperimentError, Settings
+from app.core.dialogue_limits import PATIENT_MAX_CHARACTERS, PATIENT_MAX_OUTPUT_TOKENS
 from app.core.requests import RequestCoordinator
 from app.core.telemetry import emit
 from app.llm.client import VllmClient
@@ -52,7 +53,7 @@ def create_app(settings: Settings | None = None, llm=None):
         await coordinator.close()
         await engine.close()
 
-    app = FastAPI(title="상담 게임 AI", version="0.4.3", lifespan=lifespan)
+    app = FastAPI(title="상담 게임 AI", version="0.4.4", lifespan=lifespan)
     app.state.coordinator = coordinator
 
     @app.middleware("http")
@@ -103,7 +104,10 @@ def create_app(settings: Settings | None = None, llm=None):
             "tokenizer_revision": engine.config["revision"], "max_model_len": engine.config["max_model_len"],
             "prompt_version": catalog.prompt_version, "busy": coordinator.gate.locked(),
             "format_version": FORMAT_VERSION, "mode": "mock" if settings.mock else "model",
-            "capabilities": ["game_progress_scope", "patient_catalog_v1", "request_timing_v1", "volatile_request_replay_v1"],
+            "capabilities": ["game_progress_scope", "patient_catalog_v1", "request_timing_v1", "volatile_request_replay_v1", "single_bubble_reply_v1"],
+            "patient_reply_limits": {"max_characters": PATIENT_MAX_CHARACTERS,
+                                     "max_output_tokens": min(engine.config["roles"]["patient"]["max_tokens"], PATIENT_MAX_OUTPUT_TOKENS),
+                                     "single_paragraph": True},
             "supported_patient_ids": list(catalogs),
             "supported_patients": [{"id": c.patient["id"], "display_name": c.patient["name"],
                                      "content_version": c.patient["content_version"]} for c in catalogs.values()],

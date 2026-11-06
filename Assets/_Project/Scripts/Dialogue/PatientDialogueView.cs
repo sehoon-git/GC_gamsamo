@@ -46,9 +46,17 @@ namespace Gamsamo.Dialogue
         public bool IsConfirming { get; private set; }
         public string DisplayedText => bodyText != null ? bodyText.text : string.Empty;
         public string Draft => replyInput != null ? replyInput.text : string.Empty;
-        public int CurrentPage => bodyText != null ? bodyText.pageToDisplay : 1;
-        public int PageCount => bodyText != null ? Mathf.Max(1, bodyText.textInfo.pageCount) : 1;
-        public bool HasMorePages => CurrentPage < PageCount;
+        // Compatibility for callers of the former paging API. A reply is one bubble.
+        public int CurrentPage => 1;
+        public int PageCount => 1;
+        public bool HasMorePages => false;
+        public bool NeedsLegacyScroll => bubbleScroll != null && bubbleScroll.vertical;
+
+        private ScrollRect bubbleScroll;
+        private RectTransform bubbleViewport;
+        private Vector2 lastBubbleSize;
+        private float originalFontSize;
+        private string connectionLabel = "";
 
         private Coroutine typing;
         private bool visible;
@@ -82,6 +90,11 @@ namespace Gamsamo.Dialogue
                 && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))) NotifySend();
         }
 
+        private void LateUpdate()
+        {
+            if (bubbleViewport != null && bubbleViewport.rect.size != lastBubbleSize) LayoutBubble(false);
+        }
+
         public void ShowLine(string speaker, string text)
         {
             BindButtons();
@@ -96,16 +109,67 @@ namespace Gamsamo.Dialogue
             {
                 bodyText.richText = false;
                 bodyText.text = text ?? string.Empty;
-                bodyText.overflowMode = TextOverflowModes.Page;
+                EnsureBubbleViewport();
+                bodyText.overflowMode = TextOverflowModes.Overflow;
                 bodyText.pageToDisplay = 1;
+                LayoutBubble(true);
                 bodyText.maxVisibleCharacters = 0;
                 bodyText.ForceMeshUpdate();
-                if (bodyText.textInfo.characterCount > 0 && isActiveAndEnabled)
+                if (bodyText.textInfo.characterCount > 0 && isActiveAndEnabled && Application.isPlaying)
                     typing = StartCoroutine(TypeLine());
                 else
                     bodyText.maxVisibleCharacters = int.MaxValue;
             }
             RefreshVisibility();
+        }
+
+        private void EnsureBubbleViewport()
+        {
+            if (bubbleViewport != null) return;
+            var content = bodyText.rectTransform;
+            var holder = new GameObject("SingleBubbleViewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image), typeof(ScrollRect));
+            bubbleViewport = (RectTransform)holder.transform;
+            bubbleViewport.SetParent(content.parent, false);
+            bubbleViewport.SetSiblingIndex(content.GetSiblingIndex());
+            bubbleViewport.anchorMin = content.anchorMin; bubbleViewport.anchorMax = content.anchorMax;
+            bubbleViewport.pivot = content.pivot; bubbleViewport.sizeDelta = content.sizeDelta;
+            bubbleViewport.anchoredPosition = content.anchoredPosition;
+            bubbleViewport.localScale = content.localScale; bubbleViewport.localRotation = content.localRotation;
+            var background = holder.GetComponent<Image>();
+            background.color = Color.clear; background.raycastTarget = true;
+            originalFontSize = bodyText.fontSize;
+            content.SetParent(bubbleViewport, false);
+            content.anchorMin = new Vector2(0, 1); content.anchorMax = Vector2.one;
+            content.pivot = new Vector2(.5f, 1); content.anchoredPosition = Vector2.zero;
+            bodyText.enableAutoSizing = false;
+            bodyText.verticalAlignment = VerticalAlignmentOptions.Top;
+            bodyText.raycastTarget = false;
+            bubbleScroll = holder.GetComponent<ScrollRect>();
+            bubbleScroll.viewport = bubbleViewport; bubbleScroll.content = content;
+            bubbleScroll.horizontal = false;
+            bubbleScroll.movementType = ScrollRect.MovementType.Clamped;
+            bubbleScroll.scrollSensitivity = 26;
+        }
+
+        private void LayoutBubble(bool resetScroll)
+        {
+            if (bubbleViewport == null) return;
+            lastBubbleSize = bubbleViewport.rect.size;
+            float width = Mathf.Max(1, lastBubbleSize.x), height = Mathf.Max(1, lastBubbleSize.y);
+            // Keep the authored font size; at narrow sizes allow at most two points
+            // of adjustment. Legacy long replies remain complete, scrollable text.
+            bodyText.fontSize = originalFontSize;
+            float preferred = bodyText.GetPreferredValues(bodyText.text, width, float.PositiveInfinity).y;
+            float minimum = Mathf.Max(18, originalFontSize - 2);
+            while (preferred > height && bodyText.fontSize > minimum)
+            {
+                bodyText.fontSize -= 1;
+                preferred = bodyText.GetPreferredValues(bodyText.text, width, float.PositiveInfinity).y;
+            }
+            bodyText.rectTransform.sizeDelta = new Vector2(0, Mathf.Max(height, preferred));
+            bubbleScroll.vertical = preferred > height + .1f;
+            if (resetScroll) { bubbleScroll.StopMovement(); bodyText.rectTransform.anchoredPosition = Vector2.zero; bubbleScroll.verticalNormalizedPosition = 1; }
+            SetConnectionLabel(connectionLabel);
         }
 
         public void SetStatus(string text)
@@ -189,8 +253,8 @@ namespace Gamsamo.Dialogue
             buttonObject.SetActive(false);
         }
 
-        /// <summary>Retains the PR24 adapter/controller paging API.</summary>
-        public bool AdvancePage() => !IsTyping && HasMorePages && AdvancePageOrReveal();
+        /// <summary>Retained for existing controller callers; replies no longer have pages.</summary>
+        public bool AdvancePage() => false;
 
         public void SetNextAction(bool available, string caption)
         {
@@ -217,7 +281,9 @@ namespace Gamsamo.Dialogue
 
         public void SetConnectionLabel(string value)
         {
-            if (connectionText != null) connectionText.text = value ?? string.Empty;
+            connectionLabel = value ?? string.Empty;
+            if (connectionText != null) connectionText.text = connectionLabel
+                + (NeedsLegacyScroll ? " · 긴 기록은 대화칸에서 스크롤" : "");
         }
 
         public void SetDraft(string value)
@@ -225,33 +291,11 @@ namespace Gamsamo.Dialogue
             if (replyInput != null) replyInput.SetTextWithoutNotify(value ?? string.Empty);
         }
 
-        /// <summary>Paging only changes presentation; the complete line remains in the transcript.</summary>
+        /// <summary>Only accelerates typing; it never changes the saved line.</summary>
         public bool AdvancePageOrReveal()
         {
             if (IsTyping) { RevealAll(); return true; }
-            if (!HasMorePages) return false;
-            bodyText.pageToDisplay++;
-            BeginPage();
-            return true;
-        }
-
-        private void BeginPage()
-        {
-            StopTyping();
-            bodyText.ForceMeshUpdate();
-            int first = bodyText.textInfo.pageInfo[Mathf.Clamp(CurrentPage - 1, 0, PageCount - 1)].firstCharacterIndex;
-            bodyText.maxVisibleCharacters = first;
-            if (isActiveAndEnabled) typing = StartCoroutine(TypeLine());
-            RefreshVisibility();
-        }
-
-        private void PreviousPage()
-        {
-            if (!IsVisible || IsConfirming || bodyText == null || CurrentPage <= 1) return;
-            StopTyping();
-            bodyText.pageToDisplay--;
-            bodyText.maxVisibleCharacters = int.MaxValue;
-            RefreshVisibility();
+            return false;
         }
 
         public void SetSuspended(bool value)
@@ -285,9 +329,8 @@ namespace Gamsamo.Dialogue
 
         private IEnumerator TypeLine()
         {
-            int page = Mathf.Clamp(CurrentPage - 1, 0, PageCount - 1);
-            int total = bodyText.textInfo.characterCount == 0 ? 0 : bodyText.textInfo.pageInfo[page].lastCharacterIndex + 1;
-            float shown = bodyText.textInfo.characterCount == 0 ? 0 : bodyText.textInfo.pageInfo[page].firstCharacterIndex;
+            int total = bodyText.textInfo.characterCount;
+            float shown = 0;
             // Defer once so the Coroutine handle is always assigned before completion.
             yield return null;
             while (shown < total)
@@ -318,12 +361,13 @@ namespace Gamsamo.Dialogue
             bool interactive = shown && !IsConfirming && !presentationBlocked;
             if (nextButton != null)
             {
-                nextButton.interactable = interactive && ((allowNext && !canDepart) || IsTyping || HasMorePages);
+                nextButton.gameObject.SetActive(IsTyping || (allowNext && !canDepart));
+                nextButton.interactable = interactive && ((allowNext && !canDepart) || IsTyping);
                 TMP_Text label = nextButton.GetComponentInChildren<TMP_Text>();
-                if (label != null) label.text = IsTyping ? "바로 보기" : HasMorePages ? "다음 쪽" : nextCaption;
+                if (label != null) label.text = IsTyping ? "바로 보기" : nextCaption;
             }
-            if (previousPageButton != null) previousPageButton.interactable = interactive && CurrentPage > 1;
-            if (pageText != null) pageText.text = PageCount > 1 ? CurrentPage + " / " + PageCount : string.Empty;
+            if (previousPageButton != null) previousPageButton.gameObject.SetActive(false);
+            if (pageText != null) pageText.gameObject.SetActive(false);
             if (endButton != null)
             {
                 endButton.gameObject.SetActive(!canDepart);
@@ -358,7 +402,6 @@ namespace Gamsamo.Dialogue
             if (sendButton != null) sendButton.onClick.AddListener(NotifySend);
             if (retryButton != null) retryButton.onClick.AddListener(NotifyRetry);
             if (historyButton != null) historyButton.onClick.AddListener(NotifyHistory);
-            if (previousPageButton != null) previousPageButton.onClick.AddListener(PreviousPage);
             bound = true;
         }
 
@@ -393,7 +436,6 @@ namespace Gamsamo.Dialogue
             if (sendButton != null) sendButton.onClick.RemoveListener(NotifySend);
             if (retryButton != null) retryButton.onClick.RemoveListener(NotifyRetry);
             if (historyButton != null) historyButton.onClick.RemoveListener(NotifyHistory);
-            if (previousPageButton != null) previousPageButton.onClick.RemoveListener(PreviousPage);
         }
     }
 }

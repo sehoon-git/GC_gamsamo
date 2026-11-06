@@ -8,6 +8,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from app.core.config import ExperimentError, InvalidModelOutput, Settings
+from app.core.dialogue_limits import PATIENT_MAX_OUTPUT_TOKENS
 from app.core.telemetry import current_trace
 from app.schemas.models import Metrics
 
@@ -51,7 +52,11 @@ class VllmClient:
                 "enable_thinking": self.config["roles"][role]["thinking"]}
 
     def fits(self, messages: list[dict], role: str) -> bool:
-        return self.count(messages, role) + self.config["roles"][role]["max_tokens"] + 128 <= self.config["max_model_len"]
+        return self.count(messages, role) + self.output_budget(role) + 128 <= self.config["max_model_len"]
+
+    def output_budget(self, role: str) -> int:
+        configured = self.config["roles"][role]["max_tokens"]
+        return min(configured, PATIENT_MAX_OUTPUT_TOKENS) if role == "patient" else configured
 
     async def health(self) -> dict:
         try:
@@ -75,7 +80,7 @@ class VllmClient:
             payload = {
                 "model": self.config["served_model_name"], "messages": request_messages,
                 "stream": False, "temperature": role_config["temperature"],
-                "max_tokens": role_config["max_tokens"],
+                "max_tokens": self.output_budget(role),
                 "chat_template_kwargs": self.template_kwargs(role),
                 "response_format": {"type": "json_schema", "json_schema": {"name": schema.__name__, "schema": schema.model_json_schema(), "strict": True}},
             }
@@ -119,9 +124,13 @@ class VllmClient:
                     validate(value)
                 return value
             except (ValidationError, InvalidModelOutput, ValueError, KeyError, TypeError, IndexError) as exc:
-                error = str(exc)[:700]
+                error = ("; ".join(item["msg"] for item in exc.errors(include_input=False, include_url=False))
+                         if role == "patient" and isinstance(exc, ValidationError) else str(exc))[:700]
                 if attempt == 0:
-                    request_messages = messages + [{"role": "user", "content": "형식/검증 오류입니다. 원래 과제를 다시 수행하고 JSON만 짧게 반환하세요. 잘린 출력은 더 간결하게 만드세요. 오류: " + error}]
+                    feedback = "형식/검증 오류입니다. 원래 과제를 다시 수행하고 JSON만 짧게 반환하세요. 잘린 출력은 더 간결하게 만드세요. 오류: " + error
+                    if role == "patient":
+                        feedback += " 이번 수정의 text는 공백 포함 35자 안팎의 완결된 한 문장으로 끝내세요. 가장 중요한 대답 하나를 고르고, 추가 설명은 다음 대화로 미루세요."
+                    request_messages = messages + [{"role": "user", "content": feedback}]
             finally:
                 if trace is not None:
                     trace.postprocess_seconds += perf_counter() - processed

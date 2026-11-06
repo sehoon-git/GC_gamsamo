@@ -17,6 +17,7 @@ class Program {
   return new SavedEvaluation { Identity=new RoundIdentity { ProgressId=s.State.ProgressId, PatientId=id, CaseId="case_"+id, RoundId=round }, AiSaveCompleted=true, Phase="evaluated",PatientScore=a,CounselorScore=b };
  }
  static void Main() {
+  DevelopmentChecks.Run(Check, Reject);
   string root=Path.Combine(Path.GetTempPath(),"b-progress-check-"+Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
   string path=Path.Combine(root,"run.json"); var store=new GameProgressStore(path); var s=new ProgressService(store); var c=new FixedReward();
   s.Create(new[]{"a","b","c","d","e"}); var firstId=s.State.ProgressId;

@@ -219,7 +219,9 @@ async def test_default_logs_and_health_have_provenance_but_no_dialogue_or_key(ca
     settings = Settings(mock=True, api_key="secret-key", code_revision="test-revision")
     async with client(create_app(settings)) as http:
         health = (await http.get("/health")).json()
-        assert health["api_version"] == "0.4.3" and health["code_revision"] == "test-revision"
+        assert health["api_version"] == "0.4.4" and health["code_revision"] == "test-revision"
+        assert health["patient_reply_limits"] == {"max_characters": 56, "max_output_tokens": 192, "single_paragraph": True}
+        assert "single_bubble_reply_v1" in health["capabilities"]
         assert health["max_model_len"] == 16384 and "request_timing_v1" in health["capabilities"]
         state = opened_case().model_dump(mode="json")
         result = await http.post("/v1/dialogue/turn", headers={"Authorization": "Bearer secret-key"}, json={"state": state, "session_id": state["sessions"][-1]["id"], "turn_id": "trace-one", "text": "비공개 상담 검사 문장"})

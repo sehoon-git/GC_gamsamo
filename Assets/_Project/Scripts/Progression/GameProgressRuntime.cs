@@ -15,7 +15,8 @@ namespace Gamsamo.Progression
 {
     public static class GameProgressSession
     {
-        public static string Root => Path.Combine(Application.persistentDataPath, "game-progress");
+        public static string Root => Path.Combine(Application.persistentDataPath,
+            DevelopmentProgressMode.Enabled ? "game-progress-development" : "game-progress");
         private static string Pointer => Path.Combine(Root, "active.txt");
         public static ProgressService Open()
         {
@@ -24,6 +25,8 @@ namespace Gamsamo.Progression
             if (!Guid.TryParseExact(name, "N", out _)) throw new IOException("진행 선택 파일이 손상되었습니다. active.txt와 진행 백업을 복구해 주세요.");
             var service = new ProgressService(new GameProgressStore(Path.Combine(Root, name + ".json")));
             if (service.State == null) throw new IOException("선택한 진행 저장이 없습니다. 기존 파일을 복구해 주세요.");
+            if (service.State.DevelopmentMode != DevelopmentProgressMode.Enabled)
+                throw new IOException("일반 진행과 개발 진행을 서로 불러올 수 없습니다.");
             return service;
         }
         public static ProgressService Create(string[] roster)
@@ -33,7 +36,7 @@ namespace Gamsamo.Progression
             Directory.CreateDirectory(Root);
             string fileId = Guid.NewGuid().ToString("N");
             var service = new ProgressService(new GameProgressStore(Path.Combine(Root, fileId + ".json")));
-            service.Create(roster);
+            service.Create(roster, DevelopmentProgressMode.Enabled);
             string temp = Pointer + "." + fileId + ".tmp";
             File.WriteAllText(temp, fileId);
             if (File.Exists(Pointer)) File.Replace(temp, Pointer, Pointer + ".bak"); else File.Move(temp, Pointer);
@@ -45,7 +48,8 @@ namespace Gamsamo.Progression
             if (!Directory.Exists(Root)) return new GameProgress[0];
             return Directory.GetFiles(Root, "*.json")
                 .Where(file => Guid.TryParseExact(Path.GetFileNameWithoutExtension(file), "N", out _))
-                .Select(file => new GameProgressStore(file).Load()).ToArray();
+                .Select(file => new GameProgressStore(file).Load())
+                .Where(run => run.DevelopmentMode == DevelopmentProgressMode.Enabled).ToArray();
         }
     }
 
@@ -83,6 +87,16 @@ namespace Gamsamo.Progression
                 GameProgressSession.NewGameRequested = false;
                 if (Progress == null) Progress = GameProgressSession.Create(roster);
                 if (!Progress.State.Patients.Select(p => p.PatientId).SequenceEqual(roster)) throw new InvalidOperationException("저장 환자 목록과 씬 구성이 다릅니다. 기존 진행을 보존해 주세요.");
+                if (DevelopmentProgressMode.Enabled)
+                {
+                    // This is an explicit offline traversal, never an AI error fallback.
+                    if (ai != null) ai.enabled = false;
+                    var bridge = GetComponent<PatientAiInputBridge>();
+                    if (bridge != null) bridge.enabled = false;
+                    visits.UsesExternalDialogue = _ => false;
+                    visits.ExternalConfirmEnd = null; visits.ExternalFinishVisit = null;
+                    visits.PatientArrived += DevelopmentArrived;
+                }
                 foreach (var patientId in roster)
                 {
                     string file = Path.Combine(Application.streamingAssetsPath, "GameData", "Patients", patientId + ".json");
@@ -97,7 +111,7 @@ namespace Gamsamo.Progression
                     Wallet.Reload(); pc.BindEconomy(Wallet);
                 }
                 Presentation = GetComponent<GamePresentationIntegration>();
-                if (Presentation != null) Presentation.Bind(this, visits, ai);
+                if (Presentation != null) Presentation.Bind(this, visits, DevelopmentProgressMode.Enabled ? null : ai);
                 visits.useDemoDialogue = false;
                 visits.BeforeAdmission = BeforeAdmission;
                 visits.BeforeDeparture = BeforeDeparture;
@@ -105,7 +119,7 @@ namespace Gamsamo.Progression
                 visits.GetClearedCount = () => Progress.State.ClearedCount;
                 if (visits.room != null) visits.room.CommittedSettlementForRecord = data =>
                     settlementDescriptions.TryGetValue(data.gameProgressId + "/" + data.registrationNumber + "/" + data.caseId + "/" + data.sessionId, out var description) ? description : "";
-                if (ai != null) ai.StateChanged += OnAiChanged;
+                if (ai != null && !DevelopmentProgressMode.Enabled) ai.StateChanged += OnAiChanged;
                 RestoreRecords();
                 visits.ProgressReady = true;
                 if (Progress.State.Phase == ProgressPhase.Finished) visits.TryAdmitNextPatient();
@@ -119,6 +133,10 @@ namespace Gamsamo.Progression
             try
             {
                 if (Progress.State.Current?.PatientId != patientId) return false;
+                if (DevelopmentProgressMode.Enabled)
+                {
+                    Progress.BeginDevelopmentVisit(); LastError = ""; return true;
+                }
                 if (visits.UsesExternalDialogue == null || !visits.UsesExternalDialogue(patientId))
                     throw new InvalidOperationException("이 환자의 정식 AI 연결이 아직 없습니다. A의 콘텐츠 연결이 필요합니다.");
                 Progress.PrepareAiOperation();
@@ -137,7 +155,7 @@ namespace Gamsamo.Progression
         }
         private void OnAiChanged()
         {
-            if (handling || Progress == null || ai == null || !ai.IsAiVisit) return;
+            if (DevelopmentProgressMode.Enabled || handling || Progress == null || ai == null || !ai.IsAiVisit) return;
             handling = true;
             try
             {
@@ -173,7 +191,56 @@ namespace Gamsamo.Progression
             catch (Exception e) { Fail(e); Presentation?.FailResultSave(LastError); }
             finally { handling = false; }
         }
-        public void RetryProgress() => OnAiChanged();
+        public void RetryProgress()
+        {
+            if (DevelopmentProgressMode.Enabled) SkipDevelopmentPatient(); else OnAiChanged();
+        }
+
+        private void DevelopmentArrived(string visitId, string patientId)
+        {
+            if (!DevelopmentProgressMode.Enabled) return;
+            var view = visits.dialogue;
+            view.SetApiMode(false); view.SetNextAvailable(false); view.SetEndAvailable(false);
+            view.SetConnectionLabel("개발 진행 미리보기 · AI 상담/평가 없음");
+            view.ShowLine("개발 안내", "개발 스킵으로 이 내담자의 70/70 클리어와 엔딩을 미리 볼 수 있습니다.");
+            view.SetStatus("별도 개발 저장 사용 · 실제 평가·코인 지급 없음");
+            if (Progress.State.Phase == ProgressPhase.Presenting || Progress.State.Phase == ProgressPhase.AwaitingDeparture)
+                visits.MarkConsultationEnded(visitId);
+        }
+
+        public bool CanSkipDevelopmentPatient => DevelopmentProgressMode.Enabled && Progress?.State.DevelopmentMode == true
+            && Progress.State.Phase == ProgressPhase.Consulting && visits != null
+            && visits.State == PatientVisitController.VisitState.Consulting && RoomControlsAvailable;
+
+        public bool SkipDevelopmentPatient()
+        {
+            if (!CanSkipDevelopmentPatient) return false;
+            try
+            {
+                var state = Progress.State; var patient = state.Current;
+                var receipt = Progress.SkipDevelopmentVisit(new RoundIdentity { ProgressId = state.ProgressId,
+                    PatientId = patient.PatientId, CaseId = patient.CaseId, RoundId = patient.RoundId }, PhotoForPatient?.Invoke(patient.PatientId));
+                // Only the durable, marked development receipt enables presentation/departure.
+                visits.MarkConsultationEnded(visits.CurrentSessionId);
+                visits.dialogue.SetStatus("개발 스킵 저장 완료 · 환자 70 / 상담자 70 · 실제 AI 평가 아님");
+                LastError = ""; ResultCommitted?.Invoke(receipt); return true;
+            }
+            catch (Exception e) { Fail(e); return false; }
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private void OnGUI()
+        {
+            if (!DevelopmentProgressMode.Enabled) return;
+            GUI.Box(new Rect(12, 12, 360, 105), "DEV PREVIEW | separate save | no AI / coins");
+            bool previous = GUI.enabled;
+            GUI.enabled = previous && CanSkipDevelopmentPatient;
+            if (GUI.Button(new Rect(24, 42, 336, 34), "Skip patient (70 / 70)")) SkipDevelopmentPatient();
+            GUI.enabled = previous;
+            GUI.Label(new Rect(24, 80, 336, 24), Progress?.State.Phase == ProgressPhase.Finished
+                ? "5 / 5 - final ending unlocked" : "Play stopped: disable via Gamsamo > Development");
+        }
+#endif
         public ConfirmedResult PendingResult => Progress?.State.PendingPresentation;
         public bool CompletePresentation(string key)
         {
@@ -243,6 +310,6 @@ namespace Gamsamo.Progression
             if (visits != null && visits.dialogue != null) visits.dialogue.SetStatus(LastError);
             Debug.LogWarning("Game progress: " + LastError);
         }
-        private void OnDestroy() { if (roomStatus != null) Destroy(roomStatus.gameObject); visits?.room?.pcDesktopView?.BindEconomy(null); if (visits?.room != null) visits.room.CommittedSettlementForRecord = null; if (ai != null) ai.StateChanged -= OnAiChanged; }
+        private void OnDestroy() { if (roomStatus != null) Destroy(roomStatus.gameObject); visits?.room?.pcDesktopView?.BindEconomy(null); if (visits?.room != null) visits.room.CommittedSettlementForRecord = null; if (visits != null) visits.PatientArrived -= DevelopmentArrived; if (ai != null) ai.StateChanged -= OnAiChanged; }
     }
 }

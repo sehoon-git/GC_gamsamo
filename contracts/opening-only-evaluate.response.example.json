@@ -101,7 +101,7 @@
           "cleared": false,
           "evaluated_at": "2026-11-06T00:00:00+00:00",
           "model_revision": "mock-fixture-v4",
-          "prompt_version": "876de93671222a94",
+          "prompt_version": "2411e7246604e04e",
           "source_messages": 1,
           "metrics": {
             "seconds": 0.0,

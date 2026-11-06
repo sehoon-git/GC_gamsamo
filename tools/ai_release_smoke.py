@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
 
 from app.schemas.models import CaseState, PATIENT_IDS
 from app.core.config import Settings
+from app.core.dialogue_limits import PATIENT_MAX_CHARACTERS, PATIENT_MAX_OUTPUT_TOKENS
 from app.services.catalog import Catalog
 
 
@@ -30,7 +31,9 @@ async def check(args):
         assert health["inference"]["ready"] and health["format_version"] == 4
         assert health["mode"] == args.expect_mode
         assert set(health["supported_patient_ids"]) == set(PATIENT_IDS)
-        assert {"game_progress_scope", "patient_catalog_v1", "request_timing_v1", "volatile_request_replay_v1"} <= set(health["capabilities"])
+        assert {"game_progress_scope", "patient_catalog_v1", "request_timing_v1", "volatile_request_replay_v1", "single_bubble_reply_v1"} <= set(health["capabilities"])
+        assert health["patient_reply_limits"]["max_characters"] == PATIENT_MAX_CHARACTERS
+        assert 0 < health["patient_reply_limits"]["max_output_tokens"] <= PATIENT_MAX_OUTPUT_TOKENS
         if args.expect_revision:
             assert health["code_revision"] == args.expect_revision, "Unexpected code revision"
         catalog_response = await http.get("/v1/patients")
@@ -62,6 +65,9 @@ async def check(args):
             catalog.validate_state(state)
             assert state.game_progress_id == progress and state.patient_id == args.patient
             assert state.case_id == "smoke_case" and state.current.id == body["session_id"]
+            if action in ("start", "turn", "revisit"):
+                text = state.current.turns[-1].patient_text if action == "turn" else state.current.opening.patient_text
+                assert len(text) <= PATIENT_MAX_CHARACTERS and not any(c in text for c in "\r\n\t"), "Reply exceeds the single-bubble contract"
             replay = await http.post("/v1/dialogue/" + action, json=body)
             assert replay.status_code == 200 and replay.json() == result, f"{action}: lost-response replay changed"
             assert replay.headers["x-ai-cache"] == "hit"

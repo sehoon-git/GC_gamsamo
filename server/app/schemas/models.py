@@ -2,8 +2,9 @@ from datetime import datetime, timezone
 from typing import Annotated, Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer, model_validator
 from app.patient_registry import PATIENT_IDS, content_version
+from app.core.dialogue_limits import PATIENT_MAX_CHARACTERS, PATIENT_TEXT_PATTERN
 
 CONTENT_VERSION = content_version("seoyun")  # Existing Seoyun saves remain compatible.
 FORMAT_VERSION = 4
@@ -60,9 +61,16 @@ class Classification(Model):
 
 
 class PatientReply(Model):
-    # xgrammar cannot combine pattern + length keys; the output token cap bounds length.
-    text: str = Field(pattern=r"^[^\u4e00-\u9fff\u3040-\u30ff]+$")
+    # Only newly generated speech is bounded. Saved openings/turns remain compatible.
+    text: str = Field(pattern=PATIENT_TEXT_PATTERN)
     disclosed_fact_ids: list[str] = Field(max_length=3)
+
+    @field_validator("text")
+    @classmethod
+    def complete_short_reply(cls, value):
+        if len(value) > PATIENT_MAX_CHARACTERS:
+            raise ValueError(f"대사가 너무 깁니다. 한 가지 마음만 25~45자의 완결된 한국어 문장으로 다시 쓰세요. 최대 {PATIENT_MAX_CHARACTERS}자입니다.")
+        return value
 
 
 class Evidence(Model):

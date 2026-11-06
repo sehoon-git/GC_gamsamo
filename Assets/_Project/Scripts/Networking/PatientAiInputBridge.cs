@@ -45,7 +45,7 @@ namespace Gamsamo.Networking
 
         private void Refresh()
         {
-            if (view == null || adapter == null || visits == null) return;
+            if (!isActiveAndEnabled || view == null || adapter == null || visits == null) return;
             bool supported = adapter.IsAiVisit && visits.IsConsultationActive;
             view.SetApiMode(supported);
             view.SetConnectionLabel(supported ? (adapter.IsMock ? "모의 AI · 연결 시연" : visits.CurrentPatient.displayName + " AI 상담") : "임시 대화 시연 · AI 미연결");

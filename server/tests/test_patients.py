@@ -120,6 +120,19 @@ def test_character_specific_rubric_and_authored_choices(patient_id):
     assert patient['boundaries'] and patient['unspecified']
 
 
+@pytest.mark.parametrize('role', ['patient', 'patient_compact', 'evaluation'])
+def test_character_guidance_reaches_only_its_own_model_prompt(role):
+    settings = Settings(mock=True)
+    additions = {
+        patient_id: (settings.prompts / patient_id / (role + '.txt')).read_text('utf-8').strip()
+        for patient_id in PATIENT_IDS
+    }
+    for patient_id, addition in additions.items():
+        prompt = Catalog(settings, patient_id).prompts[role]
+        assert addition and prompt.rstrip().endswith(addition)
+        assert all(other not in prompt for key, other in additions.items() if key != patient_id)
+
+
 @pytest.mark.parametrize('patient_id', PATIENT_IDS)
 def test_reduced_context_preserves_all_authored_facts_conditions_and_rubric_once(patient_id):
     settings = Settings(mock=True)

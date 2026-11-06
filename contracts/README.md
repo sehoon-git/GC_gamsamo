@@ -339,4 +339,12 @@ PYTHONPATH=server python ai/evaluation/compare_runs.py \
 - `AdapterCompileChecks.csproj`는 Unity API **대역**으로 통신·뷰·진행 런타임을 컴파일하고 모드/파일 선택을 검사한다. `-p:DefineConstants=UNITY_EDITOR`, `-p:DefineConstants=DEVELOPMENT_BUILD`, 기본 출시 구성으로 나누어 실행한다. Development Build의 ON은 `-- --gamsamo-dev-skip`을 추가한다. 실제 Unity 컴파일/화면 검사를 대체하지 않는다.
 - Unity 6000.3.28f1: **Gamsamo → AI → Run Single Bubble Checks**, 또는 `-batchmode -quit -executeMethod Gamsamo.Editor.DialogueBubbleChecks.Run`. 기존 프리팹을 저장하지 않는 격리 검사에서 실제 TMP 글리프 경계, 60자, 세 배율, 긴 원문의 마스크/스크롤, 짧은 다음 답변의 스크롤 초기화를 확인한다. 보고서는 `artifacts/dialogue-fit/unity-checks.txt`다. Play에서는 입력/한글 IME·바로 보기·수동 종료·개발 ON/OFF·5인 진행·엔딩 후 이어하기를 확인한다.
 - 실제 모델 비교는 `ai/evaluation/reliability_benchmark.py --replay ... --operations start turn revisit`를 사용한다. 동일 입력·모델·시드로 기준/후보를 순차 실행하고, `--private-records`일 때만 합성 요청/결과와 모델의 JSON·종료 사유를 로컬에 보관한다. 숨은 추론·키는 저장하지 않는다. `check_bubble_budget.py <private-records> --output <local-report>`는 fontTools로 폰트 폭을 **추정**하며 실제 TMP 렌더 검사는 아니다. 원문/측정 산출물은 커밋하지 않는다.
-- 공용 서버는 이번 작업에서 재시작하지 않는다. API 변경은 별도 배포 승인이 필요하다. 앞 절의 후보 포트 실행/복구 절차를 사용하고 새 `health` capability·192/60 제한·실행 커밋을 확인한다. `tools/ai_release_smoke.py --lifecycle --timeout-probe`가 새 답변 길이와 동일 요청 재전송도 검사한다. UI만 먼저 배포하면 구 서버의 긴 답변은 스크롤로 읽을 수 있으며, 짧은 생성은 API 0.4.4 배포 후 적용된다. 복구 시 이전 API/프로필로 되돌리고 저장은 삭제하지 않는다.
+- 0.4.4 최초 PR에서는 공용 서버를 재시작하지 않았다. 후속 승인에 따른 현행 운영 버전은 아래 0.4.5 절을 따른다. 앞 절의 후보 포트 실행/복구 절차를 사용하고 새 `health` capability·192/60 제한·실행 커밋을 확인한다. `tools/ai_release_smoke.py --lifecycle --timeout-probe`가 새 답변 길이와 동일 요청 재전송도 검사한다. UI만 먼저 배포하면 구 서버의 긴 답변은 스크롤로 읽을 수 있으며, 짧은 생성은 API 0.4.4 배포 후 적용된다. 복구 시 이전 API/프로필로 되돌리고 저장은 삭제하지 않는다.
+
+
+## AI 0.4.5: 서윤의 첫 상담
+
+- 서윤은 구체적인 걱정에서 대화를 시작하고, 상황에 맞는 공감·제안에는 와닿은 이유나 해볼 만한 선택으로 바로 답한다. 실제로 수용한 생각은 다음 턴에도 유지한다. 빈말·압박에 억지로 동의하거나 상담 밖에서 문제가 이미 해결됐다고 만들지 않는다. 긴 후보를 한 칸으로 줄일 때도 이미 표현한 수용/선택을 남긴다.
+- 서윤에게만 적용하는 입문 채점: 네 환자 항목은 자기 비난과 상황 구분, 자기 감정 알아차림, 이미 해온 노력 인정, 작은 다음 선택이다. 카페나 친구의 비밀을 반드시 열거나 같은 변화를 여러 번 말해야 하는 조건은 없다. 구체적인 실제 발언 한 번도 해당 항목의 18~22/25점 근거가 될 수 있다. 구체적인 자기 이유/선택은 23~25점까지 가능하다. 근거가 없으면 0이며 단순 복창은 높은 점수 근거가 아니다. 두 축 각각 70점, 실제 원문 인용과 검증/저장 순서는 유지한다.
+- `server/prompts/seoyun/`의 대사·압축·평가 지침만 공통 지침 뒤에 붙인다. 다른 네 명의 설정·채점·확정된 평가와 저장은 바꾸지 않는다. API 주소/인증, 형식 4, 평가 항목 ID, 192토큰/60자도 같다. 기존 Unity도 접속할 수 있고 새 평가 항목 표시 문구는 프로젝트 갱신 후 보인다.
+- 이 서버의 운영자는 `systemctl --user is-active gamsamo-ai-api-045.service`로 상태를 확인할 수 있다. 이 버전을 되돌릴 때는 서비스 계정에서 `~/.local/share/gamsamo-ai/current/rollback`을 실행한다. 도구는 현재 버전을 대조하고 처리 중 요청이 끝나면 API만 0.4.4로 교체한다. 이전 소스·프롬프트·기존 프로필은 별도 고정 사본으로 보존한다. 전환 중 대상 기동이 실패하면 원래 버전을 복원한다. 터널, 모델 프로세스와 게임 저장을 바꾸지 않는다.

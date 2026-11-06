@@ -150,10 +150,10 @@ class VllmClient:
                                 # caller's character/disclosure validator below.
                                 compression = True
                                 request_messages = [
-                                    {"role": "system", "content": (self.settings.prompts / "patient_compact.txt").read_text("utf-8")},
+                                    {"role": "system", "content": (repair_context or {}).get("instruction") or (self.settings.prompts / "patient_compact.txt").read_text("utf-8")},
                                     {"role": "user", "content": compact({"source_text": draft["text"],
                                         "source_characters": len(draft["text"]), "target_characters": 30,
-                                        "speaker_background": repair_context or {},
+                                        "speaker_background": (repair_context or {}).get("speaker_background", {}),
                                         "source_fact_ids": draft.get("disclosed_fact_ids", [])})
                                         + "\n핵심 뜻·감정·사실을 보존하며 원래 길이의 절반 이하인 짧은 한 문장으로 고쳐 쓰세요."},
                                 ]

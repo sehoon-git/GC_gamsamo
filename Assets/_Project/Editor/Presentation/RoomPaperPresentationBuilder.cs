@@ -34,7 +34,7 @@ namespace Gamsamo.Editor.Presentation
             var shadow = image.GetComponents<Shadow>().FirstOrDefault(s => !(s is Outline)) ?? image.gameObject.AddComponent<Shadow>();
             shadow.effectColor = new Color(.22f, .12f, .08f, .22f); shadow.effectDistance = new Vector2(5, -7);
         }
-        static void Button(Button button)
+        internal static void StylePaperButton(Button button)
         {
             var image = button.GetComponent<Image>(); image.sprite = ButtonPaper; image.type = Image.Type.Sliced;
             image.preserveAspect = false; image.pixelsPerUnitMultiplier = 5; image.color = Color.white;
@@ -53,7 +53,7 @@ namespace Gamsamo.Editor.Presentation
         public static void StyleGuide(GuidebookView view)
         {
             var book = view.openButton;
-            Place(book.GetComponent<RectTransform>(), 1620, 32, 260, 80); Button(book);
+            Place(book.GetComponent<RectTransform>(), 1620, 32, 260, 80); StylePaperButton(book);
             var label = book.GetComponentInChildren<TMP_Text>(); Place(label.rectTransform, 20, 10, 220, 60); label.fontSize = 25;
             // Remove the old rectangular book decoration when restyling an existing prefab.
             foreach (string name in new[] { "BookLeftPage", "BookRightPage", "BookSpine" })
@@ -76,7 +76,7 @@ namespace Gamsamo.Editor.Presentation
             Place(view.titleText.rectTransform, 72, 88, 850, 56); view.titleText.fontSize = 34; view.titleText.fontStyle = FontStyles.Bold;
             Place(view.bodyText.rectTransform, 72, 190, 1016, 414); view.bodyText.fontSize = 28; view.bodyText.lineSpacing = 12;
             view.bodyText.color = Ink;
-            Button(view.previousButton); Button(view.nextButton); Button(view.closeButton);
+            StylePaperButton(view.previousButton); StylePaperButton(view.nextButton); StylePaperButton(view.closeButton);
             Place(view.closeButton.GetComponent<RectTransform>(), 950, 46, 140, 66);
             view.panel.GetComponent<Image>().color = new Color(.16f, .09f, .06f, .58f);
         }
@@ -84,7 +84,7 @@ namespace Gamsamo.Editor.Presentation
         {
             var root = B.CanvasRoot("RoomStatus"); root.GetComponent<Canvas>().sortingOrder = 80;
             var view = root.AddComponent<RoomStatusView>(); view.controls = root.AddComponent<CanvasGroup>();
-            view.homeButton = B.Button("Home", root.transform, "시작 화면으로", 32, 32, 250, 80); Button(view.homeButton);
+            view.homeButton = B.Button("Home", root.transform, "시작 화면으로", 32, 32, 250, 80); StylePaperButton(view.homeButton);
             var card = B.Image("StatusPaper", root.transform, 40, 120, 480, 280); Paper(card); card.raycastTarget = true;
             view.errorCard = card.gameObject;
             B.Label("Heading", card.transform, "진행을 확인해 주세요", 26, 20, 428, 38, 26).fontStyle = FontStyles.Bold;
@@ -97,7 +97,7 @@ namespace Gamsamo.Editor.Presentation
             view.messageScroll = viewport.gameObject.AddComponent<ScrollRect>(); view.messageScroll.viewport = viewport.rectTransform;
             view.messageScroll.content = view.message.rectTransform; view.messageScroll.horizontal = false;
             view.messageScroll.movementType = ScrollRect.MovementType.Clamped; view.messageScroll.scrollSensitivity = 24;
-            view.retryButton = B.Button("Retry", card.transform, "저장 · 연결 재시도", 24, 208, 432, 58); Button(view.retryButton);
+            view.retryButton = B.Button("Retry", card.transform, "저장 · 연결 재시도", 24, 208, 432, 58); StylePaperButton(view.retryButton);
             view.retryButton.navigation = view.homeButton.navigation = new Navigation { mode = Navigation.Mode.Automatic };
             card.gameObject.SetActive(false);
             return root;

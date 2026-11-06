@@ -60,3 +60,16 @@ $sfz = "$revoice/UprightPianoKW-SFZ+FLAC-20220221/UprightPianoKW-20220221.sfz"
 ```
 
 최종 마스터에는 manifest의 시작·길이·크로스페이드 값을 사용한다. 상담실은 **재연주 WAV**의 마지막 샘플 이후 파형을 시작 구간으로 크로스페이드한다. 엔딩은 **ACE 생성 WAV**에 짧은 어택 보호 페이드와 끝 감쇠를 적용한다. 둘 다 네이티브 48kHz 스테레오 16-bit PCM으로 내보낸다. 게인은 -20 LUFS-I를 겨냥하되 4배 보간 피크가 -1.15 dBTP를 넘지 않게 제한한다.
+
+## 사진 앨범 후일담곡 「사진을 덮으면」
+
+개인 앨범과 최종 크레딧은 `EndingContent.asset`의 `endingMusic`으로 이 곡을 선택한다. 위에 기록한 MIT ACE-Step 1.5 Turbo Q4_K_M와 같은 텍스트 인코더·VAE로 새로 생성했다. Apple M4 Pro의 Metal에서 시드 26061107, 8단계, 64초를 사용했다. 펠트 피아노의 짧은 상승 음형에 나일론 기타가 응답하는 72 BPM의 조용한 연주를 요청했다. 실제 프롬프트와 전체 요청은 [epilogue-request.json](epilogue-request.json)에 있다.
+
+다음 예시는 임시 제작 폴더에서 실행한다. `ace-synth`는 기존 고정 리비전으로 빌드한 실행 파일이고 `models`는 위 세 가중치를 담은 폴더다. 프로젝트의 요청 JSON을 여기에 복사한 후 생성한다.
+
+```sh
+./ace-synth --models models --request epilogue-request.json --vae-chunk 128 --vae-overlap 24
+ffmpeg -i epilogue-request0.wav -t 61 -af 'volume=3.2dB,afade=t=in:d=0.08,afade=t=out:st=60:d=1' -ar 48000 -c:a libvorbis -q:a 6 -metadata title='사진을 덮으면' -metadata comment='ACE-Step 1.5 Turbo, seed 26061107' bgm_epilogue.ogg
+```
+
+최종 파일은 61초, 48 kHz 스테레오 Ogg Vorbis다. 끝의 무음 여백을 줄였다. 측정값은 -21.09 LUFS-I, -2.35 dBTP이며 배포 파일 SHA-256은 `707f58a3ff3f5cfd8f39df4c3771a99e557fc2c6cdbdfacfa761b75572479786`이다. Unity 프로젝트에는 완성 음원만 들어간다.

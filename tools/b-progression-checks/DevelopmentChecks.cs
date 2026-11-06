@@ -43,18 +43,30 @@ static class DevelopmentChecks
                     && receipt.Granted == 0 && progress.State.Economy.Balance == initialBalance, "explicit 70/70 preview has no coin award " + i);
                 var committed = progress.State.Revision;
                 progress = new ProgressService(store);
+                check(progress.HasPendingPresentation && !progress.CanSkipDevelopmentVisit
+                    && progress.State.Photos.SequenceEqual(roster.Take(i + 1).Select(id => id + "_smile")),
+                    "restored presentation owns input and carries only earned photos " + i);
                 progress.SkipDevelopmentVisit(identity, patient.PatientId + "_smile");
                 check(progress.State.Revision == committed && progress.State.Settlements.Count == i + 1, "retry/restart never duplicates development settlement " + i);
                 reject(() => progress.Depart(), "developer skip still waits for presentation " + i);
-                progress.SavePresentationStage(identity.Key, "skipped"); progress.Depart();
+                progress.SavePresentationStage(identity.Key, "ending");
+                if (i == roster.Length - 1)
+                    reject(() => progress.CompleteFinalEnding(), "fifth photo alone cannot complete final credits before departure");
+                progress.SavePresentationStage(identity.Key, "completed");
+                check(!progress.HasPendingPresentation && progress.State.Phase == ProgressPhase.AwaitingDeparture,
+                    "completed personal ending waits for explicit departure " + i);
+                progress.Depart();
                 progress.SkipDevelopmentVisit(identity);
                 check(progress.State.CurrentIndex == i + 1 && progress.State.Settlements.Count == i + 1, "late prior-round replay cannot skip next patient " + i);
                 check(progress.State.Patients.All(p => p.AiSnapshot == null && p.PendingAiOperation == null), "no fake AI save or pending request " + i);
             }
             check(progress.State.FinalEndingUnlocked && progress.State.Phase == ProgressPhase.Finished && progress.State.Photos.Count == 5,
                 "all five development patients reach final ending");
-            progress.CompleteFinalEnding();
-            check(new ProgressService(store).State.FinalEndingPlayed, "development ending completion survives restart");
+            check(new ProgressService(store).HasPendingPresentation, "last explicit departure restores pending final credits");
+            progress.CompleteFinalEnding("skipped");
+            var restored = new ProgressService(store);
+            check(restored.State.FinalEndingPlayed && restored.State.FinalPresentationStage == "skipped" && !restored.HasPendingPresentation,
+                "final playback stage survives restart without reopening credits");
             var mixed = progress.State; mixed.DevelopmentMode = false;
             reject(() => mixed.Validate(), "developer receipt is rejected in normal progress");
             check(normalBytes.SequenceEqual(File.ReadAllBytes(Path.Combine(root, "normal.json"))), "development traversal preserves normal save byte for byte");

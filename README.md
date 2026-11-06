@@ -140,4 +140,4 @@ AI 서버는 FastAPI·LangGraph·vLLM으로 구성했습니다. 게임 진행, �
 
 한글 표시는 **Noto Sans CJK KR**을 사용합니다. 상담실 곡의 피아노 재연주에는 **FreePats** 샘플을, 효과음 제작에는 **Kenney**의 CC0 Foley 자료를 활용했습니다. [폰트 라이선스](Assets/_Project/Fonts/OFL.txt)와 [음원별 출처·라이선스](tools/audio-production/manifest.json)를 프로젝트 원본에 포함했습니다.
 
-현재 시연 버전에서는 일부 후일담 사진과 크레딧에 `준비 중` 표시가 나타날 수 있습니다.
+내담자 한 명을 클리어하면 다섯 장의 후일담과 웃는 얼굴을 볼 수 있습니다. 마지막 내담자가 퇴장한 뒤에는 다섯 사람의 기념사진과 최종 크레딧이 열립니다.

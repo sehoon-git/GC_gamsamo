@@ -63,7 +63,7 @@ def write_private(path, value):
 
 def source_fingerprint(root):
     digest = hashlib.sha256()
-    paths = list((root / "server/app").rglob("*.py")) + list((root / "server/prompts").glob("*.txt"))
+    paths = list((root / "server/app").rglob("*.py")) + list((root / "server/prompts").rglob("*.txt"))
     paths += list((root / "Assets/StreamingAssets/GameData/Patients").glob("*.json"))
     paths.append(root / "Assets/StreamingAssets/GameData/patient-catalog.json")
     for path in sorted(paths):

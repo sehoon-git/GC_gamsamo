@@ -220,7 +220,7 @@ async def test_default_logs_and_health_have_provenance_but_no_dialogue_or_key(ca
     async with client(create_app(settings)) as http:
         health = (await http.get("/health")).json()
         assert health["api_version"] == "0.4.4" and health["code_revision"] == "test-revision"
-        assert health["patient_reply_limits"] == {"max_characters": 56, "max_output_tokens": 192, "single_paragraph": True}
+        assert health["patient_reply_limits"] == {"max_characters": 60, "max_output_tokens": 192, "single_paragraph": True}
         assert "single_bubble_reply_v1" in health["capabilities"]
         assert health["max_model_len"] == 16384 and "request_timing_v1" in health["capabilities"]
         state = opened_case().model_dump(mode="json")

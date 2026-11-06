@@ -56,7 +56,7 @@ def main():
             "at_26pt": estimate(text, font, 26), "at_24pt": estimate(text, font, 24)})
     report = {"method": "font advance / whitespace word-wrap estimate; not Unity TMP rendering",
         "font_sha256": hashlib.sha256(font_path.read_bytes()).hexdigest(), "body_size": [790, 76],
-        "n": len(rows), "over_56_characters": sum(row["characters"] > 56 for row in rows),
+        "n": len(rows), "over_60_characters": sum(row["characters"] > 60 for row in rows),
         "estimated_overflow_at_24pt": sum(not row["at_24pt"]["fits"] for row in rows), "rows": rows}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")

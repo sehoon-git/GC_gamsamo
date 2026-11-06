@@ -11,7 +11,7 @@ from app.schemas.models import CaseState, Metrics, OpenRequest, PatientReply
 from app.services.dialogue import DialogueService
 
 
-@pytest.mark.parametrize("text", ["가" * 57, "줄바꿈\n안 돼요.", "탭\t안 돼요.", "숨김\u200b문자예요.", "문단\u2028구분이에요.", ""])
+@pytest.mark.parametrize("text", ["가" * 61, "줄바꿈\n안 돼요.", "탭\t안 돼요.", "숨김\u200b문자예요.", "문단\u2028구분이에요.", ""])
 def test_new_reply_rejects_oversize_and_invisible_layout_breaks(text):
     with pytest.raises(ValidationError):
         PatientReply(text=text, disclosed_fact_ids=[])
@@ -30,7 +30,7 @@ def test_exact_boundary_and_existing_long_transcript_are_not_cut():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("failure", ["oversize", "truncated", "unfinished"])
+@pytest.mark.parametrize("failure", ["oversize", "truncated", "unfinished", "missing_choice"])
 @pytest.mark.parametrize("repair_succeeds", [True, False])
 async def test_budget_repair_and_failure_leave_input_state_intact(settings, catalog, failure, repair_succeeds):
     calls = []
@@ -39,7 +39,9 @@ async def test_budget_repair_and_failure_leave_input_state_intact(settings, cata
         calls.append(payload)
         assert payload["max_tokens"] == PATIENT_MAX_OUTPUT_TOKENS
         good = repair_succeeds and len(calls) == 2
-        text = "제 마음을 더 이야기하고 싶어요." if good else {"oversize": "가" * 57 + ".", "truncated": "대답하다가", "unfinished": "제 마음이 아직"}[failure]
+        if failure == "missing_choice" and not good:
+            return httpx.Response(200, json={"choices": []})
+        text = "제 마음을 더 이야기하고 싶어요." if good else {"oversize": "가" * 61 + ".", "truncated": "대답하다가", "unfinished": "제 마음이 아직"}[failure]
         return httpx.Response(200, json={"choices": [{"finish_reason": "length" if failure == "truncated" and not good else "stop",
             "message": {"content": json.dumps({"text": text, "disclosed_fact_ids": []}, ensure_ascii=False)}}]})
     llm = VllmClient(settings)
@@ -60,6 +62,11 @@ async def test_budget_repair_and_failure_leave_input_state_intact(settings, cata
                 await operation
             assert error.value.code == "invalid_model_output"
         assert len(calls) == 2 and state.model_dump_json() == original
+        if failure == "oversize":
+            # Compression has its source meaning, but never appends that rejected
+            # draft to the saved conversation or substitutes a clipped substring.
+            feedback = calls[-1]["messages"][-1]["content"]
+            assert "핵심 뜻·감정·사실을 그대로 유지" in feedback and "가" * 61 in feedback
         assert llm.output_budget("evaluation") == llm.config["roles"]["evaluation"]["max_tokens"]
         assert llm.output_budget("summary") == llm.config["roles"]["summary"]["max_tokens"]
     finally:

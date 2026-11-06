@@ -11,7 +11,7 @@
   "model_revision": "mock-fixture-v4",
   "tokenizer_revision": "mock-fixture-v4",
   "max_model_len": 16384,
-  "prompt_version": "2411e7246604e04e",
+  "prompt_version": "a76e1fc16ddd8211",
   "busy": false,
   "format_version": 4,
   "mode": "mock",
@@ -23,7 +23,7 @@
     "single_bubble_reply_v1"
   ],
   "patient_reply_limits": {
-    "max_characters": 56,
+    "max_characters": 60,
     "max_output_tokens": 192,
     "single_paragraph": true
   },

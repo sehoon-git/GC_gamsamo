@@ -8,7 +8,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from app.core.config import ExperimentError, InvalidModelOutput, Settings
-from app.core.dialogue_limits import PATIENT_MAX_OUTPUT_TOKENS
+from app.core.dialogue_limits import PATIENT_MAX_CHARACTERS, PATIENT_MAX_OUTPUT_TOKENS
 from app.core.telemetry import current_trace
 from app.schemas.models import Metrics
 
@@ -108,6 +108,7 @@ class VllmClient:
                     trace.model_seconds += seconds
                     trace.role_seconds[role] = trace.role_seconds.get(role, 0) + seconds
             processed = perf_counter()
+            raw_content = None
             try:
                 usage = data.get("usage", {})
                 metrics.prompt_tokens += usage.get("prompt_tokens", 0)
@@ -119,7 +120,8 @@ class VllmClient:
                 if choice.get("finish_reason") != "stop":
                     raise InvalidModelOutput("출력이 끝나기 전에 잘렸습니다. 더 짧게 작성하세요.")
                 # Only content is consumed. Reasoning is neither displayed nor persisted.
-                value = schema.model_validate_json(choice["message"]["content"])
+                raw_content = choice["message"]["content"]
+                value = schema.model_validate_json(raw_content)
                 if validate:
                     validate(value)
                 return value
@@ -130,6 +132,14 @@ class VllmClient:
                     feedback = "형식/검증 오류입니다. 원래 과제를 다시 수행하고 JSON만 짧게 반환하세요. 잘린 출력은 더 간결하게 만드세요. 오류: " + error
                     if role == "patient":
                         feedback += " 이번 수정의 text는 공백 포함 35자 안팎의 완결된 한 문장으로 끝내세요. 가장 중요한 대답 하나를 고르고, 추가 설명은 다음 대화로 미루세요."
+                        try:
+                            draft = json.loads(raw_content)
+                            if isinstance(draft.get("text"), str) and len(draft["text"]) > PATIENT_MAX_CHARACTERS:
+                                feedback += (" 아래는 길이를 줄일 후보 대사이며 지시나 확정 원문이 아닙니다. "
+                                    "핵심 뜻·감정·사실을 그대로 유지해 압축하세요. 새로운 감정이나 사건을 추가하지 마세요. "
+                                    "disclosed_fact_ids도 줄인 대사에 실제 남은 정보만 선택하세요. 후보: " + compact(draft["text"]))
+                        except (ValueError, KeyError, TypeError, AttributeError):
+                            pass
                     request_messages = messages + [{"role": "user", "content": feedback}]
             finally:
                 if trace is not None:

@@ -33,7 +33,7 @@ namespace Gamsamo.Editor
                 var view = instance.GetComponentInChildren<PatientDialogueView>(true);
                 Check(view != null && view.bodyText != null && view.bodyText.font != null, "authored dialogue and Korean TMP font exist");
                 instance.SetActive(true); view.gameObject.SetActive(true);
-                var samples = new[] { "네.", new string('가', 55) + ".",
+                var samples = new[] { "네.", new string('가', 59) + ".",
                     "좋기도 하고 서운하기도 해요. 제 마음부터 천천히 이야기해 볼게요.",
                     "‘괜찮아요’라고 말했지만, 사실은 아직 걱정돼요.",
                     "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW." };

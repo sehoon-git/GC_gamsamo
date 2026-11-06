@@ -33,8 +33,8 @@ namespace UnityEngine
     public class GameObject : Object { public Transform transform; public GameObject() { } public GameObject(string name, params Type[] components) { } public void SetActive(bool active) { } public T AddComponent<T>() => default(T); public T GetComponent<T>() => default(T); }
     public class RectTransform : Transform { public Vector2 anchoredPosition, anchorMin, anchorMax, pivot, sizeDelta; public Rect rect; }
     public struct Rect { public Vector2 size; public Rect(float x, float y, float width, float height) { size = new Vector2(width, height); } }
-    public struct Vector3 { }
-    public struct Quaternion { }
+    public struct Vector3 { public static Vector3 one => new Vector3(); }
+    public struct Quaternion { public static Quaternion identity => new Quaternion(); }
     public struct Color { public static Color clear => new Color(); }
     public class Transform : Component { public Transform parent; public Vector3 localScale; public Quaternion localRotation; public void SetParent(Transform parent, bool worldPositionStays) { } public void SetSiblingIndex(int value) { } public int GetSiblingIndex() => 0; }
     public class Sprite : Object { }

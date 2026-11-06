@@ -139,6 +139,7 @@ namespace Gamsamo.Dialogue
             background.color = Color.clear; background.raycastTarget = true;
             originalFontSize = bodyText.fontSize;
             content.SetParent(bubbleViewport, false);
+            content.localScale = Vector3.one; content.localRotation = Quaternion.identity;
             content.anchorMin = new Vector2(0, 1); content.anchorMax = Vector2.one;
             content.pivot = new Vector2(.5f, 1); content.anchoredPosition = Vector2.zero;
             bodyText.enableAutoSizing = false;

@@ -316,9 +316,9 @@ PYTHONPATH=server python ai/evaluation/compare_runs.py \
 
 ### 응답 길이와 이전 저장
 
-- 새 첫 발화·일반 답변·재방문 첫 발화의 `text`는 **공백·문장부호 포함 최대 56자, 줄바꿈 없는 1~2문장**이다. 보통 25~45자를 지향한다. 환자 생성 요청의 `max_tokens`는 **192**이며 JSON과 공개 ID까지 포함한다. 낮은 사용자 설정은 유지하고, 이전/로컬 프로필이 512여도 서버가 192로 제한한다. 분류·요약·평가 토큰 예산과 실제 평가 70/70 기준은 바꾸지 않는다.
-- 한국어 글자와 토큰의 비율은 일정하지 않다. 토큰 상한과 별도로 완결된 출력의 길이를 검사한다. `finish_reason=length`, 너무 긴 대사, 문장 미완성, 형식/공개 조건 위반은 한 번 다시 생성한다. 두 번 실패하면 `invalid_model_output`(502, 재시도 가능)이며 원문·revision을 확정하지 않는다. 대사를 잘라 붙이거나 임시 대사로 성공 처리하지 않는다. JSON 생성 문법에 최대 글자 수를 강제하지 않는다. 실제 모델에서 단어 중간에 문자열이 닫히는 현상을 확인했기 때문이다.
-- 성공 응답 DTO·형식 4·콘텐츠 버전·기존 긴 원문은 그대로다. 기존 저장의 `patient_text`에는 새 길이 제한을 소급 적용하지 않는다. `/health`에 `single_bubble_reply_v1` capability와 `patient_reply_limits={max_characters:56,max_output_tokens:192,single_paragraph:true}`를 추가한다. 구 클라이언트는 추가 필드를 무시할 수 있다.
+- 새 첫 발화·일반 답변·재방문 첫 발화의 `text`는 **공백·문장부호 포함 최대 60자, 줄바꿈 없는 1~2문장**이다. 보통 25~45자를 지향한다. 환자 생성 요청의 `max_tokens`는 **192**이며 JSON과 공개 ID까지 포함한다. 낮은 사용자 설정은 유지하고, 이전/로컬 프로필이 512여도 서버가 192로 제한한다. 분류·요약·평가 토큰 예산과 실제 평가 70/70 기준은 바꾸지 않는다.
+- 한국어 글자와 토큰의 비율은 일정하지 않다. 토큰 상한과 별도로 완결된 출력의 길이를 검사한다. `finish_reason=length`, 너무 긴 대사, 문장 미완성, 형식/공개 조건 위반은 한 번 다시 생성한다. 두 번 실패하면 `invalid_model_output`(502, 재시도 가능)이며 원문·revision을 확정하지 않는다. 대사를 잘라 붙이거나 임시 대사로 성공 처리하지 않는다. 길이 초과 수정에는 미확정 후보 대사를 함께 주어 핵심 뜻·감정·사실을 유지하며 압축한다. 이 후보는 원문에 저장하지 않는다. JSON 생성 문법에 최대 글자 수를 강제하지 않는다. 실제 모델에서 단어 중간에 문자열이 닫히는 현상을 확인했기 때문이다.
+- 성공 응답 DTO·형식 4·콘텐츠 버전·기존 긴 원문은 그대로다. 기존 저장의 `patient_text`에는 새 길이 제한을 소급 적용하지 않는다. `/health`에 `single_bubble_reply_v1` capability와 `patient_reply_limits={max_characters:60,max_output_tokens:192,single_paragraph:true}`를 추가한다. 구 클라이언트는 추가 필드를 무시할 수 있다.
 - Unity `PatientDialogueView`는 이전/다음 쪽과 쪽 번호를 숨긴다. ‘바로 보기’는 타이핑만 완료하며, 기존 `AdvancePage()`는 false를 반환한다. 현재 본문 790×76, 26pt에서 시작해 필요 시 24pt까지 조절한다. 이전 서버/저장의 긴 답변이나 예상보다 좁은 레이아웃은 **같은 대화칸의 마스크·스크롤**로 원문 전체를 보존한다. 새 짧은 답변에서는 스크롤이 필요하지 않는지 실제 TMP 검사로 확인한다. 기록부·안내서의 쪽 이동은 그대로다.
 
 ### 개발 전용 70/70 스킵
@@ -337,6 +337,6 @@ PYTHONPATH=server python ai/evaluation/compare_runs.py \
 
 - 서버: `python -m pytest server/tests -q`, `python tools/export_contracts.py --check`. C# 계약: `dotnet run --project tools/unity-client-checks/UnityClientChecks.csproj -- <repo-root>`. 진행: `dotnet run --project tools/b-progression-checks/ProgressChecks.csproj`.
 - `AdapterCompileChecks.csproj`는 Unity API **대역**으로 통신·뷰·진행 런타임을 컴파일하고 모드/파일 선택을 검사한다. `-p:DefineConstants=UNITY_EDITOR`, `-p:DefineConstants=DEVELOPMENT_BUILD`, 기본 출시 구성으로 나누어 실행한다. Development Build의 ON은 `-- --gamsamo-dev-skip`을 추가한다. 실제 Unity 컴파일/화면 검사를 대체하지 않는다.
-- Unity 6000.3.28f1: **Gamsamo → AI → Run Single Bubble Checks**, 또는 `-batchmode -quit -executeMethod Gamsamo.Editor.DialogueBubbleChecks.Run`. 기존 프리팹을 저장하지 않는 격리 검사에서 실제 TMP 글리프 경계, 56자, 세 배율, 긴 원문의 마스크/스크롤, 짧은 다음 답변의 스크롤 초기화를 확인한다. 보고서는 `artifacts/dialogue-fit/unity-checks.txt`다. Play에서는 입력/한글 IME·바로 보기·수동 종료·개발 ON/OFF·5인 진행·엔딩 후 이어하기를 확인한다.
+- Unity 6000.3.28f1: **Gamsamo → AI → Run Single Bubble Checks**, 또는 `-batchmode -quit -executeMethod Gamsamo.Editor.DialogueBubbleChecks.Run`. 기존 프리팹을 저장하지 않는 격리 검사에서 실제 TMP 글리프 경계, 60자, 세 배율, 긴 원문의 마스크/스크롤, 짧은 다음 답변의 스크롤 초기화를 확인한다. 보고서는 `artifacts/dialogue-fit/unity-checks.txt`다. Play에서는 입력/한글 IME·바로 보기·수동 종료·개발 ON/OFF·5인 진행·엔딩 후 이어하기를 확인한다.
 - 실제 모델 비교는 `ai/evaluation/reliability_benchmark.py --replay ... --operations start turn revisit`를 사용한다. 동일 입력·모델·시드로 기준/후보를 순차 실행하고, `--private-records`일 때만 합성 요청/결과와 모델의 JSON·종료 사유를 로컬에 보관한다. 숨은 추론·키는 저장하지 않는다. `check_bubble_budget.py <private-records> --output <local-report>`는 fontTools로 폰트 폭을 **추정**하며 실제 TMP 렌더 검사는 아니다. 원문/측정 산출물은 커밋하지 않는다.
-- 공용 서버는 이번 작업에서 재시작하지 않는다. API 변경은 별도 배포 승인이 필요하다. 앞 절의 후보 포트 실행/복구 절차를 사용하고 새 `health` capability·192/56 제한·실행 커밋을 확인한다. `tools/ai_release_smoke.py --lifecycle --timeout-probe`가 새 답변 길이와 동일 요청 재전송도 검사한다. UI만 먼저 배포하면 구 서버의 긴 답변은 스크롤로 읽을 수 있으며, 짧은 생성은 API 0.4.4 배포 후 적용된다. 복구 시 이전 API/프로필로 되돌리고 저장은 삭제하지 않는다.
+- 공용 서버는 이번 작업에서 재시작하지 않는다. API 변경은 별도 배포 승인이 필요하다. 앞 절의 후보 포트 실행/복구 절차를 사용하고 새 `health` capability·192/60 제한·실행 커밋을 확인한다. `tools/ai_release_smoke.py --lifecycle --timeout-probe`가 새 답변 길이와 동일 요청 재전송도 검사한다. UI만 먼저 배포하면 구 서버의 긴 답변은 스크롤로 읽을 수 있으며, 짧은 생성은 API 0.4.4 배포 후 적용된다. 복구 시 이전 API/프로필로 되돌리고 저장은 삭제하지 않는다.

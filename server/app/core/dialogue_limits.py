@@ -5,7 +5,7 @@ separate because Korean characters and model tokens do not have a fixed ratio.
 Existing transcript fields deliberately keep their original, unlimited schema.
 """
 PATIENT_MAX_OUTPUT_TOKENS = 192
-PATIENT_MAX_CHARACTERS = 56
+PATIENT_MAX_CHARACTERS = 60
 
 # Do not force a grammar length boundary: it can close the JSON string in the
 # middle of a Korean word. Validate length after a naturally finished response.

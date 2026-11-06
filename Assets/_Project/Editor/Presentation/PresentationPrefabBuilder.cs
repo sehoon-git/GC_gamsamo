@@ -69,11 +69,6 @@ namespace Gamsamo.Editor.Presentation
             var root = CanvasRoot("Guidebook");
             var view = root.AddComponent<GuidebookView>();
             view.openButton = Button("Book", root.transform, "게임 안내", 1670, 40, 200, 76);
-            var bookLabel = view.openButton.GetComponentInChildren<TMP_Text>().rectTransform;
-            bookLabel.anchoredPosition = new Vector2(65, -6); bookLabel.sizeDelta = new Vector2(129, 64);
-            Image("BookLeftPage", view.openButton.transform, 12, 19, 21, 38).color = Paper;
-            Image("BookRightPage", view.openButton.transform, 36, 19, 21, 38).color = Paper;
-            Image("BookSpine", view.openButton.transform, 33, 18, 3, 40).color = Ink;
             view.panel = Modal(root.transform);
             Transform paper = PaperPanel(view.panel.transform);
             view.titleText = Label("Title", paper, "게임 안내", 70, 48, 850, 82, 40);

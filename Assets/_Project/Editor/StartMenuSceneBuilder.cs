@@ -32,8 +32,11 @@ namespace Gamsamo.Editor
                 return;
             }
             var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
-            var artwork = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_Project/Art/Backgrounds/ConsultationRoom.png");
-            if (font == null || artwork == null || !File.Exists(ConsultationRoomSceneBuilder.ScenePath))
+            var roomPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/ConsultationRoomUI.prefab");
+            var roomArtwork = roomPrefab != null ? roomPrefab.GetComponent<ConsultationRoomAppearance>() : null;
+            var artwork = roomArtwork != null ? roomArtwork.baseTexture : null;
+            if (font == null || artwork == null || roomArtwork.editorPreviewLayers == null
+                || !File.Exists(ConsultationRoomSceneBuilder.ScenePath))
                 throw new InvalidOperationException("The existing Korean font, room artwork and consultation scene are required.");
             Scene previous = SceneManager.GetActiveScene();
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
@@ -65,6 +68,11 @@ namespace Gamsamo.Editor
                 image.texture = artwork;
                 image.color = new Color(0.86f, 0.86f, 0.86f, 1);
                 image.raycastTarget = false;
+                var roomLayers = UnityEngine.Object.Instantiate(roomArtwork.editorPreviewLayers, background, false);
+                roomLayers.name = "DefaultRoomLayers";
+                roomLayers.SetActive(true);
+                foreach (var layer in roomLayers.GetComponentsInChildren<RawImage>(true))
+                    layer.color = image.color;
                 RectTransform shade = Rect("BrownGradient", canvas);
                 Stretch(shade);
                 shade.gameObject.AddComponent<StartMenuShade>().raycastTarget = false;
@@ -75,8 +83,8 @@ namespace Gamsamo.Editor
                 content.sizeDelta = new Vector2(480, 840);
                 content.anchoredPosition = Vector2.zero;
                 menu.menuGroup = content.gameObject.AddComponent<CanvasGroup>();
-                Text("TitleFirst", content, font, 0, 180, 400, 110, 62, "상담", Cream).characterSpacing = 8;
-                Text("TitleLast", content, font, -3, 243, 450, 180, 108, "커피톡", Cream);
+                Text("TitleFirst", content, font, 0, 180, 400, 110, 62, "우리동네", Cream).characterSpacing = 8;
+                Text("TitleLast", content, font, -3, 243, 450, 180, 108, "상담사", Cream);
                 Solid("TitleRule", content, 0, 425, 42, 2, new Color32(182, 182, 136, 230));
                 menu.menuItems = new StartMenuButton[4];
                 string[] captions = { "새 게임", "불러오기", "설정", "게임 종료" };
@@ -107,7 +115,7 @@ namespace Gamsamo.Editor
                 menu.quitButton = menu.menuItems[3].button;
                 VerticalNavigation(new Selectable[] { menu.newGameButton, menu.settingsButton, menu.quitButton });
                 menu.saveStatus = Text("SaveStatus", content, font, 27, 612, 400, 26, 14,
-                    "저장된 진행이 없습니다", new Color32(156, 142, 122, 255));
+                    "", new Color32(156, 142, 122, 255));
                 menu.transitionStatus = Text("TransitionStatus", content, font, 27, 802, 440, 60, 18, "", Cream);
 
                 BuildSettings(menu, canvas, font);

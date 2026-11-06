@@ -466,7 +466,7 @@ namespace Gamsamo.Dialogue
                 case DialogueProcessingState.EndingRequested: return "진행 중인 응답과 기록 저장 후 상담을 마칠게요";
                 case DialogueProcessingState.Saved: return "상담 기록 저장 완료 · 상세 결과는 서류에서 확인해 주세요";
                 case DialogueProcessingState.Error: return "처리를 완료하지 못했어요. 재시도로 이어갈 수 있어요";
-                default: return "답변을 자유롭게 적어 주세요";
+                default: return string.Empty;
             }
         }
     }

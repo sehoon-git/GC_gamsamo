@@ -45,7 +45,7 @@ namespace Gamsamo.UI
             try
             {
                 loadButton.interactable = Gamsamo.Progression.GameProgressSession.Open() != null;
-                saveStatus.text = loadButton.interactable ? "저장된 진행을 이어갈 수 있습니다 · 새 게임도 이전 기록을 보존합니다" : "저장된 진행이 없습니다";
+                saveStatus.text = "";
             }
             catch (Exception e) { loadButton.interactable = false; newGameButton.interactable = false; saveStatus.text = e.Message; }
             settingsModal.SetActive(false);

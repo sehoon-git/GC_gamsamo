@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Gamsamo.Editor
@@ -20,6 +21,8 @@ namespace Gamsamo.Editor
         private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
         private static void Field(object target, string name, object value) => target.GetType().GetField(name, Private).SetValue(target, value);
         private static object Call(object target, string name) => target.GetType().GetMethod(name, Private).Invoke(target, null);
+        private static void BindSession(PatientAiAdapter adapter, AiSession session) =>
+            typeof(PatientAiAdapter).GetMethod("BindSession", Private).Invoke(adapter, new object[] { session });
         private static void Property(object target, string name, object value) => target.GetType().GetProperty(name).SetValue(target, value);
         private static JObject Example(string name) => AiProtocol.Parse(File.ReadAllText("contracts/" + name + ".example.json", Encoding.UTF8));
 
@@ -40,8 +43,19 @@ namespace Gamsamo.Editor
             string temporary = Path.Combine(Path.GetTempPath(), "GamsamoInputChecks_" + Guid.NewGuid().ToString("N"));
             var host = new GameObject("IsolatedInputBridgeChecks", typeof(RectTransform));
             host.hideFlags = HideFlags.HideAndDontSave;
+            EventSystem previousEventSystem = EventSystem.current;
+            EventSystem eventSystem = null;
+            TMP_FontAsset inputFont = null;
             try
             {
+                var eventObject = new GameObject("IsolatedInputEventSystem");
+                eventObject.transform.SetParent(host.transform, false);
+                eventSystem = eventObject.AddComponent<EventSystem>();
+                // Edit-mode checks do not receive the normal Play-mode enable lifecycle.
+                var systems = (System.Collections.IList)typeof(EventSystem)
+                    .GetField("m_EventSystems", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+                if (!systems.Contains(eventSystem)) Call(eventSystem, "OnEnable");
+                EventSystem.current = eventSystem;
                 var visits = host.AddComponent<PatientVisitController>();
                 var view = host.AddComponent<PatientDialogueView>();
                 var room = host.AddComponent<ConsultationRoomController>();
@@ -56,6 +70,18 @@ namespace Gamsamo.Editor
                 var inputObject = new GameObject("ReplyInput", typeof(RectTransform));
                 inputObject.transform.SetParent(host.transform, false);
                 view.replyInput = inputObject.AddComponent<TMP_InputField>();
+                inputFont = TMP_FontAsset.CreateFontAsset(AssetDatabase.LoadAssetAtPath<Font>("Assets/_Project/Fonts/NotoSansCJKkr-Regular.otf"));
+                inputFont.hideFlags = HideFlags.HideAndDontSave;
+                inputFont.isMultiAtlasTexturesEnabled = true;
+                var inputTextObject = new GameObject("InputText", typeof(RectTransform));
+                inputTextObject.transform.SetParent(inputObject.transform, false);
+                var inputText = inputTextObject.AddComponent<TextMeshProUGUI>();
+                inputText.font = inputFont;
+                view.replyInput.textComponent = inputText;
+                view.replyInput.textViewport = inputText.rectTransform;
+                view.replyInput.caretBlinkRate = 0; // No frame-driven caret coroutine in Edit mode.
+                view.replyInput.lineType = TMP_InputField.LineType.MultiLineNewline;
+                view.replyInput.richText = false;
                 view.replyRoot = inputObject;
                 var sendObject = new GameObject("Send", typeof(RectTransform));
                 sendObject.transform.SetParent(host.transform, false);
@@ -91,7 +117,7 @@ namespace Gamsamo.Editor
                 var store = new AiSaveStore(Path.Combine(temporary, "input"));
                 store.Save(snapshot, -1);
                 var session = new AiSession(store);
-                Field(adapter, "session", session);
+                BindSession(adapter, session);
                 Field(adapter, "committedState", session.State);
                 Field(adapter, "localVisitId", "local_check");
                 Field(adapter, "activePatientId", "seoyun");
@@ -107,7 +133,13 @@ namespace Gamsamo.Editor
                 string input = "  한글 질문과 공감\n두 번째 줄 <b>원문</b>  ";
                 view.replyInput.text = input;
                 Check(adapter.Draft == input, "Input changes reach UpdateDraft without trimming whitespace or markup");
+                CheckDraftAutosave(adapter, view, session, store, eventSystem, input, Check);
+                bool requestLockedDuringWrite = false;
+                BeforeWrite(store, _ => requestLockedDuringWrite |= session.IsWriting && !view.replyInput.interactable && !adapter.CanSubmit);
                 view.sendButton.onClick.Invoke();
+                BeforeWrite(store, null);
+                Check(requestLockedDuringWrite && !view.replyInput.isFocused && eventSystem.currentSelectedGameObject == null,
+                    "A non-draft request save still disables and deselects the composer before disk commit");
                 Check(session.PendingRequest != null && AiProtocol.Text(AiProtocol.Object(session.PendingRequest, "body"), "text") == input,
                     "The real send button creates the adapter's durable verbatim turn request");
                 string pending = AiProtocol.Encode(session.PendingRequest);
@@ -130,7 +162,7 @@ namespace Gamsamo.Editor
                 resultStore.Save(evaluated, -1);
                 var completedSession = new AiSession(resultStore);
                 session = completedSession;
-                Field(adapter, "session", completedSession);
+                BindSession(adapter, completedSession);
                 Field(adapter, "committedState", completedSession.State);
                 Field(adapter, "networkBusy", false);
                 Field(adapter, "draftDirty", false);
@@ -173,7 +205,7 @@ namespace Gamsamo.Editor
                 Call(adapter, "Publish");
                 // Exercise the same persisted result being restored after reopening the game.
                 session = completedSession = new AiSession(resultStore);
-                Field(adapter, "session", completedSession);
+                BindSession(adapter, completedSession);
                 Field(adapter, "committedState", completedSession.State);
                 Field(adapter, "renderedRevision", -1);
                 Call(adapter, "RenderCommitted");
@@ -208,7 +240,7 @@ namespace Gamsamo.Editor
                     var patientStore = new AiSaveStore(Path.Combine(temporary, id));
                     patientStore.Save(patientSnapshot, -1);
                     session = new AiSession(patientStore, id);
-                    Field(adapter, "session", session);
+                    BindSession(adapter, session);
                     Field(adapter, "committedState", session.State);
                     Field(adapter, "activePatientId", id);
                     Field(adapter, "patientName", name);
@@ -227,12 +259,83 @@ namespace Gamsamo.Editor
             }
             finally
             {
+                if (eventSystem != null) Call(eventSystem, "OnDisable");
+                if (previousEventSystem != null) EventSystem.current = previousEventSystem;
                 UnityEngine.Object.DestroyImmediate(host);
+                if (inputFont != null) UnityEngine.Object.DestroyImmediate(inputFont);
                 if (Directory.Exists(temporary)) Directory.Delete(temporary, true);
                 Directory.CreateDirectory("artifacts/ui");
                 File.WriteAllText("artifacts/ui/patient-ai-input-checks.txt", report.ToString(), new UTF8Encoding(false));
             }
             Debug.Log("Patient AI input checks: " + passed + " passed. No server request or player save was used.");
+        }
+
+        private static void BeforeWrite(AiSaveStore store, Action<string> action) =>
+            typeof(AiSaveStore).GetProperty("BeforeWrite", Private).SetValue(store, action);
+
+        private static void CheckDraftAutosave(PatientAiAdapter adapter, PatientDialogueView view, AiSession session,
+            AiSaveStore store, EventSystem eventSystem, string original, Action<bool, string> check)
+        {
+            TMP_InputField input = view.replyInput;
+            int deselections = 0;
+            input.onDeselect.AddListener(_ => deselections++);
+            try
+            {
+                // Run TMP's actual activation; only the frame scheduling is supplied by this Edit-mode fixture.
+                Call(input, "ActivateInputFieldInternal");
+                check(input.isFocused && eventSystem.currentSelectedGameObject == input.gameObject,
+                    "The autosave regression fixture has a focused TMP input selected by a real EventSystem");
+                for (int save = 0; save < 2; save++)
+                {
+                    string draft = save == 0 ? original : original + " 이어 쓰기";
+                    input.text = draft;
+                    input.textComponent.ForceMeshUpdate(true);
+                    input.selectionStringAnchorPosition = 2;
+                    input.selectionStringFocusPosition = 6;
+                    input.selectionAnchorPosition = 2;
+                    input.selectionFocusPosition = 6;
+                    int caret = input.caretPosition;
+                    bool observedWrite = false, retainedFocus = true;
+                    BeforeWrite(store, _ =>
+                    {
+                        observedWrite = true;
+                        retainedFocus &= session.IsWriting && session.HasPendingSave && input.isFocused
+                            && input.interactable && eventSystem.currentSelectedGameObject == input.gameObject
+                            && input.selectionStringAnchorPosition == 2 && input.selectionStringFocusPosition == 6
+                            && input.caretPosition == caret;
+                    });
+                    // Exercise the adapter's timed path, not a direct session-only SaveDraft call.
+                    Field(adapter, "draftSaveAt", Time.unscaledTime - 1f);
+                    Call(adapter, "Update");
+                    check(observedWrite && retainedFocus && deselections == 0 && input.isFocused
+                        && eventSystem.currentSelectedGameObject == input.gameObject,
+                        "Draft autosave " + (save + 1) + " retains focus, selection and caret throughout the actual disk write");
+                    check(new AiSession(store).Draft == draft && input.text == draft && adapter.Draft == draft,
+                        "Draft autosave " + (save + 1) + " reloads the exact text without changing the live composer");
+                }
+
+                string lastSaved = session.Draft;
+                input.text = original + " 저장 실패 검사";
+                string failedDraft = input.text;
+                BeforeWrite(store, _ => { throw new IOException("Isolated draft write failure"); });
+                Call(adapter, "FlushDraft");
+                check(session.HasPendingSave && adapter.CanRetry && !adapter.CanSubmit && !input.interactable,
+                    "A failed draft write remains pending and retryable and blocks submission");
+                check(input.text == failedDraft && adapter.Draft == failedDraft && new AiSession(store).Draft == lastSaved,
+                    "A failed draft write preserves the new in-memory draft and the last durable draft");
+                BeforeWrite(store, null);
+                session.RetrySave(); // Isolate persistence recovery; adapter.Retry would start a health request.
+                Field(adapter, "draftDirty", false);
+                Property(adapter, "LastError", "");
+                Call(adapter, "Publish");
+                check(!session.HasPendingSave && new AiSession(store).Draft == failedDraft && adapter.CanEditDraft,
+                    "Retrying the pending draft commits the preserved text and restores edit availability");
+
+                input.text = original;
+                Call(adapter, "FlushDraft");
+                Call(input, "ActivateInputFieldInternal");
+            }
+            finally { BeforeWrite(store, null); }
         }
 
         private static void CheckRecordPages(Transform parent, Action<bool, string> check)

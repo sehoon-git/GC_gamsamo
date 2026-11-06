@@ -69,7 +69,8 @@ namespace Gamsamo.Progression
         private readonly Dictionary<string, string> settlementDescriptions = new Dictionary<string, string>();
         private string notifiedResult;
         private Gamsamo.UI.Presentation.RoomStatusView roomStatus;
-        public bool RoomControlsAvailable => visits?.room == null || !visits.room.IsOverlayBlocking;
+        public bool RoomControlsAvailable => (visits?.room == null || !visits.room.IsOverlayBlocking)
+            && Progress?.HasPendingPresentation != true;
         private void Awake()
         {
             var prefab = Resources.Load<GameObject>("Presentation/RoomStatus");
@@ -209,8 +210,7 @@ namespace Gamsamo.Progression
                 visits.MarkConsultationEnded(visitId);
         }
 
-        public bool CanSkipDevelopmentPatient => DevelopmentProgressMode.Enabled && Progress?.State.DevelopmentMode == true
-            && Progress.State.Phase == ProgressPhase.Consulting && visits != null
+        public bool CanSkipDevelopmentPatient => DevelopmentProgressMode.Enabled && Progress?.CanSkipDevelopmentVisit == true && visits != null
             && visits.State == PatientVisitController.VisitState.Consulting && RoomControlsAvailable;
 
         public bool SkipDevelopmentPatient()
@@ -229,19 +229,6 @@ namespace Gamsamo.Progression
             catch (Exception e) { Fail(e); return false; }
         }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        private void OnGUI()
-        {
-            if (!DevelopmentProgressMode.Enabled) return;
-            GUI.Box(new Rect(12, 12, 360, 105), "DEV PREVIEW | separate save | no AI / no rewards");
-            bool previous = GUI.enabled;
-            GUI.enabled = previous && CanSkipDevelopmentPatient;
-            if (GUI.Button(new Rect(24, 42, 336, 34), "Skip patient (70 / 70)")) SkipDevelopmentPatient();
-            GUI.enabled = previous;
-            GUI.Label(new Rect(24, 80, 336, 24), Progress?.State.Phase == ProgressPhase.Finished
-                ? "5 / 5 - final ending unlocked" : "Play stopped: disable via Gamsamo > Development");
-        }
-#endif
         public ConfirmedResult PendingResult => Progress?.State.PendingPresentation;
         public bool CompletePresentation(string key)
         {
@@ -285,7 +272,7 @@ namespace Gamsamo.Progression
         }
         public bool ReturnToStartMenu()
         {
-            if (visits != null && visits.room != null && visits.room.IsOverlayBlocking) return false;
+            if (!RoomControlsAvailable) return false;
             // CanRetry also covers a missing connection setting with no pending request/save.
             // That recoverable error must not trap a durably saved consultation in the room.
             if (ai != null && ai.IsBusy) { LastError = "요청·자동 저장을 완료한 후 돌아가세요."; return false; }

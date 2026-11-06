@@ -12,11 +12,121 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0b9685fd56a24fc3a6f6dff71d13c99, type: 3}
   m_Name: EndingContent
   m_EditorClassIdentifier: Assembly-CSharp::Gamsamo.UI.Presentation.EndingContentCatalog
-  contentVersion: unassigned
-  patients: []
-  creditsApproved: 0
-  credits:
+  contentVersion: album-v1
+  patients:
+  - patientId: seoyun
+    photoId: seoyun_smile
+    approved: 1
+    title: "서윤이 다시 꺼낸 카메라"
+    description: "서윤 · 상담 완료 기념사진"
+    photo: {fileID: 21300006, guid: 2dbda2c878b35a5db7cd9e9baf724b93, type: 3}
+    moments:
+    - title: "오늘 저녁은 내가 살게"
+      description: "합격 소식을 들은 친구들이 서윤을 불러냈다. 다들 한마디씩 축하를 건네려는데, 서윤이 먼저 웃음을 터뜨렸다. 단체 사진에는 셋 다 눈을 감고 있었다."
+      photo: {fileID: 21300001, guid: 2dbda2c878b35a5db7cd9e9baf724b93, type: 3}
+    - title: "엄마, 나 붙었어"
+      description: "취업했다는 말에 전화기 너머가 잠깐 조용했다. 그러고는 엄마의 웃음이 들렸다. “오늘은 네가 좋아하는 거 먹자. 뭐 먹고 싶어?”"
+      photo: {fileID: 21300002, guid: 2dbda2c878b35a5db7cd9e9baf724b93, type: 3}
+    - title: "첫날의 옆자리"
+      description: "출근 첫날, 서윤은 처음 보는 업무 화면 앞에서 한참을 망설였다. 옆자리 동료에게 의자를 조금 당겨도 되느냐고 묻자, 동료가 먼저 자리를 내주었다."
+      photo: {fileID: 21300003, guid: 2dbda2c878b35a5db7cd9e9baf724b93, type: 3}
+    - title: "토요일의 빈칸"
+      description: "창가에 앉아 수첩을 펼쳤다. 한때 지원 마감일로 가득했던 토요일이었다. 서윤은 남은 반쪽에 다음에 친구들과 가고 싶은 곳을 적었다."
+      photo: {fileID: 21300004, guid: 2dbda2c878b35a5db7cd9e9baf724b93, type: 3}
+    - title: "한 정거장 먼저"
+      description: "해가 길어진 저녁, 서윤은 한 정거장 먼저 내렸다. 골목 끝에 분홍빛이 남아 있었다. 휴대폰을 꺼내 엄마에게 오늘의 두 번째 사진을 보냈다."
+      photo: {fileID: 21300005, guid: 2dbda2c878b35a5db7cd9e9baf724b93, type: 3}
+  - patientId: dohyeon
+    photoId: dohyeon_smile
+    approved: 1
+    title: "도현이 정한 퇴근길"
+    description: "도현 · 상담 완료 기념사진"
+    photo: {fileID: 21300006, guid: b85e91e61e35562aba412804bab5db65, type: 3}
+    moments:
+    - title: "조건을 적는 자리"
+      description: "도현은 공책 한쪽에 지금 회사, 건너편에 제안받은 회사를 적었다. 연봉 아래에 퇴근 시각과 집까지 걸리는 시간도 나란히 써 넣었다."
+      photo: {fileID: 21300001, guid: b85e91e61e35562aba412804bab5db65, type: 3}
+    - title: "정류장에서 잰 시간"
+      description: "평소보다 조금 일찍 집을 나섰다. 정류장까지 걸린 시간을 확인하곤, 도현은 버스가 올 때까지 시계를 다시 들여다보지 않았다."
+      photo: {fileID: 21300002, guid: b85e91e61e35562aba412804bab5db65, type: 3}
+    - title: "점심 한 끼"
+      description: "점심을 먹던 동료가 무엇 때문에 망설이냐고 물었다. 도현은 잠깐 생각하다 “난 저녁을 집에서 먹는 날이 좀 많았으면 좋겠어”라고 말했다."
+      photo: {fileID: 21300003, guid: b85e91e61e35562aba412804bab5db65, type: 3}
+    - title: "달력에 남긴 저녁"
+      description: "표시 하나 없던 달력에 저녁 약속을 먼저 적었다. 도현은 일을 고를 때 지키고 싶던 게 무엇인지 이제 손가락으로 짚을 수 있었다."
+      photo: {fileID: 21300004, guid: b85e91e61e35562aba412804bab5db65, type: 3}
+    - title: "벤치에 앉을 틈"
+      description: "퇴근길 공원 벤치에 잠깐 앉았다. 시내에서 일하는 친구에게 안부를 보냈다. 오늘은 회사 얘기보다 둘이 언제 만날 수 있는지가 더 궁금했다."
+      photo: {fileID: 21300005, guid: b85e91e61e35562aba412804bab5db65, type: 3}
+  - patientId: taejun
+    photoId: taejun_smile
+    approved: 1
+    title: "태준의 작은 동네 회의"
+    description: "태준 · 상담 완료 기념사진"
+    photo: {fileID: 21300006, guid: 2704d6f469b353c4b6c46b045339ebe6, type: 3}
+    moments:
+    - title: "게시판 앞에서"
+      description: "동네 게시판에 주민 모임 안내가 붙었다. 태준은 평소처럼 지나치다가 발을 돌렸다. 날짜와 장소가 잘 보이게 사진을 한 장 찍었다."
+      photo: {fileID: 21300001, guid: 2704d6f469b353c4b6c46b045339ebe6, type: 3}
+    - title: "앞줄 대신 옆자리"
+      description: "모임에서 처음 듣는 목소리가 여럿이었다. 태준은 발언 순서를 기다리면서, 이웃이 저녁마다 어느 길로 집에 가는지부터 들었다."
+      photo: {fileID: 21300002, guid: 2704d6f469b353c4b6c46b045339ebe6, type: 3}
+    - title: "내가 묻고 싶은 것"
+      description: "수첩에는 남이 했던 말이 빼곡했다. 태준은 한 줄을 비워 자기 질문을 적었다. “이 길을 제일 자주 걷는 분께도 물어봤나요?”"
+      photo: {fileID: 21300003, guid: 2704d6f469b353c4b6c46b045339ebe6, type: 3}
+    - title: "다른 길로 가는 이웃"
+      description: "회의가 끝나고 옆자리 이웃과 이야기가 이어졌다. 같은 골목을 두고도 서로 다른 장면을 기억했다. 다음번에는 둘이 함께 그 길을 걸어 보기로 했다."
+      photo: {fileID: 21300004, guid: 2704d6f469b353c4b6c46b045339ebe6, type: 3}
+    - title: "마지막 의자"
+      description: "사람들이 하나둘 돌아간 뒤 태준은 남은 의자를 포갰다. 문을 닫으려는데 누군가 다음 주에도 오느냐고 물었다. 이번에는 바로 고개를 끄덕였다."
+      photo: {fileID: 21300005, guid: 2704d6f469b353c4b6c46b045339ebe6, type: 3}
+  - patientId: yeonwoo
+    photoId: yeonwoo_smile
+    approved: 1
+    title: "연우와 나란히 걷는 오후"
+    description: "연우 · 상담 완료 기념사진"
+    photo: {fileID: 21300006, guid: 66cb02b3153a5be28eee306b4c41cb5a, type: 3}
+    moments:
+    - title: "헬멧 끈 한 뼘"
+      description: "공원에서 만난 아이가 헬멧을 쑥 내밀었다. 연우는 턱 아래로 손가락 하나 들어갈 틈을 남겼다. 아이가 고개를 크게 끄덕여 보였다."
+      photo: {fileID: 21300001, guid: 66cb02b3153a5be28eee306b4c41cb5a, type: 3}
+    - title: "손을 흔드는 쪽"
+      description: "아이는 이미 혼자 자전거를 탈 줄 알았다. 연우는 길 끝에 서서 아이가 한 바퀴 돌아오길 기다렸다. 먼저 손을 흔든 건 연우였다."
+      photo: {fileID: 21300002, guid: 66cb02b3153a5be28eee306b4c41cb5a, type: 3}
+    - title: "벤치 위의 간식"
+      description: "둘은 간식을 나눠 먹으며 잠시 쉬었다. 아이가 오늘 제일 재미있던 커브를 손가락으로 그렸다. 연우는 그 이야기를 다 듣고 나서 물병을 건넸다."
+      photo: {fileID: 21300003, guid: 66cb02b3153a5be28eee306b4c41cb5a, type: 3}
+    - title: "오늘 찍은 한 장"
+      description: "집으로 돌아온 연우는 창가에서 오늘 찍은 사진을 열었다. 화면 한쪽에 자기 손끝이 걸려 있었다. 지우려다, 함께 서 있던 자리까지 담긴 것 같아 그냥 두었다."
+      photo: {fileID: 21300004, guid: 66cb02b3153a5be28eee306b4c41cb5a, type: 3}
+    - title: "다음에 탈 자전거"
+      description: "다음 만남을 앞두고 자전거를 살폈다. 느슨한 곳을 조이고 바퀴를 한 번 돌렸다. 아이에게는 짧게 물었다. “이번엔 어디로 가 볼까?”"
+      photo: {fileID: 21300005, guid: 66cb02b3153a5be28eee306b4c41cb5a, type: 3}
+  - patientId: harin
+    photoId: harin_smile
+    approved: 1
+    title: "하린이 들려주고 싶은 만큼"
+    description: "하린 · 상담 완료 기념사진"
+    photo: {fileID: 21300006, guid: a63a8ecd1d515ac0b1da0935a9cea9c3, type: 3}
+    moments:
+    - title: "나에게 먼저 쓰는 말"
+      description: "하린은 창가에 앉아 공책을 펼쳤다. 누구에게 보여줄지 정하지 않은 글이었다. 첫 문장을 두 번 고친 뒤, 세 번째 문장은 마음에 들어 그대로 두었다."
+      photo: {fileID: 21300001, guid: a63a8ecd1d515ac0b1da0935a9cea9c3, type: 3}
+    - title: "창가의 두 자리"
+      description: "친구와 마주 앉은 하린은 요즘 자주 떠올리는 이야기를 하나 꺼냈다. 친구는 다음 말을 재촉하지 않고 차가 조금 식을 때까지 기다려 주었다."
+      photo: {fileID: 21300002, guid: a63a8ecd1d515ac0b1da0935a9cea9c3, type: 3}
+    - title: "엄마 옆의 도마"
+      description: "저녁 준비를 하던 엄마가 하린에게 간을 봐 달라고 했다. 하린은 한 숟갈 맛보고 어릴 때 먹던 맛이라며 웃었다. 둘은 냄비를 사이에 두고 한참 수다를 떨었다."
+      photo: {fileID: 21300003, guid: a63a8ecd1d515ac0b1da0935a9cea9c3, type: 3}
+    - title: "집까지 한 바퀴"
+      description: "해 질 무렵 익숙한 거리를 한 바퀴 돌았다. 친구에게서 “오늘 얘기해 줘서 고마워”라는 문자가 왔다. 하린은 걷던 걸음을 멈추고 천천히 답을 썼다."
+      photo: {fileID: 21300004, guid: a63a8ecd1d515ac0b1da0935a9cea9c3, type: 3}
+    - title: "새잎이 난 아침"
+      description: "창가의 화분에 작은 잎이 하나 더 났다. 물을 주고 공책을 펼친 하린은 오늘 적고 싶은 것부터 골랐다. 친구에게 들려줄 이야기는 나중에 골라도 괜찮았다."
+      photo: {fileID: 21300005, guid: a63a8ecd1d515ac0b1da0935a9cea9c3, type: 3}
+  creditsApproved: 1
+  credits: "우리동네 상담사\n\n서윤 · 도현 · 태준 · 연우 · 하린\n\n다섯 사람이 들려준 이야기는 여기까지입니다.\n사진을 덮고 나면, 또 각자의 하루가 시작됩니다.\n\n만든 이들\n2026 게임인재원 AI 해커톤 팀\n\n마지막 이야기까지 함께해 주셔서 감사합니다."
   roomMusic: {fileID: 0}
-  endingMusic: {fileID: 0}
+  endingMusic: {fileID: 8300000, guid: e784d2f00f315f05897b2b6a62c7d846, type: 3}
   pageSound: {fileID: 0}
   clearSound: {fileID: 0}

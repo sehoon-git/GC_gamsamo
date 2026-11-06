@@ -176,8 +176,9 @@ namespace Gamsamo.Editor
                 Check(view.DisplayedText == "직전 환자 대사", "Committing evaluation does not replace patient dialogue with a result popup");
                 Check(room.record.consultationTranscript == AiRecordFormatter.Transcript(completedSession.State),
                     "The desk record receives every committed utterance and closing notice");
-                Check(!string.IsNullOrWhiteSpace(room.record.consultationResult) && room.record.consultationResult.Contains("환자 변화"),
-                    "The desk record receives saved evaluation scores and reasons");
+                Check(!string.IsNullOrWhiteSpace(room.record.consultationResult) && room.record.consultationResult.Contains("평가 결과")
+                    && !room.record.consultationResult.Contains("/ 100") && !room.record.consultationResult.Contains("/ 25"),
+                    "The desk record receives saved feedback without numerical grades");
                 Check(typeof(PatientAiAdapter).GetMethod("ShowResult", Private) == null, "No result-dialogue renderer remains in the adapter");
                 Check(visits.IsAwaitingDeparture && adapter.CanFinishVisit && departureButton.gameObject.activeSelf
                     && departureButton.interactable && !view.endButton.gameObject.activeSelf,
@@ -478,7 +479,7 @@ namespace Gamsamo.Editor
                 var seoyun = new MedicalRecordData
                 {
                     registrationNumber = "seoyun", patientName = "서윤", consultationNotes = "짧은 상담 메모",
-                    consultationTranscript = transcript.ToString(), consultationResult = "환자 변화 45 / 100\n상담자 대응 60 / 100\n한글 평가 <b>인용 원문</b>"
+                    consultationTranscript = transcript.ToString(), consultationResult = "상담 1 · 평가 결과\n한글 평가 <b>인용 원문</b>"
                 };
                 record.ShowRecord(seoyun);
                 Button("TranscriptTab").onClick.Invoke();

@@ -10,6 +10,9 @@ namespace Gamsamo.Progression
         private readonly IProgressStore store;
         private GameProgress state;
         public GameProgress State => GameProgress.Copy(state);
+        public bool CanSkipDevelopmentVisit => state?.DevelopmentMode == true && state.Phase == ProgressPhase.Consulting;
+        public bool HasPendingPresentation => state != null && (state.Phase == ProgressPhase.Presenting
+            || (state.Phase == ProgressPhase.Finished && state.FinalEndingUnlocked && !state.FinalEndingPlayed));
         public ProgressService(IProgressStore store) { this.store = store; state = store.Load(); }
         public void Create(IEnumerable<string> roster, bool developmentMode = false)
         {
@@ -175,11 +178,16 @@ namespace Gamsamo.Progression
                 throw new InvalidOperationException("경제 상태를 다시 읽은 뒤 시도하세요.");
             var next = State; next.Economy = GameProgress.Copy(economy); Commit(next);
         }
-        public void CompleteFinalEnding()
+        public void CompleteFinalEnding(string stage = "completed")
         {
-            if (!state.FinalEndingUnlocked) throw new InvalidOperationException("최종 엔딩이 잠겨 있습니다.");
+            if (state.Phase != ProgressPhase.Finished || !state.FinalEndingUnlocked)
+                throw new InvalidOperationException("마지막 환자의 퇴장을 먼저 완료하세요.");
+            if (stage != "completed" && stage != "skipped") throw new InvalidOperationException("잘못된 최종 엔딩 재생 상태입니다.");
             if (state.FinalEndingPlayed) return;
-            var next = State; next.FinalEndingPlayed = true; Commit(next);
+            var next = State;
+            next.FinalPresentationStage = stage;
+            next.FinalEndingPlayed = true;
+            Commit(next);
         }
         // No proposed 2/4 thresholds are installed by default.
         public string Certificate(IReadOnlyDictionary<int, string> approvedThresholds) => approvedThresholds == null ? ""

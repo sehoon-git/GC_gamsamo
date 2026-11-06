@@ -1,0 +1,14 @@
+{
+  "caption": "An intimate instrumental for turning the pages of a Korean neighborhood counseling photo album. Warm close-miked felt piano introduces a small rising three-note idea, answered by fingerpicked nylon guitar; gently changing voicings like afternoon sunlight across paper. A steady lilting 6/8 at 72 BPM, D major, touching and quietly optimistic. Restrained dynamics for reading, space between phrases, a delicate returning cadence. Purely acoustic instrumental, no vocals, no humming, no drums.",
+  "synth_model": "acestep-v15-turbo-Q4_K_M.gguf",
+  "lyrics": "[Instrumental]",
+  "bpm": 72,
+  "duration": 64,
+  "keyscale": "D major",
+  "timesignature": "6",
+  "seed": 26061107,
+  "inference_steps": 8,
+  "guidance_scale": 1.0,
+  "shift": 3.0,
+  "output_format": "wav32"
+}

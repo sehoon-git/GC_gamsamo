@@ -10,6 +10,7 @@ namespace Gamsamo.UI.Presentation
     public sealed class EndingPresentationView : PresentationModal
     {
         public EndingContentCatalog content;
+        public Sprite albumPaper;
         public TMP_Text titleText, bodyText, rewardText, photoNotice, feedbackText;
         public Image photo;
         public Button continueButton, skipButton, replayButton, retryButton;
@@ -29,8 +30,24 @@ namespace Gamsamo.UI.Presentation
         private int awardedCoins;
         private bool photoUnlocked;
         private bool final;
-        private float creditElapsed;
+        private float creditElapsed, creditTravel;
         private Vector2 creditsStart;
+        private EndingContent album;
+        private EndingAlbumSpread spread;
+        private int momentIndex;
+        private float readingElapsed;
+        private TMP_Text continueLabel, skipLabel;
+        private int MomentCount
+        {
+            get
+            {
+                int authored = album?.moments?.Length ?? 0;
+                if (authored == 0) return album == null ? 0 : 1;
+                return album.moments[authored - 1]?.photo == album.photo ? authored : authored + 1;
+            }
+        }
+        private bool ShowingAlbum => album != null && (IsReplay || Stage == "ending");
+        private bool LastMoment => momentIndex + 1 == MomentCount;
 
         private void Awake()
         {
@@ -39,7 +56,8 @@ namespace Gamsamo.UI.Presentation
             if (replayButton != null) replayButton.onClick.AddListener(Replay);
             if (retryButton != null) retryButton.onClick.AddListener(RetryPlaybackSave);
             if (panel != null) panel.SetActive(false);
-            if (creditsBody != null) creditsStart = creditsBody.anchoredPosition;
+            if (continueButton != null) continueLabel = continueButton.GetComponentInChildren<TMP_Text>(true);
+            if (skipButton != null) skipLabel = skipButton.GetComponentInChildren<TMP_Text>(true);
         }
 
         /// <summary>No evaluation is accepted here. B calls after A→B→C→B persistence succeeds.</summary>
@@ -53,6 +71,8 @@ namespace Gamsamo.UI.Presentation
                 && savedStage != "completed" && savedStage != "skipped") return false;
             StoreContext(game, patient, caseValue, session, false);
             displayName = name ?? ""; awardedCoins = coinsAwarded; photoUnlocked = photoWasUnlocked;
+            var entry = content != null ? content.FindApproved(patientId) : null;
+            if (photoUnlocked && entry?.photo != null && photo != null && bodyText != null) album = entry;
             Stage = savedStage;
             return RestoreStage();
         }
@@ -74,6 +94,7 @@ namespace Gamsamo.UI.Presentation
             gameId = game; patientId = patient; caseId = caseValue; sessionId = session; final = isFinal;
             identity = Key(game, patient, caseValue, session);
             IsReplay = false; PendingStage = ""; creditElapsed = 0;
+            album = null; momentIndex = 0; readingElapsed = 0;
             if (finalPhotos != null) foreach (var item in finalPhotos) if (item != null) { item.sprite = null; item.enabled = false; }
             if (finalCaptions != null) foreach (var item in finalCaptions) GuidebookView.Set(item, "");
             if (creditsBody != null) creditsBody.anchoredPosition = creditsStart;
@@ -92,14 +113,28 @@ namespace Gamsamo.UI.Presentation
         public void Continue()
         {
             if (!IsOpen || AwaitingSave || !string.IsNullOrEmpty(PendingStage)) return;
-            if (!final && (Stage == "ending" || IsReplay) && bodyText != null && bodyText.pageToDisplay < bodyText.textInfo.pageCount)
-            { bodyText.pageToDisplay++; return; }
+            if (!final && (Stage == "ending" || IsReplay) && HasMoreText())
+            { bodyText.pageToDisplay++; readingElapsed = 0; RefreshButtons(); return; }
+            if (ShowingAlbum && !LastMoment)
+            {
+                momentIndex++;
+                RenderMoment();
+                return;
+            }
             if (IsReplay) { FinishPresentation(); return; }
             Request(Stage == "clear" ? "ending" : "completed");
         }
         public void Skip()
         {
             if (!IsOpen || AwaitingSave || !string.IsNullOrEmpty(PendingStage)) return;
+            if (album != null)
+            {
+                if (ShowingAlbum && LastMoment) { Continue(); return; }
+                momentIndex = MomentCount - 1;
+                if (ShowingAlbum) RenderMoment();
+                else Request("ending");
+                return;
+            }
             if (IsReplay) { FinishPresentation(); return; }
             Request("skipped");
         }
@@ -107,7 +142,7 @@ namespace Gamsamo.UI.Presentation
         {
             if (string.IsNullOrEmpty(identity) || AwaitingSave || IsOpen
                 || (Stage != "completed" && Stage != "skipped") || !OpenModal()) return;
-            IsReplay = true; creditElapsed = 0;
+            IsReplay = true; creditElapsed = 0; momentIndex = 0;
             Render(); // No save, grant, evaluation or economy callbacks on replay.
         }
         private void Request(string target)
@@ -143,31 +178,41 @@ namespace Gamsamo.UI.Presentation
         private void Update()
         {
             if (!IsOpen) return;
-            if (Input.GetKeyDown(KeyCode.Escape)) Skip();
-            // Gentle top-to-bottom credits. Playback time never represents save or AI progress.
-            if (final && creditsBody != null && !AwaitingSave)
+            if (Input.GetKeyDown(KeyCode.Escape)) { Skip(); return; }
+            AdvanceReading(Time.unscaledDeltaTime);
+            if (final && creditTravel > 0 && !AwaitingSave && string.IsNullOrEmpty(PendingStage))
             {
                 creditElapsed += Time.unscaledDeltaTime;
-                creditsBody.anchoredPosition = creditsStart + Vector2.down * Mathf.Min(creditElapsed * 20f, creditsBody.rect.height + 340f);
+                float distance = Mathf.Clamp((creditElapsed - 4f) * 22f, 0, creditTravel);
+                creditsBody.anchoredPosition = creditsStart + Vector2.up * distance;
             }
+        }
+        private void AdvanceReading(float seconds)
+        {
+            if (album == null || !IsOpen || AwaitingSave || !string.IsNullOrEmpty(PendingStage)) return;
+            if (ShowingAlbum && LastMoment) return;
+            readingElapsed += seconds;
+            float duration = ShowingAlbum ? Mathf.Max(8f, 3f + bodyText.text.Length * 0.13f) : 4f;
+            if (readingElapsed >= duration) Continue();
         }
         private void Render()
         {
             bool clear = !IsReplay && !final && Stage == "clear";
             if (!clear) PresentationAudio.Instance?.PlayEndingMusic();
+            readingElapsed = 0;
+            spread?.Hide();
             EndingContent entry = content != null ? content.FindApproved(patientId) : null;
-            GuidebookView.Set(titleText, clear ? displayName + " 님의 상담을 마쳤어요" : final ? "함께 만든 이야기" : entry != null ? entry.title : "후일담");
+            GuidebookView.Set(titleText, clear ? displayName + " 님의 상담을 마쳤어요" : final ? "함께 만든 이야기" : "");
             GuidebookView.Set(bodyText, clear ? "함께 나눈 이야기와 상세 결과는 책상 위 서류에 보관되어 있습니다."
                 : final ? FinalCreditsText() : entry != null ? entry.description : "후일담 콘텐츠가 아직 준비되지 않았습니다. 계속하기로 돌아갈 수 있어요.");
             GuidebookView.Set(rewardText, clear ? "이번 획득 " + awardedCoins + " C" : "");
             GuidebookView.Set(photoNotice, clear ? (photoUnlocked ? "PC 사진첩에 사진이 추가되었습니다." : "웃는 사진과 후일담은 준비 중입니다. 클리어 기록은 저장되었습니다.") : "");
-            if (photo != null) { photo.sprite = !clear && !final && photoUnlocked && entry != null ? entry.photo : null; photo.enabled = photo.sprite != null; photo.preserveAspect = true; }
+            if (photo != null) { photo.sprite = null; photo.enabled = false; }
             if (bodyText != null)
             {
-                bool withPhoto = photo != null && photo.enabled;
                 bodyText.gameObject.SetActive(!final);
-                bodyText.rectTransform.anchoredPosition = new Vector2(270, withPhoto ? -410 : -150);
-                bodyText.rectTransform.sizeDelta = new Vector2(620, withPhoto ? 220 : 310);
+                bodyText.rectTransform.anchoredPosition = new Vector2(270, -150);
+                bodyText.rectTransform.sizeDelta = new Vector2(620, 310);
                 bodyText.pageToDisplay = 1;
                 bodyText.ForceMeshUpdate();
             }
@@ -175,43 +220,75 @@ namespace Gamsamo.UI.Presentation
             if (final)
             {
                 GuidebookView.Set(creditsText, FinalCreditsText());
-                if (creditsText != null && creditsBody != null)
+                if (creditsText != null && creditsBody != null && creditsViewport != null)
                 {
-                    creditsBody.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(500, creditsText.preferredHeight));
-                    creditsStart = new Vector2(0, creditsBody.rect.height);
+                    var window = (RectTransform)creditsViewport.transform;
+                    float height = creditsText.GetPreferredValues(creditsText.text, window.rect.width, Mathf.Infinity).y;
+                    creditsText.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
+                    creditsBody.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
+                    creditTravel = Mathf.Max(0f, height - window.rect.height);
+                    creditsStart = new Vector2(0, -Mathf.Max(0f, window.rect.height - height) * 0.5f);
                     creditsBody.anchoredPosition = creditsStart; creditElapsed = 0;
                 }
             }
+            if (ShowingAlbum) RenderMoment();
+            else RefreshButtons();
+        }
+        private void RenderMoment()
+        {
+            var moments = album.moments;
+            EndingMoment moment = moments != null && momentIndex < moments.Length ? moments[momentIndex] : null;
+            if (spread == null) spread = new EndingAlbumSpread(photo, bodyText, albumPaper);
+            string title = moment?.title ?? displayName + "의 웃는 얼굴";
+            string story = moment?.description ?? "";
+            spread.Show(LastMoment ? album.photo : moment?.photo, title, story, momentIndex + 1, MomentCount);
+            readingElapsed = 0;
+            if (momentIndex > 0) PresentationAudio.Instance?.PlayPageSound();
             RefreshButtons();
         }
         private string FinalCreditsText()
         {
             if (content == null || !content.creditsApproved || string.IsNullOrWhiteSpace(content.credits))
-                return "최종 엔딩이 해금되었습니다.\n정식 후일담 사진과 제작진 크레딧은 준비 중입니다.";
+                return "다섯 사람의 상담을 마쳤습니다.\n함께해 주셔서 감사합니다.";
             return content.credits;
         }
 
-        /// <summary>B supplies only saved, unlocked photos and verified captions for this run.</summary>
+        /// <summary>Display the portraits unlocked in this save.</summary>
         public void SetCreditsPhotos(string game, IReadOnlyList<PhotoGalleryEntry> unlockedPhotos)
         {
             if (game != gameId || !final) return;
-            for (int index = 0; index < 6; index++)
+            int slots = finalPhotos?.Length ?? 0;
+            int count = Mathf.Min(unlockedPhotos?.Count ?? 0, slots);
+            for (int index = 0; index < slots; index++)
             {
-                var entry = unlockedPhotos != null && index < unlockedPhotos.Count ? unlockedPhotos[index] : null;
-                if (finalPhotos != null && index < finalPhotos.Length && finalPhotos[index] != null)
+                var entry = index < count ? unlockedPhotos[index] : null;
+                bool left = index % 2 == 0;
+                int columnCount = left ? (count + 1) / 2 : count / 2;
+                float x = left ? 38 : 918, y = 128 + (3 - columnCount) * 78 + index / 2 * 156;
+                var image = finalPhotos[index];
+                if (image != null)
                 {
-                    finalPhotos[index].sprite = entry?.thumbnail;
-                    finalPhotos[index].enabled = entry?.thumbnail != null;
+                    image.sprite = entry?.thumbnail;
+                    image.enabled = image.sprite != null;
+                    image.preserveAspect = true;
+                    image.rectTransform.anchoredPosition = new Vector2(x, -y);
+                    image.rectTransform.sizeDelta = new Vector2(204, 98);
                 }
-                if (finalCaptions != null && index < finalCaptions.Length)
-                    GuidebookView.Set(finalCaptions[index], entry?.title);
             }
         }
+        private bool HasMoreText() => bodyText != null && !string.IsNullOrEmpty(bodyText.text)
+            && bodyText.pageToDisplay < bodyText.textInfo.pageCount;
         private void RefreshButtons()
         {
             bool ready = !AwaitingSave && string.IsNullOrEmpty(PendingStage);
+            string caption = "계속하기";
+            if (ShowingAlbum)
+                caption = HasMoreText() ? "다음 쪽" : LastMoment ? "앨범 닫기" : "다음 사진";
+            else if (album != null && Stage == "clear") caption = "앨범 열기";
+            GuidebookView.Set(continueLabel, caption);
+            GuidebookView.Set(skipLabel, album != null ? "마지막 사진" : "건너뛰기");
             if (continueButton != null) { continueButton.interactable = ready; continueButton.gameObject.SetActive(ready); }
-            if (skipButton != null) { skipButton.interactable = ready; skipButton.gameObject.SetActive(ready); }
+            if (skipButton != null) { skipButton.interactable = ready; skipButton.gameObject.SetActive(ready && !(ShowingAlbum && LastMoment)); }
             if (retryButton != null) { retryButton.gameObject.SetActive(!AwaitingSave && !string.IsNullOrEmpty(PendingStage)); retryButton.interactable = !AwaitingSave; }
             if (replayButton != null) replayButton.gameObject.SetActive(false); // The host's replay entry calls Replay after completion.
         }

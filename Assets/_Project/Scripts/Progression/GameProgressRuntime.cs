@@ -232,7 +232,7 @@ namespace Gamsamo.Progression
         private void OnGUI()
         {
             if (!DevelopmentProgressMode.Enabled) return;
-            GUI.Box(new Rect(12, 12, 360, 105), "DEV PREVIEW | separate save | no AI / coins");
+            GUI.Box(new Rect(12, 12, 360, 105), "DEV PREVIEW | separate save | no AI / no rewards");
             bool previous = GUI.enabled;
             GUI.enabled = previous && CanSkipDevelopmentPatient;
             if (GUI.Button(new Rect(24, 42, 336, 34), "Skip patient (70 / 70)")) SkipDevelopmentPatient();

@@ -31,7 +31,7 @@ class FakeLLM:
     def fits(self, messages, role):
         return self.count(messages, role) + self.config["roles"][role]["max_tokens"] + 128 < self.config["max_model_len"]
 
-    async def generate(self, role, messages, schema, metrics, validate=None):
+    async def generate(self, role, messages, schema, metrics, validate=None, repair_context=None):
         self.calls.append((role, schema.__name__, messages))
         metrics.calls += 1
         if schema.__name__ == "MemoryContent":

@@ -756,7 +756,7 @@ H = 이 환자에게 이미 인정·지급한 최고 기본 보상 기준 (최�
 
 - `PatientDialogueView`는 대화창 쪽 이동을 제거하고 타이핑 ‘바로 보기’를 유지한다. 같은 본문 영역과 글꼴을 사용하며 이전 긴 답변은 마스크/스크롤로 보존한다. 기록부/안내서 쪽 이동·씬·프리팹·정식 인물 데이터는 바꾸지 않는다. 실제 Unity TMP 화면 검증은 팀원이 PR 이후 진행한다.
 - 개발 전용 **70/70 스킵 미리보기**는 기본 OFF다. Play 전 `Gamsamo/Development/70-70 Skip Preview (separate save)`를 체크하고 문 입장 후 `Skip patient (70 / 70)`를 누른다. 개발 저장 성공 → 기존 결과 표시/엔딩 → 명시적 환자 내보내기 → 다음 문 입장을 통해 5명과 최종 엔딩을 확인한다. Development Build는 `--gamsamo-dev-skip`, 일반 출시 빌드는 비활성이다.
-- 개발 저장은 별도 `game-progress-development`에 둔다. `GameProgressRuntime.SkipDevelopmentPatient()` → `ProgressService.SkipDevelopmentVisit()`은 전체 회차 식별자로 한 번만 저장하며 실패 시 진행/사진을 확정하지 않는다. 개발 결과는 70/70, 개발 표시, 코인 0이다. AI 요청·가짜 원문·가짜 평가 근거를 만들지 않는다. 일반 저장/원장과 실제 AI 평가를 바꾸지 않는다. Play를 끄고 메뉴를 해제하면 일반 진행으로 복귀한다.
+- 개발 저장은 별도 `game-progress-development`에 둔다. `GameProgressRuntime.SkipDevelopmentPatient()` → `ProgressService.SkipDevelopmentVisit()`은 전체 회차 식별자로 한 번만 저장하며 실패 시 진행/사진을 확정하지 않는다. 개발 결과는 70/70, 개발 표시, 스킵 보상 0이다. 최신 main의 새 게임 초기 자금 200C는 유지한다. AI 요청·가짜 원문·가짜 평가 근거를 만들지 않는다. 일반 저장/원장과 실제 AI 평가를 바꾸지 않는다. Play를 끄고 메뉴를 해제하면 일반 진행으로 복귀한다.
 - 기능 구현을 위해 이번 요청에 필요한 Dialogue/Networking/Progression 연결만 함께 수정한다. 보상 수치·클리어 기준·엔딩 콘텐츠는 변경하지 않는다. API/Unity 모두 별도 배포가 필요하며 공용 서버는 유지한다. 테스트 구분·실행 명령·연결/복구 절차는 [AI 0.4.4 계약](../contracts/README.md#ai-044-한-대화창-응답과-개발-진행-미리보기), 실제 결과와 한계는 이번 17절 기록을 따른다.
 
 ### A/B/C/D 통합 후 현행 기준 (2026-11-06)

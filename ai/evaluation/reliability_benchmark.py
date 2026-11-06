@@ -39,11 +39,11 @@ class ObservedClient(VllmClient):
         self.observed_calls = 0
         self.observed_roles = {}
 
-    async def generate(self, role, messages, schema, metrics, validate=None):
+    async def generate(self, role, messages, schema, metrics, validate=None, repair_context=None):
         before_calls = metrics.calls
         before_seconds = metrics.role_seconds.get(role, 0)
         try:
-            return await super().generate(role, messages, schema, metrics, validate)
+            return await super().generate(role, messages, schema, metrics, validate, repair_context=repair_context)
         finally:
             self.observed_calls += metrics.calls - before_calls
             self.observed_roles[role] = self.observed_roles.get(role, 0) + metrics.role_seconds.get(role, 0) - before_seconds

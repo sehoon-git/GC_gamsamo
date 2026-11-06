@@ -169,7 +169,8 @@ class DialogueService:
     async def respond(self, work):
         render = lambda: self.patient_messages(work)
         messages = await self.memory.prepare(work["case"], render, "patient", work["metrics"])
-        reply = await self.llm.generate("patient", messages, self.reply_schema(work), work["metrics"], lambda r: self.validate_reply(work, r))
+        reply = await self.llm.generate("patient", messages, self.reply_schema(work), work["metrics"], lambda r: self.validate_reply(work, r),
+            repair_context={key: self.catalog.patient[key] for key in ("name", "public_facts", "unspecified")})
         return {"reply": reply}
 
     def check_request(self, request):

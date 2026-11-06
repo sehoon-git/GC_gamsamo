@@ -69,6 +69,9 @@ async def test_budget_repair_and_failure_leave_input_state_intact(settings, cata
             assert "핵심 뜻·감정·사실을 보존" in feedback and "가" * 61 in feedback
             assert calls[-1]["temperature"] <= 0.2 and calls[-1]["presence_penalty"] == 0
             assert len(calls[-1]["messages"]) == 2
+            packet = json.JSONDecoder().raw_decode(feedback)[0]
+            assert packet["speaker_background"]["public_facts"] == catalog.patient["public_facts"]
+            assert "private_facts" not in packet["speaker_background"]
         assert llm.output_budget("evaluation") == llm.config["roles"]["evaluation"]["max_tokens"]
         assert llm.output_budget("summary") == llm.config["roles"]["summary"]["max_tokens"]
     finally:

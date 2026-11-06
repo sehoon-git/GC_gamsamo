@@ -11,7 +11,7 @@
   "model_revision": "mock-fixture-v4",
   "tokenizer_revision": "mock-fixture-v4",
   "max_model_len": 16384,
-  "prompt_version": "8ae3437597ac0c3f",
+  "prompt_version": "525002e36691821d",
   "busy": false,
   "format_version": 4,
   "mode": "mock",
